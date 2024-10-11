@@ -49,30 +49,27 @@ class Mitochondrion(Organelle):
 
     def electron_transport_chain(self) -> None:
         """
-        The ETC involves several complexes (I to IV) embedded in the inner
-        mitochondrial membrane, where electrons are transferred from molecules
-        like NADH to oxygen, producing a proton gradient across the membrane,
-        which drives ATP synthesis.
-
-        TODO: To make this more accurate:
-        - Implement stoichiometric ratios for proton pumping
-        - Add oxygen consumption
-        - Include ubiquinone and cytochrome c as electron carriers
-        - Model proton leak and its effect on ATP production efficiency
-        - Incorporate the effect of membrane potential on proton pumping
+        Simulates the electron transport chain with more accurate proton pumping.
         """
-        # Simulate NADH donating electrons to complex I
+        # Complex I: NADH to Ubiquinone
         if self.nadh > 0:
-            self.proton_gradient += 10  # Complex I pumps 10 protons
+            protons_pumped = min(self.nadh * 4, 4)  # 4 H+ per NADH, max 4
+            self.proton_gradient += protons_pumped
             self.nadh -= 1
 
-        # Simulate FADH2 donating electrons to complex II
+        # Complex II: FADH2 to Ubiquinone (no protons pumped)
         if self.fadh2 > 0:
-            self.proton_gradient += 6  # Complex II pumps fewer protons
             self.fadh2 -= 1
 
-        # Complex III and IV contribution to proton gradient
-        self.proton_gradient += 4  # Additional protons from complexes III and IV
+        # Complex III: Ubiquinol to Cytochrome c
+        protons_pumped = min(4, 2)  # 2 H+ per cycle, max 4
+        self.proton_gradient += protons_pumped
+
+        # Complex IV: Cytochrome c to Oxygen
+        protons_pumped = min(4, 2)  # 2 H+ per 1/2 O2 reduced, max 4
+        self.proton_gradient += protons_pumped
+
+        print(f"Proton gradient after ETC: {self.proton_gradient}")
 
     def glycolysis(self, glucose_amount: int) -> int:
         """
@@ -90,11 +87,12 @@ class Mitochondrion(Organelle):
         Simulates the Krebs cycle processing of pyruvate.
         """
         print(f"Krebs cycle processing {pyruvate_amount} units of pyruvate")
-        # Simplify: Produce 1 ATP per pyruvate
-        atp_produced = pyruvate_amount * 1
-        self.atp += atp_produced
-        # Produce NADH and FADH2 (not detailed here)
-        return
+        for _ in range(pyruvate_amount):
+            self.atp += 1  # 1 ATP (or GTP) per pyruvate
+            self.nadh += 4  # 3 NADH from Krebs cycle + 1 from pyruvate dehydrogenase
+            self.fadh2 += 1  # 1 FADH2 per pyruvate
+
+        print(f"After Krebs cycle: ATP: {self.atp}, NADH: {self.nadh}, FADH2: {self.fadh2}")
 
     def oxidative_phosphorylation(self) -> None:
         """
