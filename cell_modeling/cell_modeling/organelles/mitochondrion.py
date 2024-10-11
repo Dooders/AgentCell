@@ -47,6 +47,7 @@ class Mitochondrion(Organelle):
         self.fadh2 = 0
         self.proton_gradient = 0
         self.proton_leak_rate = 0.1  # 10% of protons leak per cycle
+        self.atp_synthase_efficiency = 0.8  # 80% efficiency in ATP production
 
     def electron_transport_chain(self) -> None:
         """
@@ -100,7 +101,7 @@ class Mitochondrion(Organelle):
     def oxidative_phosphorylation(self) -> None:
         """
         Simulates the oxidative phosphorylation process using the electron transport chain
-        and ATP synthase, including proton leak.
+        and ATP synthase, including proton leak and gradual ATP production.
         """
         print("Performing oxidative phosphorylation")
 
@@ -113,11 +114,15 @@ class Mitochondrion(Organelle):
         print(f"Protons leaked: {leaked_protons}")
 
         # Simulate ATP synthase using the proton gradient
-        atp_produced = self.proton_gradient // 4  # Assume 4 protons needed per ATP
-        self.atp += atp_produced
-        self.proton_gradient %= 4  # Remaining protons after ATP synthesis
+        total_atp_produced = 0
+        while self.proton_gradient >= 4:  # Minimum protons needed for ATP production
+            protons_used = 4
+            atp_produced = 1 * self.atp_synthase_efficiency  # Consider efficiency
+            self.atp += atp_produced
+            total_atp_produced += atp_produced
+            self.proton_gradient -= protons_used
 
-        print(f"ATP produced in this cycle: {atp_produced}")
+        print(f"ATP produced in this cycle: {total_atp_produced:.2f}")
         print(f"Remaining proton gradient: {self.proton_gradient}")
 
     def produce_atp(self, glucose_amount: int) -> int:
