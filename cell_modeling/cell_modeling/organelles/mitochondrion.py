@@ -46,6 +46,7 @@ class Mitochondrion(Organelle):
         self.nadh = 0
         self.fadh2 = 0
         self.proton_gradient = 0
+        self.proton_leak_rate = 0.1  # 10% of protons leak per cycle
 
     def electron_transport_chain(self) -> None:
         """
@@ -92,17 +93,24 @@ class Mitochondrion(Organelle):
             self.nadh += 4  # 3 NADH from Krebs cycle + 1 from pyruvate dehydrogenase
             self.fadh2 += 1  # 1 FADH2 per pyruvate
 
-        print(f"After Krebs cycle: ATP: {self.atp}, NADH: {self.nadh}, FADH2: {self.fadh2}")
+        print(
+            f"After Krebs cycle: ATP: {self.atp}, NADH: {self.nadh}, FADH2: {self.fadh2}"
+        )
 
     def oxidative_phosphorylation(self) -> None:
         """
         Simulates the oxidative phosphorylation process using the electron transport chain
-        and ATP synthase.
+        and ATP synthase, including proton leak.
         """
         print("Performing oxidative phosphorylation")
 
         # Run the electron transport chain
         self.electron_transport_chain()
+
+        # Simulate proton leak
+        leaked_protons = int(self.proton_gradient * self.proton_leak_rate)
+        self.proton_gradient -= leaked_protons
+        print(f"Protons leaked: {leaked_protons}")
 
         # Simulate ATP synthase using the proton gradient
         atp_produced = self.proton_gradient // 4  # Assume 4 protons needed per ATP
@@ -110,6 +118,7 @@ class Mitochondrion(Organelle):
         self.proton_gradient %= 4  # Remaining protons after ATP synthesis
 
         print(f"ATP produced in this cycle: {atp_produced}")
+        print(f"Remaining proton gradient: {self.proton_gradient}")
 
     def produce_atp(self, glucose_amount: int) -> int:
         pyruvate = self.glycolysis(glucose_amount)
