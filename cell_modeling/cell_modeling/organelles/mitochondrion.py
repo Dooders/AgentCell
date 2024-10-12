@@ -952,6 +952,100 @@ class Cell:
 
         return total_atp_produced
 
+    def produce_atp_generator(self, glucose, simulation_duration=SIMULATION_DURATION):
+        """Generator that yields the cell's state after each time step."""
+        initial_atp = (
+            self.cytoplasm.metabolites["atp"].quantity
+            + self.mitochondrion.metabolites["atp"].quantity
+        )
+        self.simulation_time = 0
+        total_atp_produced = 0
+        glucose_processed = 0
+
+        while (
+            glucose_processed < glucose and self.simulation_time < simulation_duration
+        ):
+            if self.mitochondrion.metabolites["oxygen"].quantity <= 0:
+                logger.warning("Oxygen depleted. Stopping simulation.")
+                break
+
+            # Check ADP availability
+            if self.mitochondrion.metabolites["adp"].quantity < 10:
+                logger.warning(
+                    "Low ADP levels in mitochondrion. Transferring ADP from cytoplasm."
+                )
+                adp_transfer = min(50, self.cytoplasm.metabolites["adp"].quantity)
+                self.mitochondrion.metabolites["adp"].quantity += adp_transfer
+                self.cytoplasm.metabolites["adp"].quantity -= adp_transfer
+
+            # Implement feedback activation
+            adp_activation_factor = 1 + self.cytoplasm.metabolites["adp"].quantity / 500
+            self.cytoplasm.glycolysis_rate *= adp_activation_factor
+
+            # Glycolysis with updated rate
+            pyruvate = self.cytoplasm.glycolysis(1 * self.cytoplasm.glycolysis_rate)
+            glucose_processed += 1 * self.cytoplasm.glycolysis_rate
+
+            # Calculate ATP produced in glycolysis
+            glycolysis_atp = (
+                self.cytoplasm.metabolites["atp"].quantity
+                - initial_atp
+                + self.mitochondrion.metabolites["atp"].quantity
+            )
+            total_atp_produced += glycolysis_atp
+
+            cytoplasmic_nadh = self.cytoplasm.metabolites["nadh"].quantity
+
+            # NADH shuttle
+            mitochondrial_nadh = self.mitochondrion.transfer_cytoplasmic_nadh(
+                cytoplasmic_nadh
+            )
+
+            # Cellular respiration in mitochondrion
+            mitochondrial_atp = self.mitochondrion.cellular_respiration(pyruvate)
+            total_atp_produced += mitochondrial_atp
+
+            # Transfer excess ATP from mitochondrion to cytoplasm
+            atp_transfer = max(0, self.mitochondrion.metabolites["atp"].quantity - 100)
+            self.cytoplasm.metabolites["atp"].quantity += atp_transfer
+            self.mitochondrion.metabolites["atp"].quantity -= atp_transfer
+
+            # Yield the current state of the cell
+            yield {
+                "simulation_time": self.simulation_time,
+                "glucose_processed": glucose_processed,
+                "total_atp_produced": total_atp_produced,
+                "cytoplasm_atp": self.cytoplasm.metabolites["atp"].quantity,
+                "mitochondrion_atp": self.mitochondrion.metabolites["atp"].quantity,
+                "cytoplasm_nadh": self.cytoplasm.metabolites["nadh"].quantity,
+                "mitochondrion_nadh": self.mitochondrion.metabolites["nadh"].quantity,
+                "mitochondrion_fadh2": self.mitochondrion.metabolites["fadh2"].quantity,
+                "mitochondrial_calcium": self.mitochondrion.metabolites[
+                    "calcium"
+                ].quantity,
+                "cytoplasmic_calcium": self.cytoplasmic_calcium.quantity,
+                "proton_gradient": self.mitochondrion.proton_gradient,
+                "oxygen_remaining": self.mitochondrion.metabolites["oxygen"].quantity,
+            }
+
+            self.simulation_time += self.time_step
+
+        # Final yield after the simulation completes
+        yield {
+            "simulation_time": self.simulation_time,
+            "glucose_processed": glucose_processed,
+            "total_atp_produced": total_atp_produced,
+            "cytoplasm_atp": self.cytoplasm.metabolites["atp"].quantity,
+            "mitochondrion_atp": self.mitochondrion.metabolites["atp"].quantity,
+            "cytoplasm_nadh": self.cytoplasm.metabolites["nadh"].quantity,
+            "mitochondrion_nadh": self.mitochondrion.metabolites["nadh"].quantity,
+            "mitochondrion_fadh2": self.mitochondrion.metabolites["fadh2"].quantity,
+            "mitochondrial_calcium": self.mitochondrion.metabolites["calcium"].quantity,
+            "cytoplasmic_calcium": self.cytoplasmic_calcium.quantity,
+            "proton_gradient": self.mitochondrion.proton_gradient,
+            "oxygen_remaining": self.mitochondrion.metabolites["oxygen"].quantity,
+        }
+
     def reset(self):
         """Reset the entire cell state."""
         self.cytoplasm.reset()
@@ -976,26 +1070,32 @@ if __name__ == "__main__":
 
     for glucose in glucose_amounts:
         logger.info(f"\nSimulating ATP production with {glucose} glucose units:")
-        atp_produced = cell.produce_atp(glucose, simulation_duration)
 
-        # Log the current state of the cell
-        logger.info(f"Cytoplasm ATP: {cell.cytoplasm.metabolites['atp'].quantity}")
-        logger.info(f"Cytoplasm NADH: {cell.cytoplasm.metabolites['nadh'].quantity}")
-        logger.info(
-            f"Mitochondrion ATP: {cell.mitochondrion.metabolites['atp'].quantity}"
-        )
-        logger.info(
-            f"Mitochondrion NADH: {cell.mitochondrion.metabolites['nadh'].quantity}"
-        )
-        logger.info(
-            f"Mitochondrion FADH2: {cell.mitochondrion.metabolites['fadh2'].quantity}"
-        )
-        logger.info(f"Simulation time: {cell.simulation_time:.2f} seconds")
-        logger.info(
-            f"Mitochondrial Calcium: {cell.mitochondrion.metabolites['calcium'].quantity}"
-        )
-        logger.info(f"Cytoplasmic Calcium: {cell.cytoplasmic_calcium.quantity}")
-        logger.info(f"Proton Gradient: {cell.mitochondrion.proton_gradient:.2f}")
+        for state in cell.produce_atp_generator(glucose, simulation_duration):
+            # Log the current state of the cell at each time step
+            if state["simulation_time"] % 10 == 0:  # Log every 10 time steps
+                logger.info(f"Time: {state['simulation_time']:.2f} s")
+                logger.info(f"Glucose Processed: {state['glucose_processed']:.2f}")
+                logger.info(f"Total ATP Produced: {state['total_atp_produced']:.2f}")
+                logger.info(f"Cytoplasm ATP: {state['cytoplasm_atp']:.2f}")
+                logger.info(f"Mitochondrion ATP: {state['mitochondrion_atp']:.2f}")
+                logger.info(f"Proton Gradient: {state['proton_gradient']:.2f}")
+                logger.info(f"Oxygen Remaining: {state['oxygen_remaining']:.2f}")
+
+        # Log final state
+        logger.info(f"\nFinal State:")
+        logger.info(f"Simulation time: {state['simulation_time']:.2f} seconds")
+        logger.info(f"Glucose processed: {state['glucose_processed']:.2f}")
+        logger.info(f"Total ATP produced: {state['total_atp_produced']:.2f}")
+        logger.info(f"Cytoplasm ATP: {state['cytoplasm_atp']:.2f}")
+        logger.info(f"Mitochondrion ATP: {state['mitochondrion_atp']:.2f}")
+        logger.info(f"Cytoplasm NADH: {state['cytoplasm_nadh']:.2f}")
+        logger.info(f"Mitochondrion NADH: {state['mitochondrion_nadh']:.2f}")
+        logger.info(f"Mitochondrion FADH2: {state['mitochondrion_fadh2']:.2f}")
+        logger.info(f"Mitochondrial Calcium: {state['mitochondrial_calcium']:.2f}")
+        logger.info(f"Cytoplasmic Calcium: {state['cytoplasmic_calcium']:.2f}")
+        logger.info(f"Proton Gradient: {state['proton_gradient']:.2f}")
+        logger.info(f"Oxygen Remaining: {state['oxygen_remaining']:.2f}")
 
         # Reset the cell for the next simulation
         cell.reset()
