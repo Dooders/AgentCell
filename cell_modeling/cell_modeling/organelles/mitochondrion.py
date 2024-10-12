@@ -11,8 +11,14 @@ logger = logging.getLogger(__name__)
 
 class Organelle:
     def __init__(self):
-        self.logger = logging.getLogger(self.__class__.__name__)
         self.metabolites: Dict[str, Metabolite] = {}
+        self.add_metabolite("glucose", 0, 1000)
+        self.add_metabolite("atp", 100, 1000)  # Start with some ATP
+        self.add_metabolite("adp", 0, 1000)
+        self.add_metabolite("nad", 10, 1000)
+        self.add_metabolite("nadh", 0, 1000)
+        self.add_metabolite("pyruvate", 0, 1000)
+        self.glycolysis_rate = 1.0
 
     def add_metabolite(self, name: str, quantity: int, max_quantity: int):
         self.metabolites[name] = Metabolite(name, quantity, max_quantity)
@@ -24,20 +30,17 @@ class Organelle:
                 0, min(metabolite.quantity + amount, metabolite.max_quantity)
             )
         else:
-            self.logger.warning(f"Unknown metabolite: {metabolite_name}")
+            raise ValueError(f"Unknown metabolite: {metabolite_name}")
 
     def is_metabolite_available(self, metabolite: str, amount: float) -> bool:
-        """Check if a metabolite is available in sufficient quantity."""
         if metabolite in self.metabolites:
             return self.metabolites[metabolite].quantity >= amount
         elif metabolite in self.cofactors:
             return self.cofactors[metabolite] >= amount
         else:
-            self.logger.warning(f"Unknown metabolite: {metabolite}")
-            return False
+            raise ValueError(f"Unknown metabolite: {metabolite}")
 
     def consume_metabolites(self, **metabolites: Dict[str, float]):
-        """Consume multiple metabolites at once."""
         for metabolite, amount in metabolites.items():
             if self.is_metabolite_available(metabolite, amount):
                 if metabolite in self.metabolites:
@@ -45,19 +48,17 @@ class Organelle:
                 elif metabolite in self.cofactors:
                     self.cofactors[metabolite] -= amount
             else:
-                logger.warning(f"Insufficient {metabolite} for reaction")
-                return False
+                raise ValueError(f"Insufficient {metabolite} for reaction")
         return True
 
     def produce_metabolites(self, **metabolites: Dict[str, float]):
-        """Produce multiple metabolites at once."""
         for metabolite, amount in metabolites.items():
             if metabolite in self.metabolites:
                 self.metabolites[metabolite].quantity += amount
             elif metabolite in self.cofactors:
                 self.cofactors[metabolite] += amount
             else:
-                logger.warning(f"Unknown metabolite: {metabolite}")
+                raise ValueError(f"Unknown metabolite: {metabolite}")
 
 
 @dataclass
@@ -121,42 +122,52 @@ class GlycolysisSteps(Enum):
     STEP10_PYRUVATE_KINASE = "Pyruvate Kinase"
 
 
+class GlycolysisError(Exception):
+    pass
+
+
 class Cytoplasm(Organelle):
     def __init__(self):
         super().__init__()
-        self.add_metabolite("glucose", 0, 1000)
-        self.add_metabolite("atp", 0, 1000)
-        self.add_metabolite("adp", 0, 1000)
-        self.add_metabolite("nad", 10, 1000)  # Starting NAD+ molecules
+        self.add_metabolite("glucose", 100, 1000)  # Start with some glucose
+        self.add_metabolite("atp", 100, 1000)  # Start with some ATP
+        self.add_metabolite("adp", 100, 1000)  # Start with some ADP
+        self.add_metabolite("nad", 100, 1000)
         self.add_metabolite("nadh", 0, 1000)
         self.add_metabolite("pyruvate", 0, 1000)
-        self.glycolysis_rate = 1.0  # Base glycolysis rate
+        self.glycolysis_rate = 1.0
 
     def glycolysis(self, glucose_units):
-        """
-        Models glycolysis in a step-wise manner, including ATP and NADH
-        production.
-        """
-        self.change_metabolite_quantity("glucose", glucose_units)
-        logger.info(
-            f"Starting glycolysis with {self.get_metabolite_quantity('glucose')} units of glucose"
-        )
+        try:
+            # Check if there's enough glucose
+            if not self.is_metabolite_available("glucose", glucose_units):
+                raise ValueError("Insufficient glucose for glycolysis")
 
-        for step in GlycolysisSteps:
-            getattr(self, f"{step.name.lower()}")()
+            self.change_metabolite_quantity("glucose", -glucose_units)
+            for step in GlycolysisSteps:
+                getattr(self, f"{step.name.lower()}")()
+            return self.get_metabolite_quantity("pyruvate")
+        except ValueError as e:
+            # Handle the exception or re-raise it
+            raise GlycolysisError(f"Glycolysis failed: {str(e)}")
 
-        logger.info(
-            f"Glycolysis complete. Produced {self.get_metabolite_quantity('pyruvate')} pyruvate molecules"
-        )
-        return self.get_metabolite_quantity("pyruvate")
+    def ensure_metabolite_availability(self, metabolite: str, amount: float):
+        if not self.is_metabolite_available(metabolite, amount):
+            if metabolite == "atp" and self.is_metabolite_available("adp", amount):
+                self.change_metabolite_quantity("adp", -amount)
+                self.change_metabolite_quantity("atp", amount)
+            elif metabolite == "adp" and self.is_metabolite_available("atp", amount):
+                self.change_metabolite_quantity("atp", -amount)
+                self.change_metabolite_quantity("adp", amount)
+            else:
+                raise ValueError(f"Insufficient {metabolite} for reaction")
 
     def is_metabolite_available(self, metabolite: str, amount: float) -> bool:
         """Check if a metabolite is available in sufficient quantity."""
         if metabolite in self.metabolites:
             return self.metabolites[metabolite].quantity >= amount
         else:
-            logger.warning(f"Unknown metabolite: {metabolite}")
-            return False
+            raise ValueError(f"Unknown metabolite: {metabolite}")
 
     def consume_metabolites(self, **metabolites: Dict[str, float]):
         """Consume multiple metabolites at once."""
@@ -164,8 +175,7 @@ class Cytoplasm(Organelle):
             if self.is_metabolite_available(metabolite, amount):
                 self.metabolites[metabolite].quantity -= amount
             else:
-                logger.warning(f"Insufficient {metabolite} for reaction")
-                return False
+                raise ValueError(f"Insufficient {metabolite} for reaction")
         return True
 
     def produce_metabolites(self, **metabolites: Dict[str, float]):
@@ -174,74 +184,56 @@ class Cytoplasm(Organelle):
             self.metabolites[metabolite].quantity += amount
 
     def step1_hexokinase(self):
+        self.ensure_metabolite_availability("atp", 1)
         if self.consume_metabolites(glucose=1, atp=1):
             self.produce_metabolites(adp=1)
-            logger.info(
-                f"Step 1: {GlycolysisSteps.STEP1_HEXOKINASE.value} - Glucose phosphorylation"
-            )
+        else:
+            raise ValueError("Insufficient glucose or ATP for hexokinase step")
 
     def step2_phosphoglucose_isomerase(self):
-        logger.info(
-            f"Step 2: {GlycolysisSteps.STEP2_PHOSPHOGLUCOSE_ISOMERASE.value} - Isomerization"
-        )
+        pass
 
     def step3_phosphofructokinase(self):
+        self.ensure_metabolite_availability("atp", 1)
         if self.consume_metabolites(atp=1):
             self.produce_metabolites(adp=1)
-            logger.info(
-                f"Step 3: {GlycolysisSteps.STEP3_PHOSPHOFRUCTOKINASE.value} - Phosphorylation"
-            )
 
     def step4_aldolase(self):
-        logger.info(
-            f"Step 4: {GlycolysisSteps.STEP4_ALDOLASE.value} - Splitting fructose-1,6-bisphosphate"
-        )
+        pass
 
     def step5_triose_phosphate_isomerase(self):
-        logger.info(
-            f"Step 5: {GlycolysisSteps.STEP5_TRIOSE_PHOSPHATE_ISOMERASE.value} - Isomerization"
-        )
+        pass
 
     def step6_glyceraldehyde_3_phosphate_dehydrogenase(self):
+        self.ensure_metabolite_availability("nad", 2)
         if self.consume_metabolites(nad=2):
             self.produce_metabolites(nadh=2)
-            logger.info(
-                f"Step 6: {GlycolysisSteps.STEP6_GLYCERALDEHYDE_3_PHOSPHATE_DEHYDROGENASE.value} - Oxidation and phosphorylation"
-            )
 
     def step7_phosphoglycerate_kinase(self):
+        self.ensure_metabolite_availability("adp", 2)
         if self.consume_metabolites(adp=2):
             self.produce_metabolites(atp=2)
-            logger.info(
-                f"Step 7: {GlycolysisSteps.STEP7_PHOSPHOGLYCERATE_KINASE.value} - ATP generation"
-            )
 
     def step8_phosphoglycerate_mutase(self):
-        logger.info(
-            f"Step 8: {GlycolysisSteps.STEP8_PHOSPHOGLYCERATE_MUTASE.value} - Shifting phosphate group"
-        )
+        pass
 
     def step9_enolase(self):
-        logger.info(f"Step 9: {GlycolysisSteps.STEP9_ENOLASE.value} - Dehydration")
+        pass
 
     def step10_pyruvate_kinase(self):
+        self.ensure_metabolite_availability("adp", 2)
         if self.consume_metabolites(adp=2):
             self.produce_metabolites(atp=2, pyruvate=2)
-            logger.info(
-                f"Step 10: {GlycolysisSteps.STEP10_PYRUVATE_KINASE.value} - ATP generation and pyruvate formation"
-            )
 
     def reset(self):
         self.__init__()
-        logger.info("Cytoplasm state reset")
 
     def get_metabolite_quantity(self, metabolite_name: str) -> int:
         """Get the quantity of a specific metabolite."""
         if metabolite_name in self.metabolites:
             return self.metabolites[metabolite_name].quantity
         else:
-            logger.warning(f"Unknown metabolite: {metabolite_name}")
-            return 0
+            raise ValueError(f"Unknown metabolite: {metabolite_name}")
 
 
 class Mitochondrion(Organelle):
@@ -948,6 +940,7 @@ class KrebsCycle(Organelle):
 class Cell:
     def __init__(self):
         self.cytoplasm = Cytoplasm()
+        # The Cytoplasm now initializes with some glucose, ATP, and ADP
         self.mitochondrion = Mitochondrion()
         self.krebs_cycle = KrebsCycle()
         self.simulation_time = 0
