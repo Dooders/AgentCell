@@ -28,6 +28,37 @@ from organelle import Organelle
 logger = logging.getLogger(__name__)
 
 
+class Cytoplasm:
+    def __init__(self):
+        self.glucose = 0
+        self.pyruvate = 0
+        self.atp = 0
+        self.nadh = 0
+
+    def glycolysis(self, glucose_amount: int) -> int:
+        """
+        Simulates the glycolysis of glucose in the cytoplasm.
+
+        Parameters
+        ----------
+        glucose_amount : int
+            The amount of glucose to be glycolysed.
+
+        Returns
+        -------
+        int
+            The amount of pyruvate produced.
+        """
+        logger.info(f"Glycolysis of {glucose_amount} units of glucose in cytoplasm")
+        # Net ATP production (2 ATP per glucose)
+        atp_produced = glucose_amount * 2
+        self.atp += atp_produced
+        # NADH production (2 NADH per glucose)
+        self.nadh += glucose_amount * 2
+        self.pyruvate += glucose_amount * 2
+        return self.pyruvate
+
+
 class Mitochondrion(Organelle):
     name = "Mitochondrion"
     """
@@ -165,33 +196,6 @@ class Mitochondrion(Organelle):
         # ROS clearance (simplified)
         self.ros_level = max(0, self.ros_level - random.uniform(0, 1))
 
-    def glycolysis(self, glucose_amount: int) -> int:
-        """
-        Simulates the glycolysis of glucose.
-
-        Glycolysis is the process of breaking down glucose into pyruvate,
-        producing 2 ATP per glucose molecule.
-
-        Parameters
-        ----------
-        glucose_amount : int
-            The amount of glucose to be glycolysed. Comes from the cytosol.
-            Comes from the mitochondrion.
-
-        Returns
-        -------
-        int
-            The amount of pyruvate produced. Used for the Krebs cycle.
-        """
-        logger.info(f"Glycolysis of {glucose_amount} units of glucose")
-        # Net ATP production (2 ATP per glucose)
-        atp_produced = glucose_amount * 2
-        self.atp += atp_produced
-        # NADH production (2 NADH per glucose)
-        self.nadh = min(self.nadh + glucose_amount * 2, self.nadh_max)
-        pyruvate = glucose_amount * 2
-        return pyruvate
-
     def krebs_cycle(self, pyruvate_amount: int) -> None:
         """
         Simulates the Krebs cycle processing of pyruvate.
@@ -263,27 +267,17 @@ class Mitochondrion(Organelle):
         self.fadh2 = min(self.fadh2 + self.fadh2_production_rate, self.fadh2_max)
         logger.debug(f"Updated NADH: {self.nadh}, FADH2: {self.fadh2}")
 
-    def produce_atp(self, glucose_amount: int) -> int:
+    def process_pyruvate(self, pyruvate_amount: int) -> None:
         """
-        Simulates the production of ATP from glucose over multiple time steps.
+        Processes pyruvate received from glycolysis in the cytoplasm.
+
+        Parameters
+        ----------
+        pyruvate_amount : int
+            The amount of pyruvate to be processed.
         """
-        initial_atp = self.atp
-        pyruvate: int = self.glycolysis(glucose_amount)
-        self.krebs_cycle(pyruvate)
-
-        oxygen_consumed = glucose_amount * self.oxygen_uptake_rate
-        self.update_oxygen(-oxygen_consumed)
-
-        for _ in range(10):
-            self.time_step += 1
-            self.oxidative_phosphorylation()
-            # Replenish some NADH and FADH2 to allow for continued ATP production
-            self.nadh = min(self.nadh + self.nadh_production_rate, self.nadh_max)
-            self.fadh2 = min(self.fadh2 + self.fadh2_production_rate, self.fadh2_max)
-
-        atp_produced = self.atp - initial_atp
-        logger.info(f"Total ATP produced: {atp_produced}")
-        return atp_produced
+        logger.info(f"Processing {pyruvate_amount} units of pyruvate from cytoplasm")
+        self.krebs_cycle(pyruvate_amount)
 
     def function(self) -> str:
         """
@@ -297,6 +291,33 @@ class Mitochondrion(Organelle):
         return "Produce energy through cellular respiration"
 
 
+class Cell:
+    def __init__(self):
+        self.cytoplasm = Cytoplasm()
+        self.mitochondrion = Mitochondrion()
+
+    def produce_atp(self, glucose_amount: int) -> int:
+        """
+        Simulates the production of ATP from glucose in the entire cell.
+        """
+        initial_atp = self.cytoplasm.atp + self.mitochondrion.atp
+
+        # Glycolysis in cytoplasm
+        pyruvate = self.cytoplasm.glycolysis(glucose_amount)
+
+        # Transfer pyruvate to mitochondrion
+        self.mitochondrion.process_pyruvate(pyruvate)
+
+        # Oxidative phosphorylation in mitochondrion
+        for _ in range(10):
+            self.mitochondrion.oxidative_phosphorylation()
+            self.mitochondrion.update_nadh_fadh2()
+
+        total_atp = self.cytoplasm.atp + self.mitochondrion.atp - initial_atp
+        logger.info(f"Total ATP produced in the cell: {total_atp}")
+        return total_atp
+
+
 # Simulation code
 if __name__ == "__main__":
     # Set up logging configuration
@@ -305,36 +326,33 @@ if __name__ == "__main__":
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    # Create a Mitochondrion instance
-    mito = Mitochondrion()
+    # Create a Cell instance
+    cell = Cell()
 
     # Simulate ATP production with different amounts of glucose
     glucose_amounts = [1, 2, 5, 10]
 
     for glucose in glucose_amounts:
         logger.info(f"\nSimulating ATP production with {glucose} glucose units:")
-        initial_atp = mito.atp
-        mito.produce_atp(glucose)
+        cell.produce_atp(glucose)
 
-        # Log the current state of the mitochondrion
-        logger.info(f"ATP produced: {mito.atp - initial_atp}")
-        logger.info(f"Remaining NADH: {mito.nadh}")
-        logger.info(f"Remaining FADH2: {mito.fadh2}")
-        logger.info(f"Remaining proton gradient: {mito.proton_gradient}")
-        logger.info(f"Remaining oxygen: {mito.oxygen}")
-        logger.info(f"ROS level: {mito.ros_level}")
-        logger.info(f"ROS damage: {mito.ros_damage}")
-        logger.info(f"Proton pump efficiency: {mito.proton_pump_efficiency}")
+        # Log the current state of the cell
+        logger.info(f"Cytoplasm ATP: {cell.cytoplasm.atp}")
+        logger.info(f"Cytoplasm NADH: {cell.cytoplasm.nadh}")
+        logger.info(f"Mitochondrion ATP: {cell.mitochondrion.atp}")
+        logger.info(f"Mitochondrion NADH: {cell.mitochondrion.nadh}")
+        logger.info(f"Mitochondrion FADH2: {cell.mitochondrion.fadh2}")
+        logger.info(
+            f"Mitochondrion proton gradient: {cell.mitochondrion.proton_gradient}"
+        )
+        logger.info(f"Mitochondrion oxygen: {cell.mitochondrion.oxygen}")
+        logger.info(f"Mitochondrion ROS level: {cell.mitochondrion.ros_level}")
+        logger.info(f"Mitochondrion ROS damage: {cell.mitochondrion.ros_damage}")
+        logger.info(
+            f"Mitochondrion proton pump efficiency: {cell.mitochondrion.proton_pump_efficiency}"
+        )
 
-        # Reset the mitochondrion for the next simulation
-        mito.atp = 0
-        mito.nadh = 0
-        mito.fadh2 = 0
-        mito.proton_gradient = 0
-        mito.oxygen = 100  # Reset oxygen level
-        mito.ros_level = 0  # Reset ROS level
-        mito.ros_damage = 0  # Reset ROS damage
-        mito.proton_pump_efficiency = 1.0  # Reset proton pump efficiency
-        mito.time_step = 0  # Reset time step
+        # Reset the cell for the next simulation
+        cell = Cell()
 
     logger.info("Simulation complete.")
