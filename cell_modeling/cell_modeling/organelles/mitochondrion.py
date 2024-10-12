@@ -126,6 +126,7 @@ class Mitochondrion:
         self.nadh = Metabolite("NADH", 0, 1000)
         self.fadh2 = Metabolite("FADH2", 0, 1000)
         self.atp = Metabolite("ATP", 0, 1000)
+        self.adp = Metabolite("ADP", 100, 1000)  # Add ADP
         self.oxygen = Metabolite("O2", 1000, 1000)  # Limited oxygen supply
         self.proton_gradient = 0
         self.co2 = Metabolite("CO2", 0, 1000000)  # Add CO2 metabolite
@@ -144,6 +145,10 @@ class Mitochondrion:
         self.leak_steepness = 0.1  # Steepness of the logistic curve
         self.leak_midpoint = 150  # Midpoint of the logistic curve
         self.krebs_cycle = KrebsCycle()
+        self.ubiquinone = Metabolite("Ubiquinone", 100, 1000)
+        self.ubiquinol = Metabolite("Ubiquinol", 0, 1000)
+        self.cytochrome_c_oxidized = Metabolite("Cytochrome c (oxidized)", 100, 1000)
+        self.cytochrome_c_reduced = Metabolite("Cytochrome c (reduced)", 0, 1000)
 
     def krebs_cycle_process(self, acetyl_coa_amount: int):
         """Processes acetyl-CoA through the Krebs cycle"""
@@ -189,9 +194,26 @@ class Mitochondrion:
 
     def cellular_respiration(self, pyruvate_amount: int):
         """Simulates the entire cellular respiration process"""
+        if self.oxygen.quantity <= 0:
+            logger.warning("No oxygen available. Cellular respiration halted.")
+            return 0
+
         acetyl_coa = self.pyruvate_to_acetyl_coa(pyruvate_amount)
         krebs_products = self.krebs_cycle_process(acetyl_coa)
+
+        # Transfer NADH and FADH2 from Krebs cycle to ETC
+        self.nadh.quantity += self.krebs_cycle.cofactors["nadh"]
+        self.fadh2.quantity += self.krebs_cycle.cofactors["fadh2"]
+
+        # Check ADP availability
+        if self.adp.quantity < 10:  # Arbitrary threshold
+            logger.warning("Low ADP levels. Oxidative phosphorylation may be limited.")
+
         atp_produced = self.oxidative_phosphorylation()
+
+        # Add ATP from substrate-level phosphorylation in Krebs cycle
+        atp_produced += self.krebs_cycle.cofactors["gtp"]  # GTP is equivalent to ATP
+
         return atp_produced
 
     def calculate_proton_leak(self):
@@ -212,77 +234,138 @@ class Mitochondrion:
         self.proton_gradient = max(0, self.proton_gradient - leak)
         logger.info(f"Proton gradient: {self.proton_gradient:.2f}, Leak: {leak:.2f}")
 
+    def complex_I(self):
+        """Simulates Complex I activity."""
+        if self.nadh.quantity > 0 and self.ubiquinone.quantity > 0:
+            reaction_rate = min(self.nadh.quantity, self.ubiquinone.quantity)
+            self.nadh.quantity -= reaction_rate
+            self.ubiquinone.quantity -= reaction_rate
+            self.ubiquinol.quantity += reaction_rate
+            self.proton_gradient += 4 * reaction_rate  # 4 H⁺ pumped per NADH
+            logger.info(
+                f"Complex I: Oxidized {reaction_rate} NADH, pumped {4 * reaction_rate} protons"
+            )
+            return reaction_rate
+        else:
+            logger.warning("Insufficient NADH or ubiquinone for Complex I")
+            return 0
+
+    def complex_II(self):
+        """Simulates Complex II activity."""
+        if self.fadh2.quantity > 0 and self.ubiquinone.quantity > 0:
+            reaction_rate = min(self.fadh2.quantity, self.ubiquinone.quantity)
+            self.fadh2.quantity -= reaction_rate
+            self.ubiquinone.quantity -= reaction_rate
+            self.ubiquinol.quantity += reaction_rate
+            logger.info(f"Complex II: Oxidized {reaction_rate} FADH2")
+            return reaction_rate
+        else:
+            logger.warning("Insufficient FADH2 or ubiquinone for Complex II")
+            return 0
+
+    def complex_III(self):
+        """Simulates Complex III activity."""
+        if self.ubiquinol.quantity > 0 and self.cytochrome_c_oxidized.quantity > 0:
+            reaction_rate = min(
+                self.ubiquinol.quantity, self.cytochrome_c_oxidized.quantity
+            )
+            self.ubiquinol.quantity -= reaction_rate
+            self.ubiquinone.quantity += reaction_rate
+            self.cytochrome_c_oxidized.quantity -= reaction_rate
+            self.cytochrome_c_reduced.quantity += reaction_rate
+            self.proton_gradient += 4 * reaction_rate  # 4 H⁺ pumped per electron pair
+            logger.info(
+                f"Complex III: Transferred {reaction_rate} electron pairs, pumped {4 * reaction_rate} protons"
+            )
+            return reaction_rate
+        else:
+            logger.warning("Insufficient ubiquinol or cytochrome c for Complex III")
+            return 0
+
+    def complex_IV(self):
+        """Simulates Complex IV activity."""
+        if self.cytochrome_c_reduced.quantity > 0 and self.oxygen.quantity > 0:
+            reaction_rate = min(
+                self.cytochrome_c_reduced.quantity, self.oxygen.quantity * 2
+            )  # 2 cytochrome c per O2
+            oxygen_consumed = reaction_rate // 2
+            self.cytochrome_c_reduced.quantity -= reaction_rate
+            self.cytochrome_c_oxidized.quantity += reaction_rate
+            self.oxygen.quantity -= oxygen_consumed
+            self.proton_gradient += 2 * reaction_rate  # 2 H⁺ pumped per electron pair
+            logger.info(
+                f"Complex IV: Consumed {oxygen_consumed} O2, pumped {2 * reaction_rate} protons"
+            )
+            return reaction_rate
+        else:
+            if self.oxygen.quantity <= 0:
+                logger.warning("Insufficient oxygen for Complex IV")
+            else:
+                logger.warning("Insufficient reduced cytochrome c for Complex IV")
+            return 0
+
+    def atp_synthase(self):
+        """Synthesizes ATP using the proton gradient."""
+        protons_required_per_atp = 4  # Approximate value
+        possible_atp = int(self.proton_gradient / protons_required_per_atp)
+        atp_produced = min(possible_atp, self.adp.quantity)
+        self.atp.quantity += atp_produced
+        self.adp.quantity -= atp_produced
+        self.proton_gradient -= atp_produced * protons_required_per_atp
+        logger.info(f"ATP Synthase: Produced {atp_produced} ATP")
+        return atp_produced
+
+    def replenish_ubiquinone(self):
+        """Replenishes ubiquinone from ubiquinol"""
+        replenish_amount = min(
+            self.ubiquinol.quantity,
+            self.ubiquinone.max_quantity - self.ubiquinone.quantity,
+        )
+        self.ubiquinone.quantity += replenish_amount
+        self.ubiquinol.quantity -= replenish_amount
+        logger.info(f"Replenished {replenish_amount} ubiquinone")
+
+    def replenish_cytochrome_c(self):
+        """Replenishes oxidized cytochrome c from reduced form"""
+        replenish_amount = min(
+            self.cytochrome_c_reduced.quantity,
+            self.cytochrome_c_oxidized.max_quantity
+            - self.cytochrome_c_oxidized.quantity,
+        )
+        self.cytochrome_c_oxidized.quantity += replenish_amount
+        self.cytochrome_c_reduced.quantity -= replenish_amount
+        logger.info(f"Replenished {replenish_amount} oxidized cytochrome c")
+
     def oxidative_phosphorylation(self, cytoplasmic_nadh_used: int = 0):
-        """Simulates oxidative phosphorylation with nonlinear proton leak."""
-        total_oxygen_required = (
-            self.nadh.quantity + cytoplasmic_nadh_used
-        ) * self.oxygen_per_nadh + self.fadh2.quantity * self.oxygen_per_fadh2
-        available_oxygen = min(self.oxygen.quantity, total_oxygen_required)
+        """Simulates oxidative phosphorylation with the electron transport chain."""
+        if self.oxygen.quantity <= 0:
+            logger.warning("No oxygen available. Oxidative phosphorylation halted.")
+            return 0
 
-        if available_oxygen < total_oxygen_required:
-            logger.warning("Not enough oxygen for complete oxidative phosphorylation")
+        total_nadh = self.nadh.quantity + cytoplasmic_nadh_used
 
-        oxygen_consumed = available_oxygen
-        self.oxygen.quantity -= oxygen_consumed
+        # Run the electron transport chain
+        electrons_through_complex_I = self.complex_I()
+        electrons_through_complex_II = self.complex_II()
+        electrons_through_complex_III = self.complex_III()
+        electrons_through_complex_IV = self.complex_IV()
 
-        # Calculate oxidation based on available oxygen
-        nadh_oxidized = min(
-            self.nadh.quantity, int(available_oxygen / self.oxygen_per_nadh)
-        )
-        available_oxygen -= nadh_oxidized * self.oxygen_per_nadh
+        # ATP production via ATP synthase
+        atp_produced = self.atp_synthase()
 
-        cytoplasmic_nadh_oxidized = min(
-            cytoplasmic_nadh_used, int(available_oxygen / self.oxygen_per_nadh)
-        )
-        available_oxygen -= cytoplasmic_nadh_oxidized * self.oxygen_per_nadh
+        # Replenish ubiquinone and cytochrome c
+        self.replenish_ubiquinone()
+        self.replenish_cytochrome_c()
 
-        fadh2_oxidized = min(
-            self.fadh2.quantity, int(available_oxygen / self.oxygen_per_fadh2)
-        )
+        # Calculate efficiency
+        total_electrons = electrons_through_complex_I + electrons_through_complex_II
+        if total_electrons > 0:
+            efficiency = atp_produced / total_electrons
+            logger.info(
+                f"Oxidative phosphorylation efficiency: {efficiency:.2f} ATP per electron pair"
+            )
 
-        # Calculate protons pumped
-        protons_pumped = (
-            nadh_oxidized + cytoplasmic_nadh_oxidized
-        ) * 10 + fadh2_oxidized * 6
-        self.update_proton_gradient(protons_pumped)
-
-        # Calculate ATP production based on proton gradient
-        atp_production_efficiency = min(
-            1, self.proton_gradient / self.max_proton_gradient
-        )
-
-        # Apply calcium-dependent boost
-        calcium_boost = 1 + (self.calcium.quantity / self.calcium.max_quantity) * (
-            self.calcium_boost_factor - 1
-        )
-
-        mitochondrial_nadh_atp = (
-            nadh_oxidized
-            * self.atp_per_nadh
-            * atp_production_efficiency
-            * calcium_boost
-        )
-        cytoplasmic_nadh_atp = (
-            cytoplasmic_nadh_oxidized
-            * (self.atp_per_nadh - 1)
-            * atp_production_efficiency
-            * calcium_boost
-        )
-        fadh2_atp = (
-            fadh2_oxidized
-            * self.atp_per_fadh2
-            * atp_production_efficiency
-            * calcium_boost
-        )
-        total_atp = int(mitochondrial_nadh_atp + cytoplasmic_nadh_atp + fadh2_atp)
-
-        self.atp.quantity = min(self.atp.quantity + total_atp, self.atp.max_quantity)
-        self.nadh.quantity -= nadh_oxidized
-        self.fadh2.quantity -= fadh2_oxidized
-
-        logger.info(f"ATP produced in oxidative phosphorylation: {total_atp}")
-        logger.info(f"Oxygen consumed: {oxygen_consumed}")
-        return total_atp
+        return atp_produced
 
     def buffer_calcium(self, cytoplasmic_calcium: int):
         """Simulates calcium buffering by the mitochondrion."""
@@ -577,6 +660,17 @@ class Cell:
                 logger.warning("Oxygen depleted. Stopping simulation.")
                 break
 
+            # Check ADP availability
+            if self.mitochondrion.adp.quantity < 10:  # Arbitrary threshold
+                logger.warning(
+                    "Low ADP levels in mitochondrion. Transferring ADP from cytoplasm."
+                )
+                adp_transfer = min(
+                    50, self.cytoplasm.adp.quantity
+                )  # Transfer up to 50 ADP
+                self.mitochondrion.adp.quantity += adp_transfer
+                self.cytoplasm.adp.quantity -= adp_transfer
+
             # Glycolysis
             pyruvate = self.cytoplasm.glycolysis(1)
             glucose_processed += 1
@@ -596,29 +690,16 @@ class Cell:
                 cytoplasmic_nadh
             )
 
-            # Pyruvate to Acetyl-CoA
-            acetyl_coa = self.mitochondrion.pyruvate_to_acetyl_coa(pyruvate)
+            # Cellular respiration in mitochondrion
+            mitochondrial_atp = self.mitochondrion.cellular_respiration(pyruvate)
+            total_atp_produced += mitochondrial_atp
 
-            # Calcium dynamics
-            calcium_to_buffer = min(10, self.cytoplasmic_calcium.quantity)
-            buffered_calcium = self.mitochondrion.buffer_calcium(calcium_to_buffer)
-            self.cytoplasmic_calcium.quantity -= buffered_calcium
-
-            # Simulate calcium release (e.g., every 10 time steps)
-            if int(self.simulation_time / self.time_step) % 10 == 0:
-                released_calcium = self.mitochondrion.release_calcium(5)
-                self.cytoplasmic_calcium.quantity = min(
-                    self.cytoplasmic_calcium.quantity + released_calcium,
-                    self.cytoplasmic_calcium.max_quantity,
-                )
-
-            # Krebs cycle
-            krebs_atp = self.mitochondrion.krebs_cycle_process(acetyl_coa)
-            total_atp_produced += krebs_atp
-
-            # Oxidative phosphorylation
-            ox_phos_atp = self.mitochondrion.oxidative_phosphorylation(cytoplasmic_nadh)
-            total_atp_produced += ox_phos_atp
+            # Transfer excess ATP from mitochondrion to cytoplasm
+            atp_transfer = max(
+                0, self.mitochondrion.atp.quantity - 100
+            )  # Keep 100 ATP in mitochondrion
+            self.cytoplasm.atp.quantity += atp_transfer
+            self.mitochondrion.atp.quantity -= atp_transfer
 
             self.simulation_time += self.time_step
 
