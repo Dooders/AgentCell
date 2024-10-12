@@ -23,6 +23,7 @@ import logging
 import math
 import time
 from dataclasses import dataclass
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +143,37 @@ class Mitochondrion:
         self.leak_rate = 0.1  # Base leak rate
         self.leak_steepness = 0.1  # Steepness of the logistic curve
         self.leak_midpoint = 150  # Midpoint of the logistic curve
+        self.krebs_cycle = KrebsCycle()
+
+    def krebs_cycle_process(self, acetyl_coa_amount: int):
+        """Processes acetyl-CoA through the Krebs cycle"""
+        logger.info(
+            f"Processing {acetyl_coa_amount} units of acetyl-CoA through the Krebs cycle"
+        )
+
+        self.krebs_cycle.add_substrate("acetyl_coa", acetyl_coa_amount)
+
+        # Ensure there's enough oxaloacetate to start the cycle
+        if self.krebs_cycle.metabolites["oxaloacetate"] < acetyl_coa_amount:
+            self.krebs_cycle.add_substrate(
+                "oxaloacetate",
+                acetyl_coa_amount - self.krebs_cycle.metabolites["oxaloacetate"],
+            )
+
+        for _ in range(acetyl_coa_amount):
+            self.krebs_cycle.run_cycle()
+
+        # Transfer the products to the mitochondrion
+        self.nadh.quantity += self.krebs_cycle.cofactors["nadh"]
+        self.fadh2.quantity += self.krebs_cycle.cofactors["fadh2"]
+        self.atp.quantity += self.krebs_cycle.cofactors[
+            "gtp"
+        ]  # GTP is equivalent to ATP
+
+        # Reset the Krebs cycle for the next round
+        self.krebs_cycle.reset()
+
+        return self.krebs_cycle.cofactors["nadh"] + self.krebs_cycle.cofactors["fadh2"]
 
     def pyruvate_to_acetyl_coa(self, pyruvate_amount: int) -> int:
         """Converts pyruvate to acetyl-CoA."""
@@ -152,33 +184,15 @@ class Mitochondrion:
         )
         self.co2.quantity = min(
             self.co2.quantity + pyruvate_amount, self.co2.max_quantity
-        )  # Add CO2 production
+        )
         return acetyl_coa_produced
 
-    def krebs_cycle(self, acetyl_coa_amount: int):
-        """Simulates the Krebs cycle with calcium-dependent boost."""
-        logger.info(f"Krebs cycle processing {acetyl_coa_amount} units of acetyl-CoA")
-        # Apply calcium-dependent boost
-        calcium_boost = 1 + (self.calcium.quantity / self.calcium.max_quantity) * (
-            self.calcium_boost_factor - 1
-        )
-
-        for _ in range(acetyl_coa_amount):
-            self.atp.quantity = min(
-                self.atp.quantity
-                + self.atp_per_substrate_phosphorylation * calcium_boost,
-                self.atp.max_quantity,
-            )
-            self.nadh.quantity = min(
-                self.nadh.quantity + 3 * calcium_boost, self.nadh.max_quantity
-            )
-            self.fadh2.quantity = min(
-                self.fadh2.quantity + 1 * calcium_boost, self.fadh2.max_quantity
-            )
-
-        return (
-            acetyl_coa_amount * self.atp_per_substrate_phosphorylation * calcium_boost
-        )
+    def cellular_respiration(self, pyruvate_amount: int):
+        """Simulates the entire cellular respiration process"""
+        acetyl_coa = self.pyruvate_to_acetyl_coa(pyruvate_amount)
+        krebs_products = self.krebs_cycle_process(acetyl_coa)
+        atp_produced = self.oxidative_phosphorylation()
+        return atp_produced
 
     def calculate_proton_leak(self):
         """Calculate the proton leak using a logistic function."""
@@ -313,6 +327,234 @@ class Mitochondrion:
         return mitochondrial_nadh
 
 
+class KrebsCycle:
+    def __init__(self):
+        self.metabolites: Dict[str, float] = {
+            "acetyl_coa": 0,
+            "oxaloacetate": 0,
+            "citrate": 0,
+            "isocitrate": 0,
+            "alpha_ketoglutarate": 0,
+            "succinyl_coa": 0,
+            "succinate": 0,
+            "fumarate": 0,
+            "malate": 0,
+        }
+        self.cofactors = {
+            "nad": 100,
+            "nadh": 0,
+            "fad": 100,
+            "fadh2": 0,
+            "coenzyme_a": 100,
+            "atp": 100,
+            "adp": 0,
+            "gtp": 0,
+            "gdp": 0,
+            "co2": 0,
+        }
+
+    def michaelis_menten(self, substrate_conc: float, vmax: float, km: float) -> float:
+        return (vmax * substrate_conc) / (km + substrate_conc)
+
+    def step1_citrate_synthase(self):
+        """Acetyl-CoA + Oxaloacetate to Citrate"""
+        substrate_conc = min(
+            self.metabolites["acetyl_coa"], self.metabolites["oxaloacetate"]
+        )
+        vmax = 1.0  # Placeholder value
+        km = 0.1  # Placeholder value
+
+        reaction_rate = self.michaelis_menten(substrate_conc, vmax, km)
+
+        if (
+            self.metabolites["acetyl_coa"] >= reaction_rate
+            and self.metabolites["oxaloacetate"] >= reaction_rate
+        ):
+            self.metabolites["acetyl_coa"] -= reaction_rate
+            self.metabolites["oxaloacetate"] -= reaction_rate
+            self.metabolites["citrate"] += reaction_rate
+            self.cofactors["coenzyme_a"] += reaction_rate
+        else:
+            logger.warning("Insufficient substrates for step 1")
+
+    def step2_aconitase(self):
+        """Citrate to Isocitrate"""
+        substrate_conc = self.metabolites["citrate"]
+        vmax = 1.0  # Placeholder value
+        km = 0.1  # Placeholder value
+
+        reaction_rate = self.michaelis_menten(substrate_conc, vmax, km)
+
+        if self.metabolites["citrate"] >= reaction_rate:
+            self.metabolites["citrate"] -= reaction_rate
+            self.metabolites["isocitrate"] += reaction_rate
+        else:
+            logger.warning("Insufficient citrate for step 2")
+
+    def step3_isocitrate_dehydrogenase(self):
+        """Isocitrate to α-Ketoglutarate"""
+        substrate_conc = self.metabolites["isocitrate"]
+        vmax = 1.0  # Placeholder value
+        km = 0.1  # Placeholder value
+
+        # Enzyme regulation
+        atp_inhibition = self.cofactors["atp"] / 100
+        nadh_inhibition = self.cofactors["nadh"] / 100
+        enzyme_activity = 1 - (atp_inhibition + nadh_inhibition) / 2
+
+        reaction_rate = self.michaelis_menten(
+            substrate_conc, vmax * enzyme_activity, km
+        )
+
+        if (
+            self.metabolites["isocitrate"] >= reaction_rate
+            and self.cofactors["nad"] >= reaction_rate
+        ):
+            self.metabolites["isocitrate"] -= reaction_rate
+            self.metabolites["alpha_ketoglutarate"] += reaction_rate
+            self.cofactors["nad"] -= reaction_rate
+            self.cofactors["nadh"] += reaction_rate
+            self.cofactors["co2"] += reaction_rate
+        else:
+            logger.warning("Insufficient substrates or NAD⁺ for step 3")
+
+    def step4_alpha_ketoglutarate_dehydrogenase(self):
+        """α-Ketoglutarate to Succinyl-CoA"""
+        substrate_conc = self.metabolites["alpha_ketoglutarate"]
+        vmax = 1.0  # Placeholder value
+        km = 0.1  # Placeholder value
+
+        # Enzyme regulation
+        atp_inhibition = self.cofactors["atp"] / 100
+        nadh_inhibition = self.cofactors["nadh"] / 100
+        succinyl_coa_inhibition = (
+            self.metabolites["succinyl_coa"] / 10
+        )  # Assuming max succinyl-CoA is 10
+        enzyme_activity = (
+            1 - (atp_inhibition + nadh_inhibition + succinyl_coa_inhibition) / 3
+        )
+
+        reaction_rate = self.michaelis_menten(
+            substrate_conc, vmax * enzyme_activity, km
+        )
+
+        if (
+            self.metabolites["alpha_ketoglutarate"] >= reaction_rate
+            and self.cofactors["nad"] >= reaction_rate
+        ):
+            self.metabolites["alpha_ketoglutarate"] -= reaction_rate
+            self.metabolites["succinyl_coa"] += reaction_rate
+            self.cofactors["nad"] -= reaction_rate
+            self.cofactors["nadh"] += reaction_rate
+            self.cofactors["co2"] += reaction_rate
+        else:
+            logger.warning("Insufficient substrates or NAD⁺ for step 4")
+
+    def step5_succinyl_coa_synthetase(self):
+        """Succinyl-CoA to Succinate"""
+        substrate_conc = self.metabolites["succinyl_coa"]
+        vmax = 1.0  # Placeholder value
+        km = 0.1  # Placeholder value
+
+        reaction_rate = self.michaelis_menten(substrate_conc, vmax, km)
+
+        if (
+            self.metabolites["succinyl_coa"] >= reaction_rate
+            and self.cofactors["gdp"] >= reaction_rate
+        ):
+            self.metabolites["succinyl_coa"] -= reaction_rate
+            self.metabolites["succinate"] += reaction_rate
+            self.cofactors["gdp"] -= reaction_rate
+            self.cofactors["gtp"] += reaction_rate
+            self.cofactors["coenzyme_a"] += reaction_rate
+        else:
+            logger.warning("Insufficient substrates or GDP for step 5")
+
+    def step6_succinate_dehydrogenase(self):
+        """Succinate to Fumarate"""
+        substrate_conc = self.metabolites["succinate"]
+        vmax = 1.0  # Placeholder value
+        km = 0.1  # Placeholder value
+
+        reaction_rate = self.michaelis_menten(substrate_conc, vmax, km)
+
+        if (
+            self.metabolites["succinate"] >= reaction_rate
+            and self.cofactors["fad"] >= reaction_rate
+        ):
+            self.metabolites["succinate"] -= reaction_rate
+            self.metabolites["fumarate"] += reaction_rate
+            self.cofactors["fad"] -= reaction_rate
+            self.cofactors["fadh2"] += reaction_rate
+        else:
+            logger.warning("Insufficient substrates or FAD for step 6")
+
+    def step7_fumarase(self):
+        """Fumarate to Malate"""
+        substrate_conc = self.metabolites["fumarate"]
+        vmax = 1.0  # Placeholder value
+        km = 0.1  # Placeholder value
+
+        reaction_rate = self.michaelis_menten(substrate_conc, vmax, km)
+
+        if self.metabolites["fumarate"] >= reaction_rate:
+            self.metabolites["fumarate"] -= reaction_rate
+            self.metabolites["malate"] += reaction_rate
+        else:
+            logger.warning("Insufficient fumarate for step 7")
+
+    def step8_malate_dehydrogenase(self):
+        """Malate to Oxaloacetate"""
+        substrate_conc = self.metabolites["malate"]
+        vmax = 1.0  # Placeholder value
+        km = 0.1  # Placeholder value
+
+        reaction_rate = self.michaelis_menten(substrate_conc, vmax, km)
+
+        if (
+            self.metabolites["malate"] >= reaction_rate
+            and self.cofactors["nad"] >= reaction_rate
+        ):
+            self.metabolites["malate"] -= reaction_rate
+            self.metabolites["oxaloacetate"] += reaction_rate
+            self.cofactors["nad"] -= reaction_rate
+            self.cofactors["nadh"] += reaction_rate
+        else:
+            logger.warning("Insufficient substrates or NAD⁺ for step 8")
+
+    def run_cycle(self):
+        self.step1_citrate_synthase()
+        self.step2_aconitase()
+        self.step3_isocitrate_dehydrogenase()
+        self.step4_alpha_ketoglutarate_dehydrogenase()
+        self.step5_succinyl_coa_synthetase()
+        self.step6_succinate_dehydrogenase()
+        self.step7_fumarase()
+        self.step8_malate_dehydrogenase()
+
+    def add_substrate(self, substrate: str, amount: float):
+        """Add initial substrate to start the cycle"""
+        if substrate in self.metabolites:
+            self.metabolites[substrate] += amount
+        elif substrate in self.cofactors:
+            self.cofactors[substrate] += amount
+        else:
+            logger.warning(f"Unknown substrate: {substrate}")
+
+    def display_state(self):
+        """Display the current state of metabolites and cofactors"""
+        print("Metabolites:")
+        for metabolite, amount in self.metabolites.items():
+            print(f"  {metabolite}: {amount:.2f}")
+        print("\nCofactors:")
+        for cofactor, amount in self.cofactors.items():
+            print(f"  {cofactor}: {amount:.2f}")
+
+    def reset(self):
+        """Reset the Krebs cycle to its initial state"""
+        self.__init__()
+
+
 class Cell:
     def __init__(self):
         self.cytoplasm = Cytoplasm()
@@ -371,7 +613,7 @@ class Cell:
                 )
 
             # Krebs cycle
-            krebs_atp = self.mitochondrion.krebs_cycle(acetyl_coa)
+            krebs_atp = self.mitochondrion.krebs_cycle_process(acetyl_coa)
             total_atp_produced += krebs_atp
 
             # Oxidative phosphorylation
