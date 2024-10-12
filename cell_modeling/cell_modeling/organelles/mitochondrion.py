@@ -24,13 +24,26 @@ class Organelle:
         self.metabolites[name] = Metabolite(name, quantity, max_quantity)
 
     def change_metabolite_quantity(self, metabolite_name: str, amount: float):
-        if metabolite_name in self.metabolites:
-            metabolite = self.metabolites[metabolite_name]
-            metabolite.quantity = max(
-                0, min(metabolite.quantity + amount, metabolite.max_quantity)
-            )
-        else:
+        if not isinstance(metabolite_name, str):
+            raise TypeError("Metabolite name must be a string.")
+        if not isinstance(amount, (int, float)):
+            raise TypeError("Amount must be a number.")
+        if metabolite_name not in self.metabolites:
             raise ValueError(f"Unknown metabolite: {metabolite_name}")
+
+        metabolite = self.metabolites[metabolite_name]
+        new_quantity = metabolite.quantity + amount
+
+        if new_quantity < 0:
+            raise ValueError(
+                f"Cannot reduce {metabolite_name} below zero. Attempted to set {metabolite_name} to {new_quantity}."
+            )
+        if new_quantity > metabolite.max_quantity:
+            raise ValueError(
+                f"Cannot exceed max quantity for {metabolite_name}. Attempted to set {metabolite_name} to {new_quantity}, but max is {metabolite.max_quantity}."
+            )
+
+        metabolite.quantity = new_quantity
 
     def is_metabolite_available(self, metabolite: str, amount: float) -> bool:
         if metabolite in self.metabolites:
@@ -42,23 +55,42 @@ class Organelle:
 
     def consume_metabolites(self, **metabolites: Dict[str, float]):
         for metabolite, amount in metabolites.items():
-            if self.is_metabolite_available(metabolite, amount):
-                if metabolite in self.metabolites:
-                    self.metabolites[metabolite].quantity -= amount
-                elif metabolite in self.cofactors:
-                    self.cofactors[metabolite] -= amount
-            else:
-                raise ValueError(f"Insufficient {metabolite} for reaction")
+            if not isinstance(metabolite, str):
+                raise TypeError("Metabolite names must be strings.")
+            if not isinstance(amount, (int, float)):
+                raise TypeError("Amounts must be numbers.")
+            if amount < 0:
+                raise ValueError(f"Cannot consume a negative amount of {metabolite}.")
+            if metabolite not in self.metabolites:
+                raise ValueError(f"Unknown metabolite: {metabolite}")
+            if self.metabolites[metabolite].quantity < amount:
+                raise ValueError(f"Insufficient {metabolite} for reaction.")
+
+        # If all validations pass, proceed to consume
+        for metabolite, amount in metabolites.items():
+            self.metabolites[metabolite].quantity -= amount
         return True
 
     def produce_metabolites(self, **metabolites: Dict[str, float]):
         for metabolite, amount in metabolites.items():
-            if metabolite in self.metabolites:
-                self.metabolites[metabolite].quantity += amount
-            elif metabolite in self.cofactors:
-                self.cofactors[metabolite] += amount
-            else:
+            if not isinstance(metabolite, str):
+                raise TypeError("Metabolite names must be strings.")
+            if not isinstance(amount, (int, float)):
+                raise TypeError("Amounts must be numbers.")
+            if amount < 0:
+                raise ValueError(f"Cannot produce a negative amount of {metabolite}.")
+            if metabolite not in self.metabolites:
                 raise ValueError(f"Unknown metabolite: {metabolite}")
+            new_quantity = self.metabolites[metabolite].quantity + amount
+            if new_quantity > self.metabolites[metabolite].max_quantity:
+                raise ValueError(
+                    f"Cannot exceed max quantity for {metabolite}. Attempted to set {metabolite} to {new_quantity}, but max is {self.metabolites[metabolite].max_quantity}."
+                )
+
+        # If all validations pass, proceed to produce
+        for metabolite, amount in metabolites.items():
+            self.metabolites[metabolite].quantity += amount
+        return True
 
 
 @dataclass
@@ -137,12 +169,16 @@ class Cytoplasm(Organelle):
         self.add_metabolite("pyruvate", 0, 1000)
         self.glycolysis_rate = 1.0
 
-    def glycolysis(self, glucose_units):
-        try:
-            # Check if there's enough glucose
-            if not self.is_metabolite_available("glucose", glucose_units):
-                raise ValueError("Insufficient glucose for glycolysis")
+    def glycolysis(self, glucose_units: int):
+        if not isinstance(glucose_units, int):
+            raise TypeError("The number of glucose units must be an integer.")
+        if glucose_units < 0:
+            raise ValueError("The number of glucose units cannot be negative.")
+        if glucose_units == 0:
+            return 0  # No action needed for zero units
 
+        # Proceed with glycolysis steps
+        try:
             self.change_metabolite_quantity("glucose", -glucose_units)
             for step in GlycolysisSteps:
                 getattr(self, f"{step.name.lower()}")()
@@ -170,18 +206,43 @@ class Cytoplasm(Organelle):
             raise ValueError(f"Unknown metabolite: {metabolite}")
 
     def consume_metabolites(self, **metabolites: Dict[str, float]):
-        """Consume multiple metabolites at once."""
         for metabolite, amount in metabolites.items():
-            if self.is_metabolite_available(metabolite, amount):
-                self.metabolites[metabolite].quantity -= amount
-            else:
-                raise ValueError(f"Insufficient {metabolite} for reaction")
+            if not isinstance(metabolite, str):
+                raise TypeError("Metabolite names must be strings.")
+            if not isinstance(amount, (int, float)):
+                raise TypeError("Amounts must be numbers.")
+            if amount < 0:
+                raise ValueError(f"Cannot consume a negative amount of {metabolite}.")
+            if metabolite not in self.metabolites:
+                raise ValueError(f"Unknown metabolite: {metabolite}")
+            if self.metabolites[metabolite].quantity < amount:
+                raise ValueError(f"Insufficient {metabolite} for reaction.")
+
+        # If all validations pass, proceed to consume
+        for metabolite, amount in metabolites.items():
+            self.metabolites[metabolite].quantity -= amount
         return True
 
     def produce_metabolites(self, **metabolites: Dict[str, float]):
-        """Produce multiple metabolites at once."""
+        for metabolite, amount in metabolites.items():
+            if not isinstance(metabolite, str):
+                raise TypeError("Metabolite names must be strings.")
+            if not isinstance(amount, (int, float)):
+                raise TypeError("Amounts must be numbers.")
+            if amount < 0:
+                raise ValueError(f"Cannot produce a negative amount of {metabolite}.")
+            if metabolite not in self.metabolites:
+                raise ValueError(f"Unknown metabolite: {metabolite}")
+            new_quantity = self.metabolites[metabolite].quantity + amount
+            if new_quantity > self.metabolites[metabolite].max_quantity:
+                raise ValueError(
+                    f"Cannot exceed max quantity for {metabolite}. Attempted to set {metabolite} to {new_quantity}, but max is {self.metabolites[metabolite].max_quantity}."
+                )
+
+        # If all validations pass, proceed to produce
         for metabolite, amount in metabolites.items():
             self.metabolites[metabolite].quantity += amount
+        return True
 
     def step1_hexokinase(self):
         self.ensure_metabolite_availability("atp", 1)
@@ -383,8 +444,8 @@ class Mitochondrion(Organelle):
                 logger.info(f"  {metabolite}: {quantity:.2f}")
 
         # Transfer NADH and FADH2 from Krebs cycle to ETC
-        self.change_metabolite_quantity("nadh", self.krebs_cycle.cofactors["nadh"])
-        self.change_metabolite_quantity("fadh2", self.krebs_cycle.cofactors["fadh2"])
+        self.change_metabolite_quantity("NADH", self.krebs_cycle.cofactors["NADH"])
+        self.change_metabolite_quantity("FADH2", self.krebs_cycle.cofactors["FADH2"])
 
         # Check ADP availability
         if self.metabolites["adp"].quantity < 10:  # Arbitrary threshold
@@ -393,7 +454,7 @@ class Mitochondrion(Organelle):
         atp_produced = self.oxidative_phosphorylation()
 
         # Add ATP from substrate-level phosphorylation in Krebs cycle
-        atp_produced += self.krebs_cycle.cofactors["gtp"]  # GTP is equivalent to ATP
+        atp_produced += self.krebs_cycle.cofactors["GTP"]  # GTP is equivalent to ATP
 
         return atp_produced
 
@@ -638,16 +699,16 @@ class KrebsCycle(Organelle):
         self.add_metabolite("Malate", 0, 1000)
 
         self.cofactors = {
-            "nad": INITIAL_NAD,
-            "nadh": 0,
-            "fad": 100,
-            "fadh2": 0,
-            "coenzyme_a": 100,
-            "atp": 100,
-            "adp": 0,
-            "gtp": 0,
-            "gdp": 0,
-            "co2": 0,
+            "NAD": INITIAL_NAD,
+            "NADH": 0,
+            "FAD": 100,
+            "FADH2": 0,
+            "Coenzyme-A": 100,
+            "ATP": 100,
+            "ADP": 0,
+            "GTP": 0,
+            "GDP": 0,
+            "CO2": 0,
         }
         self.enzymes = {
             "citrate_synthase": Enzyme("Citrate Synthase"),
@@ -675,25 +736,44 @@ class KrebsCycle(Organelle):
     def consume_metabolites(self, **metabolites: Dict[str, float]):
         """Consume multiple metabolites at once."""
         for metabolite, amount in metabolites.items():
+            if not isinstance(metabolite, str):
+                raise TypeError("Metabolite names must be strings.")
+            if not isinstance(amount, (int, float)):
+                raise TypeError("Amounts must be numbers.")
+            if amount < 0:
+                raise ValueError(f"Cannot consume a negative amount of {metabolite}.")
+            if metabolite not in self.metabolites and metabolite not in self.cofactors:
+                raise ValueError(f"Unknown metabolite: {metabolite}")
             if self.is_metabolite_available(metabolite, amount):
                 if metabolite in self.metabolites:
                     self.metabolites[metabolite].quantity -= amount
                 elif metabolite in self.cofactors:
                     self.cofactors[metabolite] -= amount
             else:
-                logger.warning(f"Insufficient {metabolite} for reaction")
-                return False
+                raise ValueError(f"Insufficient {metabolite} for reaction")
         return True
 
     def produce_metabolites(self, **metabolites: Dict[str, float]):
         """Produce multiple metabolites at once."""
         for metabolite, amount in metabolites.items():
+            if not isinstance(metabolite, str):
+                raise TypeError("Metabolite names must be strings.")
+            if not isinstance(amount, (int, float)):
+                raise TypeError("Amounts must be numbers.")
+            if amount < 0:
+                raise ValueError(f"Cannot produce a negative amount of {metabolite}.")
             if metabolite in self.metabolites:
-                self.metabolites[metabolite].quantity += amount
+                new_quantity = self.metabolites[metabolite].quantity + amount
+                if new_quantity > self.metabolites[metabolite].max_quantity:
+                    raise ValueError(
+                        f"Cannot exceed max quantity for {metabolite}. Attempted to set {metabolite} to {new_quantity}, but max is {self.metabolites[metabolite].max_quantity}."
+                    )
+                self.metabolites[metabolite].quantity = new_quantity
             elif metabolite in self.cofactors:
                 self.cofactors[metabolite] += amount
             else:
-                logger.warning(f"Unknown metabolite: {metabolite}")
+                raise ValueError(f"Unknown metabolite: {metabolite}")
+        return True
 
     def step1_citrate_synthase(self):
         """Acetyl-CoA + Oxaloacetate to Citrate"""
@@ -710,7 +790,7 @@ class KrebsCycle(Organelle):
             **{"Acetyl-CoA": reaction_rate, "Oxaloacetate": reaction_rate}
         ):
             self.produce_metabolites(Citrate=reaction_rate)
-            self.cofactors["coenzyme_a"] += reaction_rate
+            self.cofactors["Coenzyme-A"] += reaction_rate
             return True
         else:
             logger.warning("Insufficient substrates for step 1")
@@ -730,15 +810,13 @@ class KrebsCycle(Organelle):
             logger.warning("Insufficient Citrate for step 2")
 
     def step3_isocitrate_dehydrogenase(self):
-        """Isocitrate to α-Ketoglutarate with allosteric regulation"""
+        """Isocitrate to α-Ketoglutarate"""
         enzyme = self.enzymes["isocitrate_dehydrogenase"]
-        substrate_conc = self.metabolites[
-            "Isocitrate"
-        ].quantity  # Changed from "isocitrate" to "Isocitrate"
+        substrate_conc = self.metabolites["Isocitrate"].quantity
 
         # Define effectors
-        atp_effector = Effector("ATP", self.cofactors["atp"], Ki=100, Ka=1000)
-        adp_effector = Effector("ADP", self.cofactors["adp"], Ki=1000, Ka=100)
+        atp_effector = Effector("ATP", self.cofactors["ATP"], Ki=100, Ka=1000)
+        adp_effector = Effector("ADP", self.cofactors["ADP"], Ki=1000, Ka=100)
 
         # Calculate regulated enzyme activity
         regulated_activity = allosteric_regulation(
@@ -753,28 +831,26 @@ class KrebsCycle(Organelle):
             substrate_conc, enzyme.vmax * regulated_activity, enzyme.km, n
         )
 
-        if self.consume_metabolites(
-            Isocitrate=reaction_rate, nad=reaction_rate
-        ):  # Changed from "isocitrate" to "Isocitrate"
+        if self.consume_metabolites(Isocitrate=reaction_rate, NAD=reaction_rate):
             self.produce_metabolites(
-                α_Ketoglutarate=reaction_rate, nadh=reaction_rate, co2=reaction_rate
-            )  # Changed from "α-ketoglutarate" to "α_Ketoglutarate"
+                **{
+                    "α-Ketoglutarate": reaction_rate,
+                    "NADH": reaction_rate,
+                    "CO2": reaction_rate,
+                }
+            )
         else:
             logger.warning("Insufficient substrates or NAD⁺ for step 3")
 
     def step4_alpha_ketoglutarate_dehydrogenase(self):
         """α-Ketoglutarate to Succinyl-CoA"""
         enzyme = self.enzymes["alpha_ketoglutarate_dehydrogenase"]
-        substrate_conc = self.metabolites[
-            "α-Ketoglutarate"
-        ].quantity  # Access the quantity attribute
+        substrate_conc = self.metabolites["α-Ketoglutarate"].quantity
 
         # Enzyme regulation
-        atp_inhibition = self.cofactors["atp"] / 100
-        nadh_inhibition = self.cofactors["nadh"] / 100
-        succinyl_coa_inhibition = (
-            self.metabolites["Succinyl-CoA"].quantity / 10
-        )  # Assuming max succinyl-CoA is 10
+        atp_inhibition = self.cofactors["ATP"] / 100
+        nadh_inhibition = self.cofactors["NADH"] / 100
+        succinyl_coa_inhibition = self.metabolites["Succinyl-CoA"].quantity / 10
         enzyme_activity = (
             1 - (atp_inhibition + nadh_inhibition + succinyl_coa_inhibition) / 3
         )
@@ -785,9 +861,15 @@ class KrebsCycle(Organelle):
             enzyme.km,
         )
 
-        if self.consume_metabolites(α_Ketoglutarate=reaction_rate, nad=reaction_rate):
+        if self.consume_metabolites(
+            **{"α-Ketoglutarate": reaction_rate, "NAD": reaction_rate}
+        ):
             self.produce_metabolites(
-                Succinyl_CoA=reaction_rate, nadh=reaction_rate, co2=reaction_rate
+                **{
+                    "Succinyl-CoA": reaction_rate,
+                    "NADH": reaction_rate,
+                    "CO2": reaction_rate,
+                }
             )
         else:
             logger.warning("Insufficient substrates or NAD⁺ for step 4")
@@ -800,9 +882,13 @@ class KrebsCycle(Organelle):
             substrate_conc, enzyme.vmax * enzyme.activity, enzyme.km
         )
 
-        if self.consume_metabolites(Succinyl_CoA=reaction_rate, gdp=reaction_rate):
+        if self.consume_metabolites(
+            **{"Succinyl-CoA": reaction_rate, "GDP": reaction_rate}
+        ):
             self.produce_metabolites(
-                Succinate=reaction_rate, gtp=reaction_rate, coenzyme_a=reaction_rate
+                Succinate=reaction_rate,
+                GTP=reaction_rate,
+                **{"Coenzyme-A": reaction_rate},
             )
         else:
             logger.warning("Insufficient substrates or GDP for step 5")
@@ -815,8 +901,8 @@ class KrebsCycle(Organelle):
             substrate_conc, enzyme.vmax * enzyme.activity, enzyme.km
         )
 
-        if self.consume_metabolites(Succinate=reaction_rate, fad=reaction_rate):
-            self.produce_metabolites(fumarate=reaction_rate, fadh2=reaction_rate)
+        if self.consume_metabolites(Succinate=reaction_rate, FAD=reaction_rate):
+            self.produce_metabolites(Fumarate=reaction_rate, FADH2=reaction_rate)
         else:
             logger.warning("Insufficient substrates or FAD for step 6")
 
@@ -831,7 +917,7 @@ class KrebsCycle(Organelle):
         if self.consume_metabolites(Fumarate=reaction_rate):
             self.produce_metabolites(Malate=reaction_rate)
         else:
-            logger.warning("Insufficient fumarate for step 7")
+            logger.warning("Insufficient Fumarate for step 7")
 
     def step8_malate_dehydrogenase(self):
         """Malate to Oxaloacetate"""
@@ -841,8 +927,8 @@ class KrebsCycle(Organelle):
             substrate_conc, enzyme.vmax * enzyme.activity, enzyme.km
         )
 
-        if self.consume_metabolites(Malate=reaction_rate, nad=reaction_rate):
-            self.produce_metabolites(Oxaloacetate=reaction_rate, nadh=reaction_rate)
+        if self.consume_metabolites(Malate=reaction_rate, NAD=reaction_rate):
+            self.produce_metabolites(Oxaloacetate=reaction_rate, NADH=reaction_rate)
         else:
             logger.warning("Insufficient substrates or NAD⁺ for step 8")
 
@@ -869,6 +955,13 @@ class KrebsCycle(Organelle):
 
     def add_substrate(self, substrate: str, amount: float):
         """Add initial substrate to start the cycle"""
+        if not isinstance(substrate, str):
+            raise TypeError("Substrate name must be a string.")
+        if not isinstance(amount, (int, float)):
+            raise TypeError("Amount must be a number.")
+        if amount <= 0:
+            raise ValueError("Amount must be positive.")
+
         if substrate == "Acetyl-CoA":
             self.metabolites["Acetyl-CoA"].quantity += amount
         elif substrate in self.metabolites:
@@ -876,7 +969,7 @@ class KrebsCycle(Organelle):
         elif substrate in self.cofactors:
             self.cofactors[substrate] += amount
         else:
-            logger.warning(f"Unknown substrate: {substrate}")
+            raise ValueError(f"Unknown substrate: {substrate}")
 
     def display_state(self):
         """Display the current state of metabolites and cofactors"""
@@ -1199,9 +1292,9 @@ class SimulationController:
 
                 # Perform glycolysis
                 pyruvate = self.cell.cytoplasm.glycolysis(
-                    1 * self.cell.cytoplasm.glycolysis_rate
+                    int(1 * self.cell.cytoplasm.glycolysis_rate)
                 )
-                glucose_processed += 1 * self.cell.cytoplasm.glycolysis_rate
+                glucose_processed += round(1 * self.cell.cytoplasm.glycolysis_rate, 2)
 
                 # Calculate ATP produced in glycolysis
                 glycolysis_atp = (
