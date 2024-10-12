@@ -1136,15 +1136,44 @@ class Cell:
         logger.info("Cell state reset")
 
 
+class Reporter:
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+
+    def log_event(self, message):
+        self.logger.info(message)
+
+    def log_warning(self, message):
+        self.logger.warning(message)
+
+    def log_error(self, message):
+        self.logger.error(message)
+
+    def report_simulation_results(self, results):
+        self.log_event(
+            f"Simulation completed in {results['simulation_time']:.2f} seconds"
+        )
+        self.log_event(f"Total ATP produced: {results['total_atp_produced']:.2f}")
+        self.log_event(f"Glucose processed: {results['glucose_processed']:.2f}")
+        self.log_event(f"Oxygen remaining: {results['oxygen_remaining']:.2f}")
+        self.log_event(f"Final cytoplasm ATP: {results['final_cytoplasm_atp']:.2f}")
+        self.log_event(
+            f"Final mitochondrion ATP: {results['final_mitochondrion_atp']:.2f}"
+        )
+
+
 class SimulationController:
-    def __init__(self, cell, simulation_duration=SIMULATION_DURATION):
+    def __init__(self, cell, reporter, simulation_duration=SIMULATION_DURATION):
         self.cell = cell
+        self.reporter = reporter
         self.simulation_duration = simulation_duration
         self.simulation_time = 0
         self.time_step = TIME_STEP
 
     def run_simulation(self, glucose_amount):
-        logger.info(f"Starting simulation with {glucose_amount} glucose units")
+        self.reporter.log_event(
+            f"Starting simulation with {glucose_amount} glucose units"
+        )
         try:
             glucose_processed = 0
             total_atp_produced = 0
@@ -1153,11 +1182,13 @@ class SimulationController:
                 + self.cell.mitochondrion.metabolites["atp"].quantity
             )
 
-            while (glucose_processed < glucose_amount and 
-                   self.simulation_time < self.simulation_duration):
-                
+            while (
+                glucose_processed < glucose_amount
+                and self.simulation_time < self.simulation_duration
+            ):
+
                 if self.cell.mitochondrion.metabolites["oxygen"].quantity <= 0:
-                    logger.warning("Oxygen depleted. Stopping simulation.")
+                    self.reporter.log_warning("Oxygen depleted. Stopping simulation.")
                     break
 
                 # Check and handle ADP availability
@@ -1167,7 +1198,9 @@ class SimulationController:
                 self._apply_feedback_activation()
 
                 # Perform glycolysis
-                pyruvate = self.cell.cytoplasm.glycolysis(1 * self.cell.cytoplasm.glycolysis_rate)
+                pyruvate = self.cell.cytoplasm.glycolysis(
+                    1 * self.cell.cytoplasm.glycolysis_rate
+                )
                 glucose_processed += 1 * self.cell.cytoplasm.glycolysis_rate
 
                 # Calculate ATP produced in glycolysis
@@ -1182,37 +1215,52 @@ class SimulationController:
                 self._handle_nadh_shuttle()
 
                 # Perform cellular respiration
-                mitochondrial_atp = self.cell.mitochondrion.cellular_respiration(pyruvate)
+                mitochondrial_atp = self.cell.mitochondrion.cellular_respiration(
+                    pyruvate
+                )
                 total_atp_produced += mitochondrial_atp
 
                 # Transfer excess ATP from mitochondrion to cytoplasm
                 self._transfer_excess_atp()
 
                 self.simulation_time += self.time_step
+
+                if self.simulation_time % 10 == 0:
+                    self._log_intermediate_state()
+
             # Return simulation results
-            return {
+            results = {
                 "total_atp_produced": total_atp_produced,
                 "glucose_processed": glucose_processed,
                 "simulation_time": self.simulation_time,
-                "oxygen_remaining": self.cell.mitochondrion.metabolites["oxygen"].quantity,
+                "oxygen_remaining": self.cell.mitochondrion.metabolites[
+                    "oxygen"
+                ].quantity,
                 "final_cytoplasm_atp": self.cell.cytoplasm.metabolites["atp"].quantity,
-                "final_mitochondrion_atp": self.cell.mitochondrion.metabolites["atp"].quantity,
+                "final_mitochondrion_atp": self.cell.mitochondrion.metabolites[
+                    "atp"
+                ].quantity,
             }
+            self.reporter.report_simulation_results(results)
+            return results
 
         except Exception as e:
-            logger.error(f"Simulation error: {str(e)}")
+            self.reporter.log_error(f"Simulation error: {str(e)}")
             raise
-        
-        
+
     def _handle_adp_availability(self):
         if self.cell.mitochondrion.metabolites["adp"].quantity < 10:
-            logger.warning("Low ADP levels in mitochondrion. Transferring ADP from cytoplasm.")
+            self.reporter.log_warning(
+                "Low ADP levels in mitochondrion. Transferring ADP from cytoplasm."
+            )
             adp_transfer = min(50, self.cell.cytoplasm.metabolites["adp"].quantity)
             self.cell.mitochondrion.metabolites["adp"].quantity += adp_transfer
             self.cell.cytoplasm.metabolites["adp"].quantity -= adp_transfer
 
     def _apply_feedback_activation(self):
-        adp_activation_factor = 1 + self.cell.cytoplasm.metabolites["adp"].quantity / 500
+        adp_activation_factor = (
+            1 + self.cell.cytoplasm.metabolites["adp"].quantity / 500
+        )
         self.cell.cytoplasm.glycolysis_rate *= adp_activation_factor
 
     def _handle_nadh_shuttle(self):
@@ -1224,6 +1272,18 @@ class SimulationController:
         self.cell.cytoplasm.metabolites["atp"].quantity += atp_transfer
         self.cell.mitochondrion.metabolites["atp"].quantity -= atp_transfer
 
+    def _log_intermediate_state(self):
+        state = self.get_current_state()
+        self.reporter.log_event(f"Time: {state['simulation_time']:.2f} s")
+        self.reporter.log_event(f"Glucose Processed: {state['glucose_processed']:.2f}")
+        self.reporter.log_event(
+            f"Total ATP Produced: {state['total_atp_produced']:.2f}"
+        )
+        self.reporter.log_event(f"Cytoplasm ATP: {state['cytoplasm_atp']:.2f}")
+        self.reporter.log_event(f"Mitochondrion ATP: {state['mitochondrion_atp']:.2f}")
+        self.reporter.log_event(f"Proton Gradient: {state['proton_gradient']:.2f}")
+        self.reporter.log_event(f"Oxygen Remaining: {state['oxygen_remaining']:.2f}")
+
     def get_current_state(self):
         return {
             "simulation_time": self.simulation_time,
@@ -1231,15 +1291,17 @@ class SimulationController:
             "mitochondrion_atp": self.cell.mitochondrion.metabolites["atp"].quantity,
             "cytoplasm_nadh": self.cell.cytoplasm.metabolites["nadh"].quantity,
             "mitochondrion_nadh": self.cell.mitochondrion.metabolites["nadh"].quantity,
-            "mitochondrion_fadh2": self.cell.mitochondrion.metabolites["fadh2"].quantity,
-            "mitochondrial_calcium": self.cell.mitochondrion.metabolites["calcium"].quantity,
+            "mitochondrion_fadh2": self.cell.mitochondrion.metabolites[
+                "fadh2"
+            ].quantity,
+            "mitochondrial_calcium": self.cell.mitochondrion.metabolites[
+                "calcium"
+            ].quantity,
             "cytoplasmic_calcium": self.cell.cytoplasmic_calcium.quantity,
             "proton_gradient": self.cell.mitochondrion.proton_gradient,
             "oxygen_remaining": self.cell.mitochondrion.metabolites["oxygen"].quantity,
         }
-        
-        
-        
+
 
 if __name__ == "__main__":
     logging.basicConfig(
@@ -1248,40 +1310,15 @@ if __name__ == "__main__":
     )
 
     cell = Cell()
-    sim_controller = SimulationController(cell)
+    reporter = Reporter()
+    sim_controller = SimulationController(cell, reporter)
     glucose_amounts = [1, 2, 5, 10]
 
     for glucose in glucose_amounts:
-        logger.info(f"\nSimulating ATP production with {glucose} glucose units:")
+        reporter.log_event(f"\nSimulating ATP production with {glucose} glucose units:")
         results = sim_controller.run_simulation(glucose)
-
-        for state in cell.produce_atp_generator(glucose):
-            # Log the current state of the cell at each time step
-            if state["simulation_time"] % 10 == 0:  # Log every 10 time steps
-                logger.info(f"Time: {state['simulation_time']:.2f} s")
-                logger.info(f"Glucose Processed: {state['glucose_processed']:.2f}")
-                logger.info(f"Total ATP Produced: {state['total_atp_produced']:.2f}")
-                logger.info(f"Cytoplasm ATP: {state['cytoplasm_atp']:.2f}")
-                logger.info(f"Mitochondrion ATP: {state['mitochondrion_atp']:.2f}")
-                logger.info(f"Proton Gradient: {state['proton_gradient']:.2f}")
-                logger.info(f"Oxygen Remaining: {state['oxygen_remaining']:.2f}")
-
-        # Log final state
-        logger.info(f"\nFinal State:")
-        logger.info(f"Simulation time: {state['simulation_time']:.2f} seconds")
-        logger.info(f"Glucose processed: {state['glucose_processed']:.2f}")
-        logger.info(f"Total ATP produced: {state['total_atp_produced']:.2f}")
-        logger.info(f"Cytoplasm ATP: {state['cytoplasm_atp']:.2f}")
-        logger.info(f"Mitochondrion ATP: {state['mitochondrion_atp']:.2f}")
-        logger.info(f"Cytoplasm NADH: {state['cytoplasm_nadh']:.2f}")
-        logger.info(f"Mitochondrion NADH: {state['mitochondrion_nadh']:.2f}")
-        logger.info(f"Mitochondrion FADH2: {state['mitochondrion_fadh2']:.2f}")
-        logger.info(f"Mitochondrial Calcium: {state['mitochondrial_calcium']:.2f}")
-        logger.info(f"Cytoplasmic Calcium: {state['cytoplasmic_calcium']:.2f}")
-        logger.info(f"Proton Gradient: {state['proton_gradient']:.2f}")
-        logger.info(f"Oxygen Remaining: {state['oxygen_remaining']:.2f}")
 
         # Reset the cell for the next simulation
         cell.reset()
 
-    logger.info("Simulation complete.")
+    reporter.log_event("Simulation complete.")
