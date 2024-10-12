@@ -62,9 +62,16 @@ class Mitochondrion:
         self.nadh = Metabolite("NADH", 0, 1000)
         self.fadh2 = Metabolite("FADH2", 0, 1000)
         self.atp = Metabolite("ATP", 0, 1000)
-        self.oxygen = Metabolite("O2", 1_000_000, 1_000_000)
+        self.oxygen = Metabolite("O2", 1000, 1000)  # Limited oxygen supply
         self.proton_gradient = 0
         self.co2 = Metabolite("CO2", 0, 1000000)  # Add CO2 metabolite
+        self.atp_per_nadh = 2.5  # Fixed ATP yield per NADH oxidized
+        self.atp_per_fadh2 = 1.5  # Fixed ATP yield per FADH2 oxidized
+        self.atp_per_substrate_phosphorylation = (
+            1  # ATP from substrate-level phosphorylation in Krebs cycle
+        )
+        self.oxygen_per_nadh = 0.5  # Oxygen consumed per NADH oxidized
+        self.oxygen_per_fadh2 = 0.5  # Oxygen consumed per FADH2 oxidized
 
     def pyruvate_to_acetyl_coa(self, pyruvate_amount: int) -> int:
         """Converts pyruvate to acetyl-CoA."""
@@ -83,44 +90,44 @@ class Mitochondrion:
         logger.info(f"Krebs cycle processing {acetyl_coa_amount} units of acetyl-CoA")
         for _ in range(acetyl_coa_amount):
             self.atp.quantity = min(
-                self.atp.quantity + 1, self.atp.max_quantity
-            )  # 1 GTP (equivalent to ATP) per acetyl-CoA
-            self.nadh.quantity = min(
-                self.nadh.quantity + 3, self.nadh.max_quantity
-            )  # 3 NADH per acetyl-CoA
-            self.fadh2.quantity = min(
-                self.fadh2.quantity + 1, self.fadh2.max_quantity
-            )  # 1 FADH2 per acetyl-CoA
+                self.atp.quantity + self.atp_per_substrate_phosphorylation,
+                self.atp.max_quantity,
+            )
+            self.nadh.quantity = min(self.nadh.quantity + 3, self.nadh.max_quantity)
+            self.fadh2.quantity = min(self.fadh2.quantity + 1, self.fadh2.max_quantity)
+        return acetyl_coa_amount * self.atp_per_substrate_phosphorylation
 
     def oxidative_phosphorylation(self, cytoplasmic_nadh_used: int = 0):
-        """Simulates oxidative phosphorylation."""
+        """Simulates oxidative phosphorylation with oxygen as a limiting factor."""
         total_oxygen_required = (
-            self.nadh.quantity + self.fadh2.quantity + cytoplasmic_nadh_used
-        ) * 0.5
-        if self.oxygen.quantity < total_oxygen_required:
-            logger.warning("Not enough oxygen for oxidative phosphorylation")
-            total_nadh_used = int(self.oxygen.quantity * 2) - cytoplasmic_nadh_used
-            total_fadh2_used = 0
-            oxygen_consumed = self.oxygen.quantity
-            self.oxygen.quantity = 0
-        else:
-            total_nadh_used = self.nadh.quantity
-            total_fadh2_used = self.fadh2.quantity
-            oxygen_consumed = total_oxygen_required
-            self.oxygen.quantity -= oxygen_consumed
+            (self.nadh.quantity + cytoplasmic_nadh_used) * self.oxygen_per_nadh +
+            self.fadh2.quantity * self.oxygen_per_fadh2
+        )
+        available_oxygen = min(self.oxygen.quantity, total_oxygen_required)
 
-        mitochondrial_nadh_atp = (
-            total_nadh_used * 2.5
-        )  # Each mitochondrial NADH produces ~2.5 ATP
-        cytoplasmic_nadh_atp = (
-            cytoplasmic_nadh_used * 1.5
-        )  # Each cytoplasmic NADH produces ~1.5 ATP via glycerol-phosphate shuttle
-        fadh2_atp = total_fadh2_used * 1.5  # Each FADH2 produces ~1.5 ATP
+        if available_oxygen < total_oxygen_required:
+            logger.warning("Not enough oxygen for complete oxidative phosphorylation")
+
+        oxygen_consumed = available_oxygen
+        self.oxygen.quantity -= oxygen_consumed
+
+        # Calculate oxidation based on available oxygen
+        nadh_oxidized = min(self.nadh.quantity, int(available_oxygen / self.oxygen_per_nadh))
+        available_oxygen -= nadh_oxidized * self.oxygen_per_nadh
+
+        cytoplasmic_nadh_oxidized = min(cytoplasmic_nadh_used, int(available_oxygen / self.oxygen_per_nadh))
+        available_oxygen -= cytoplasmic_nadh_oxidized * self.oxygen_per_nadh
+
+        fadh2_oxidized = min(self.fadh2.quantity, int(available_oxygen / self.oxygen_per_fadh2))
+
+        mitochondrial_nadh_atp = nadh_oxidized * self.atp_per_nadh
+        cytoplasmic_nadh_atp = cytoplasmic_nadh_oxidized * (self.atp_per_nadh - 1)  # Accounting for transport cost
+        fadh2_atp = fadh2_oxidized * self.atp_per_fadh2
         total_atp = int(mitochondrial_nadh_atp + cytoplasmic_nadh_atp + fadh2_atp)
 
         self.atp.quantity = min(self.atp.quantity + total_atp, self.atp.max_quantity)
-        self.nadh.quantity -= total_nadh_used
-        self.fadh2.quantity -= total_fadh2_used
+        self.nadh.quantity -= nadh_oxidized
+        self.fadh2.quantity -= fadh2_oxidized
 
         logger.info(f"ATP produced in oxidative phosphorylation: {total_atp}")
         logger.info(f"Oxygen consumed: {oxygen_consumed}")
@@ -153,64 +160,54 @@ class Cell:
         self.mitochondrion = Mitochondrion()
         self.simulation_time = 0
         self.time_step = 0.1  # 0.1 second per time step
+        self.atp_from_glycolysis = 2  # Net ATP production in glycolysis
+        self.expected_atp_yield = 32  # Expected ATP yield per glucose molecule
 
     def produce_atp(self, glucose_amount: int, duration: float) -> int:
         """Simulates ATP production in the entire cell over a specified duration."""
         initial_atp = self.cytoplasm.atp.quantity + self.mitochondrion.atp.quantity
         self.simulation_time = 0
+        total_atp_produced = 0
+        glucose_processed = 0
 
-        glucose_remaining = glucose_amount
-        pyruvate_accumulated = 0
-        cytoplasmic_nadh_accumulated = 0
+        while glucose_processed < glucose_amount and self.simulation_time < duration:
+            if self.mitochondrion.oxygen.quantity <= 0:
+                logger.warning("Oxygen depleted. Stopping simulation.")
+                break
 
-        while self.simulation_time < duration:
-            # Glycolysis (occurs every time step if glucose is available)
-            if glucose_remaining > 0:
-                glucose_processed = min(
-                    glucose_remaining, 1
-                )  # Process up to 1 glucose per time step
-                pyruvate_produced = self.cytoplasm.glycolysis(glucose_processed)
-                pyruvate_accumulated += pyruvate_produced
-                cytoplasmic_nadh_accumulated += self.cytoplasm.nadh.quantity
-                self.cytoplasm.nadh.quantity = 0  # Reset cytoplasmic NADH
-                glucose_remaining -= glucose_processed
+            # Glycolysis
+            pyruvate = self.cytoplasm.glycolysis(1)
+            total_atp_produced += self.atp_from_glycolysis
+            cytoplasmic_nadh = self.cytoplasm.nadh.quantity
+            self.cytoplasm.nadh.quantity = 0  # Reset cytoplasmic NADH
 
-            # NADH shuttle and oxidative phosphorylation (occurs every time step)
-            cytoplasmic_nadh_used = min(
-                cytoplasmic_nadh_accumulated, 5
-            )  # Process up to 5 NADH per time step
-            mitochondrial_nadh_produced = self.mitochondrion.transfer_cytoplasmic_nadh(
-                cytoplasmic_nadh_used
-            )
-            cytoplasmic_nadh_accumulated -= cytoplasmic_nadh_used
-            self.mitochondrion.oxidative_phosphorylation(cytoplasmic_nadh_used)
+            # NADH shuttle
+            mitochondrial_nadh = self.mitochondrion.transfer_cytoplasmic_nadh(cytoplasmic_nadh)
 
-            # Pyruvate processing and Krebs cycle (occurs every 10 time steps if pyruvate is available)
-            if (
-                self.simulation_time % (10 * self.time_step) < self.time_step
-                and pyruvate_accumulated > 0
-            ):
-                pyruvate_processed = min(
-                    pyruvate_accumulated, 5
-                )  # Process up to 5 pyruvate per cycle
-                acetyl_coa = self.mitochondrion.pyruvate_to_acetyl_coa(
-                    pyruvate_processed
-                )
-                self.mitochondrion.krebs_cycle(acetyl_coa)
-                pyruvate_accumulated -= pyruvate_processed
+            # Pyruvate to Acetyl-CoA
+            acetyl_coa = self.mitochondrion.pyruvate_to_acetyl_coa(pyruvate)
+
+            # Krebs cycle
+            total_atp_produced += self.mitochondrion.krebs_cycle(acetyl_coa)
+
+            # Oxidative phosphorylation
+            total_atp_produced += self.mitochondrion.oxidative_phosphorylation(cytoplasmic_nadh)
 
             self.simulation_time += self.time_step
+            glucose_processed += 1
 
-        total_atp = (
-            self.cytoplasm.atp.quantity + self.mitochondrion.atp.quantity - initial_atp
-        )
-        atp_per_glucose = total_atp / glucose_amount if glucose_amount > 0 else 0
-        logger.info(
-            f"Simulation completed. Time elapsed: {self.simulation_time:.2f} seconds"
-        )
-        logger.info(f"Total ATP produced: {total_atp}")
+        atp_per_glucose = total_atp_produced / glucose_processed if glucose_processed > 0 else 0
+
+        logger.info(f"Simulation completed. Time elapsed: {self.simulation_time:.2f} seconds")
+        logger.info(f"Glucose units processed: {glucose_processed}")
+        logger.info(f"Total ATP produced: {total_atp_produced}")
         logger.info(f"ATP yield per glucose molecule: {atp_per_glucose:.2f}")
-        return total_atp
+        logger.info(f"Remaining oxygen: {self.mitochondrion.oxygen.quantity}")
+
+        if abs(atp_per_glucose - self.expected_atp_yield) > 2:
+            logger.warning(f"ATP yield ({atp_per_glucose:.2f}) is outside the expected range (30-34)")
+
+        return total_atp_produced
 
     def reset(self):
         """Reset the entire cell state."""
