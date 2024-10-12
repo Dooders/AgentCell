@@ -316,18 +316,26 @@ class Mitochondrion(Organelle):
                 acetyl_coa_amount - self.metabolites["oxaloacetate"].quantity,
             )
 
-        for _ in range(acetyl_coa_amount):
-            self.krebs_cycle.run_cycle()
+        total_nadh = 0
+        total_fadh2 = 0
+        total_atp = 0
+
+        for metabolites, cofactors in self.krebs_cycle.krebs_cycle_iterator(
+            num_cycles=acetyl_coa_amount
+        ):
+            total_nadh += cofactors["nadh"]
+            total_fadh2 += cofactors["fadh2"]
+            total_atp += cofactors["gtp"]  # GTP is equivalent to ATP
 
         # Transfer the products to the mitochondrion
-        self.change_metabolite_quantity("nadh", self.krebs_cycle.cofactors["nadh"])
-        self.change_metabolite_quantity("fadh2", self.krebs_cycle.cofactors["fadh2"])
-        self.change_metabolite_quantity("atp", self.krebs_cycle.cofactors["gtp"])
+        self.change_metabolite_quantity("nadh", total_nadh)
+        self.change_metabolite_quantity("fadh2", total_fadh2)
+        self.change_metabolite_quantity("atp", total_atp)
 
         # Reset the Krebs cycle for the next round
         self.krebs_cycle.reset()
 
-        return self.krebs_cycle.cofactors["nadh"] + self.krebs_cycle.cofactors["fadh2"]
+        return total_nadh + total_fadh2
 
     def pyruvate_to_acetyl_coa(self, pyruvate_amount: int) -> int:
         """Converts pyruvate to acetyl-CoA."""
@@ -819,6 +827,14 @@ class KrebsCycle(Organelle):
         self.step6_succinate_dehydrogenase()
         self.step7_fumarase()
         self.step8_malate_dehydrogenase()
+
+    def krebs_cycle_iterator(self, num_cycles: int = None):
+        """Generator that yields the state after each Krebs cycle."""
+        cycles_run = 0
+        while num_cycles is None or cycles_run < num_cycles:
+            self.run_cycle()
+            cycles_run += 1
+            yield self.metabolites.copy(), self.cofactors.copy()
 
     def add_substrate(self, substrate: str, amount: float):
         """Add initial substrate to start the cycle"""
