@@ -269,15 +269,11 @@ class Mitochondrion(Organelle):
             leaked_protons = int(self.proton_gradient * self.proton_leak_rate)
             self.proton_gradient -= leaked_protons
 
-            while self.proton_gradient >= 3:
-                protons_used = 3
-                atp_produced = (
-                    self.atp_yield_per_nadh * self.nadh_consumption_rate
-                    + self.atp_yield_per_fadh2 * self.fadh2_consumption_rate
-                ) * self.atp_synthase_efficiency
+            while self.proton_gradient >= 4:
+                atp_produced = 1 * self.atp_synthase_efficiency
                 self.atp += atp_produced
                 total_atp_produced += atp_produced
-                self.proton_gradient -= protons_used
+                self.proton_gradient -= 4
 
         # Round the total ATP produced to the nearest whole number
         total_atp_produced = round(total_atp_produced)
