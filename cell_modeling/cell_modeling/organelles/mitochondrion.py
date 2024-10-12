@@ -1,27 +1,5 @@
-"""
-Biological Background
-Structure: 
-    Double-membrane organelle with inner folds called cristae; 
-    contains its own DNA.
-Function:
-    ATP Production: 
-        Generates ATP through cellular respiration (glycolysis, Krebs cycle, 
-        oxidative phosphorylation).
-    Metabolic Integration: 
-        Involved in apoptosis, calcium storage, and other metabolic pathways.
-Modeling Considerations
-    Metabolic Pathways:
-        Glycolysis:
-        Occurs in the cytoplasm; glucose breakdown.
-        Krebs Cycle: Occurs in the mitochondrial matrix.
-        Electron Transport Chain (ETC): Located in the inner mitochondrial membrane.
-    ATP Yield Calculations:
-        Model the stoichiometry of ATP production from substrates.
-"""
-
 import logging
 import math
-import time
 from dataclasses import dataclass
 from typing import Dict, List
 
@@ -43,14 +21,21 @@ class Effector:
     Ka: float  # Activation constant
 
 
-def allosteric_regulation(base_activity: float, inhibitors: List[Effector], activators: List[Effector]) -> float:
+def michaelis_menten(substrate_conc: float, vmax: float, km: float) -> float:
+    """Calculates reaction rate using the Michaelis-Menten equation."""
+    return vmax * substrate_conc / (km + substrate_conc)
+
+
+def allosteric_regulation(
+    base_activity: float, inhibitors: List[Effector], activators: List[Effector]
+) -> float:
     """Calculates enzyme activity considering inhibitors and activators."""
     inhibition_factor = 1
     for inhibitor in inhibitors:
-        inhibition_factor *= (1 / (1 + inhibitor.concentration / inhibitor.Ki))
+        inhibition_factor *= 1 / (1 + inhibitor.concentration / inhibitor.Ki)
     activation_factor = 1
     for activator in activators:
-        activation_factor *= (1 + activator.concentration / activator.Ka)
+        activation_factor *= 1 + activator.concentration / activator.Ka
     return base_activity * inhibition_factor * activation_factor
 
 
@@ -71,6 +56,10 @@ class Cytoplasm:
         self.glycolysis_rate = 1.0  # Base glycolysis rate
 
     def glycolysis(self, glucose_units):
+        """
+        Models glycolysis in a step-wise manner, including ATP and NADH
+        production.
+        """
         self.glucose.quantity = glucose_units
         self.logger.info(
             f"Starting glycolysis with {self.glucose.quantity} units of glucose"
@@ -92,20 +81,43 @@ class Cytoplasm:
         )
         return self.pyruvate.quantity
 
+    def is_metabolite_available(self, metabolite: str, amount: float) -> bool:
+        """Check if a metabolite is available in sufficient quantity."""
+        if hasattr(self, metabolite):
+            return getattr(self, metabolite).quantity >= amount
+        else:
+            self.logger.warning(f"Unknown metabolite: {metabolite}")
+            return False
+
+    def consume_metabolites(self, **metabolites: Dict[str, float]):
+        """Consume multiple metabolites at once."""
+        for metabolite, amount in metabolites.items():
+            if self.is_metabolite_available(metabolite, amount):
+                getattr(self, metabolite).quantity -= amount
+            else:
+                self.logger.warning(f"Insufficient {metabolite} for reaction")
+                return False
+        return True
+
+    def produce_metabolites(self, **metabolites: Dict[str, float]):
+        """Produce multiple metabolites at once."""
+        for metabolite, amount in metabolites.items():
+            if hasattr(self, metabolite):
+                getattr(self, metabolite).quantity += amount
+            else:
+                self.logger.warning(f"Unknown metabolite: {metabolite}")
+
     def step1_hexokinase(self):
-        if self.glucose.quantity > 0 and self.atp.quantity >= 1:
-            self.glucose.quantity -= 1
-            self.atp.quantity -= 1
-            self.adp.quantity += 1
+        if self.consume_metabolites(glucose=1, atp=1):
+            self.produce_metabolites(adp=1)
             self.logger.info("Step 1: Hexokinase - Glucose phosphorylation")
 
     def step2_phosphoglucose_isomerase(self):
         self.logger.info("Step 2: Phosphoglucose isomerase - Isomerization")
 
     def step3_phosphofructokinase(self):
-        if self.atp.quantity >= 1:
-            self.atp.quantity -= 1
-            self.adp.quantity += 1
+        if self.consume_metabolites(atp=1):
+            self.produce_metabolites(adp=1)
             self.logger.info("Step 3: Phosphofructokinase - Phosphorylation")
 
     def step4_aldolase(self):
@@ -115,17 +127,16 @@ class Cytoplasm:
         self.logger.info("Step 5: Triose phosphate isomerase - Isomerization")
 
     def step6_glyceraldehyde_3_phosphate_dehydrogenase(self):
-        if self.nad.quantity >= 2:
-            self.nad.quantity -= 2
-            self.nadh.quantity += 2
+        if self.consume_metabolites(nad=2):
+            self.produce_metabolites(nadh=2)
             self.logger.info(
                 "Step 6: Glyceraldehyde 3-phosphate dehydrogenase - Oxidation and phosphorylation"
             )
 
     def step7_phosphoglycerate_kinase(self):
-        self.atp.quantity += 2
-        self.adp.quantity -= 2
-        self.logger.info("Step 7: Phosphoglycerate kinase - ATP generation")
+        if self.consume_metabolites(adp=2):
+            self.produce_metabolites(atp=2)
+            self.logger.info("Step 7: Phosphoglycerate kinase - ATP generation")
 
     def step8_phosphoglycerate_mutase(self):
         self.logger.info("Step 8: Phosphoglycerate mutase - Shifting phosphate group")
@@ -134,12 +145,11 @@ class Cytoplasm:
         self.logger.info("Step 9: Enolase - Dehydration")
 
     def step10_pyruvate_kinase(self):
-        self.atp.quantity += 2
-        self.adp.quantity -= 2
-        self.pyruvate.quantity += 2
-        self.logger.info(
-            "Step 10: Pyruvate kinase - ATP generation and pyruvate formation"
-        )
+        if self.consume_metabolites(adp=2):
+            self.produce_metabolites(atp=2, pyruvate=2)
+            self.logger.info(
+                "Step 10: Pyruvate kinase - ATP generation and pyruvate formation"
+            )
 
     def reset(self):
         self.__init__()
@@ -147,6 +157,19 @@ class Cytoplasm:
 
 
 class Mitochondrion:
+    """
+    Simulates the electron transport chain with individual complexes.
+
+    Proton gradient and ATP synthesis are modeled well, including a proton leak
+    for added realism.
+
+    Calcium buffering and its effect on mitochondrial function are included,
+    which adds another layer of detail.
+
+    Feedback inhibition for ATP levels is implemented, mimicking real cellular
+    regulation mechanisms.
+    """
+
     def __init__(self):
         self.nadh = Metabolite("NADH", 0, 1000)
         self.fadh2 = Metabolite("FADH2", 0, 1000)
@@ -228,7 +251,9 @@ class Mitochondrion:
         # Implement feedback inhibition
         atp_inhibition_factor = 1 / (1 + self.atp.quantity / 1000)  # Example threshold
         self.krebs_cycle.enzyme_activities["citrate_synthase"] *= atp_inhibition_factor
-        self.krebs_cycle.enzyme_activities["isocitrate_dehydrogenase"] *= atp_inhibition_factor
+        self.krebs_cycle.enzyme_activities[
+            "isocitrate_dehydrogenase"
+        ] *= atp_inhibition_factor
 
         krebs_products = self.krebs_cycle_process(acetyl_coa)
 
@@ -267,73 +292,108 @@ class Mitochondrion:
 
     def complex_I(self):
         """Simulates Complex I activity."""
-        if self.nadh.quantity > 0 and self.ubiquinone.quantity > 0:
+        if self.is_metabolite_available("nadh", 1) and self.is_metabolite_available(
+            "ubiquinone", 1
+        ):
             reaction_rate = min(self.nadh.quantity, self.ubiquinone.quantity)
-            self.nadh.quantity -= reaction_rate
-            self.ubiquinone.quantity -= reaction_rate
-            self.ubiquinol.quantity += reaction_rate
-            self.proton_gradient += 4 * reaction_rate  # 4 H⁺ pumped per NADH
-            logger.info(
-                f"Complex I: Oxidized {reaction_rate} NADH, pumped {4 * reaction_rate} protons"
-            )
-            return reaction_rate
-        else:
-            logger.warning("Insufficient NADH or ubiquinone for Complex I")
-            return 0
+            if self.consume_metabolites(nadh=reaction_rate, ubiquinone=reaction_rate):
+                self.produce_metabolites(ubiquinol=reaction_rate)
+                self.proton_gradient += 4 * reaction_rate  # 4 H⁺ pumped per NADH
+                logger.info(
+                    f"Complex I: Oxidized {reaction_rate} NADH, pumped {4 * reaction_rate} protons"
+                )
+                return reaction_rate
+        logger.warning("Insufficient NADH or ubiquinone for Complex I")
+        return 0
 
     def complex_II(self):
         """Simulates Complex II activity."""
-        if self.fadh2.quantity > 0 and self.ubiquinone.quantity > 0:
+        if self.is_metabolite_available("fadh2", 1) and self.is_metabolite_available(
+            "ubiquinone", 1
+        ):
             reaction_rate = min(self.fadh2.quantity, self.ubiquinone.quantity)
-            self.fadh2.quantity -= reaction_rate
-            self.ubiquinone.quantity -= reaction_rate
-            self.ubiquinol.quantity += reaction_rate
-            logger.info(f"Complex II: Oxidized {reaction_rate} FADH2")
-            return reaction_rate
-        else:
-            logger.warning("Insufficient FADH2 or ubiquinone for Complex II")
-            return 0
+            if self.consume_metabolites(fadh2=reaction_rate, ubiquinone=reaction_rate):
+                self.produce_metabolites(ubiquinol=reaction_rate)
+                logger.info(f"Complex II: Oxidized {reaction_rate} FADH2")
+                return reaction_rate
+        logger.warning("Insufficient FADH2 or ubiquinone for Complex II")
+        return 0
 
     def complex_III(self):
         """Simulates Complex III activity."""
-        if self.ubiquinol.quantity > 0 and self.cytochrome_c_oxidized.quantity > 0:
+        if self.is_metabolite_available(
+            "ubiquinol", 1
+        ) and self.is_metabolite_available("cytochrome_c_oxidized", 1):
             reaction_rate = min(
                 self.ubiquinol.quantity, self.cytochrome_c_oxidized.quantity
             )
-            self.ubiquinol.quantity -= reaction_rate
-            self.ubiquinone.quantity += reaction_rate
-            self.cytochrome_c_oxidized.quantity -= reaction_rate
-            self.cytochrome_c_reduced.quantity += reaction_rate
-            self.proton_gradient += 4 * reaction_rate  # 4 H⁺ pumped per electron pair
-            logger.info(
-                f"Complex III: Transferred {reaction_rate} electron pairs, pumped {4 * reaction_rate} protons"
-            )
-            return reaction_rate
-        else:
-            logger.warning("Insufficient ubiquinol or cytochrome c for Complex III")
-            return 0
+            if self.consume_metabolites(
+                ubiquinol=reaction_rate, cytochrome_c_oxidized=reaction_rate
+            ):
+                self.produce_metabolites(
+                    ubiquinone=reaction_rate, cytochrome_c_reduced=reaction_rate
+                )
+                self.proton_gradient += (
+                    4 * reaction_rate
+                )  # 4 H⁺ pumped per electron pair
+                logger.info(
+                    f"Complex III: Transferred {reaction_rate} electron pairs, pumped {4 * reaction_rate} protons"
+                )
+                return reaction_rate
+        logger.warning("Insufficient ubiquinol or cytochrome c for Complex III")
+        return 0
 
     def complex_IV(self):
         """Simulates Complex IV activity."""
-        if self.cytochrome_c_reduced.quantity > 0 and self.oxygen.quantity > 0:
+        if self.is_metabolite_available(
+            "cytochrome_c_reduced", 1
+        ) and self.is_metabolite_available("oxygen", 0.5):
             reaction_rate = min(
                 self.cytochrome_c_reduced.quantity, self.oxygen.quantity * 2
             )  # 2 cytochrome c per O2
             oxygen_consumed = reaction_rate // 2
-            self.cytochrome_c_reduced.quantity -= reaction_rate
-            self.cytochrome_c_oxidized.quantity += reaction_rate
-            self.oxygen.quantity -= oxygen_consumed
-            self.proton_gradient += 2 * reaction_rate  # 2 H⁺ pumped per electron pair
-            logger.info(
-                f"Complex IV: Consumed {oxygen_consumed} O2, pumped {2 * reaction_rate} protons"
-            )
-            return reaction_rate
+            if self.consume_metabolites(
+                cytochrome_c_reduced=reaction_rate, oxygen=oxygen_consumed
+            ):
+                self.produce_metabolites(cytochrome_c_oxidized=reaction_rate)
+                self.proton_gradient += (
+                    2 * reaction_rate
+                )  # 2 H⁺ pumped per electron pair
+                logger.info(
+                    f"Complex IV: Consumed {oxygen_consumed} O2, pumped {2 * reaction_rate} protons"
+                )
+                return reaction_rate
+        if self.oxygen.quantity <= 0:
+            logger.warning("Insufficient oxygen for Complex IV")
         else:
-            if self.oxygen.quantity <= 0:
-                logger.warning("Insufficient oxygen for Complex IV")
+            logger.warning("Insufficient reduced cytochrome c for Complex IV")
+        return 0
+
+    def is_metabolite_available(self, metabolite: str, amount: float) -> bool:
+        """Check if a metabolite is available in sufficient quantity."""
+        if hasattr(self, metabolite):
+            return getattr(self, metabolite).quantity >= amount
+        else:
+            logger.warning(f"Unknown metabolite: {metabolite}")
+            return False
+
+    def consume_metabolites(self, **metabolites: Dict[str, float]):
+        """Consume multiple metabolites at once."""
+        for metabolite, amount in metabolites.items():
+            if self.is_metabolite_available(metabolite, amount):
+                getattr(self, metabolite).quantity -= amount
             else:
-                logger.warning("Insufficient reduced cytochrome c for Complex IV")
-            return 0
+                logger.warning(f"Insufficient {metabolite} for reaction")
+                return False
+        return True
+
+    def produce_metabolites(self, **metabolites: Dict[str, float]):
+        """Produce multiple metabolites at once."""
+        for metabolite, amount in metabolites.items():
+            if hasattr(self, metabolite):
+                getattr(self, metabolite).quantity += amount
+            else:
+                logger.warning(f"Unknown metabolite: {metabolite}")
 
     def atp_synthase(self):
         """Synthesizes ATP using the proton gradient."""
@@ -442,6 +502,17 @@ class Mitochondrion:
 
 
 class KrebsCycle:
+    """
+    Krebs cycle is modeled step-by-step, with each enzyme's activity influenced
+    by effectors and inhibitors.
+
+    Uses Michaelis-Menten kinetics and Hill equations, which are common for
+    modeling enzyme-catalyzed reactions.
+
+    Includes regulation of enzyme activity by cofactors like ATP and ADP, which
+    is a realistic representation of metabolic regulation.
+    """
+
     def __init__(self):
         self.metabolites: Dict[str, float] = {
             "acetyl_coa": 0,
@@ -476,8 +547,38 @@ class KrebsCycle:
             "malate_dehydrogenase": 1.0,
         }
 
-    def michaelis_menten(self, substrate_conc: float, vmax: float, km: float) -> float:
-        return (vmax * substrate_conc) / (km + substrate_conc)
+    def is_metabolite_available(self, metabolite: str, amount: float) -> bool:
+        """Check if a metabolite is available in sufficient quantity."""
+        if metabolite in self.metabolites:
+            return self.metabolites[metabolite] >= amount
+        elif metabolite in self.cofactors:
+            return self.cofactors[metabolite] >= amount
+        else:
+            logger.warning(f"Unknown metabolite: {metabolite}")
+            return False
+
+    def consume_metabolites(self, **metabolites: Dict[str, float]):
+        """Consume multiple metabolites at once."""
+        for metabolite, amount in metabolites.items():
+            if self.is_metabolite_available(metabolite, amount):
+                if metabolite in self.metabolites:
+                    self.metabolites[metabolite] -= amount
+                elif metabolite in self.cofactors:
+                    self.cofactors[metabolite] -= amount
+            else:
+                logger.warning(f"Insufficient {metabolite} for reaction")
+                return False
+        return True
+
+    def produce_metabolites(self, **metabolites: Dict[str, float]):
+        """Produce multiple metabolites at once."""
+        for metabolite, amount in metabolites.items():
+            if metabolite in self.metabolites:
+                self.metabolites[metabolite] += amount
+            elif metabolite in self.cofactors:
+                self.cofactors[metabolite] += amount
+            else:
+                logger.warning(f"Unknown metabolite: {metabolite}")
 
     def step1_citrate_synthase(self):
         """Acetyl-CoA + Oxaloacetate to Citrate"""
@@ -487,16 +588,12 @@ class KrebsCycle:
         vmax = 1.0  # Placeholder value
         km = 0.1  # Placeholder value
 
-        reaction_rate = self.michaelis_menten(substrate_conc, vmax, km)
+        reaction_rate = michaelis_menten(substrate_conc, vmax, km)
 
-        if (
-            self.metabolites["acetyl_coa"] >= reaction_rate
-            and self.metabolites["oxaloacetate"] >= reaction_rate
+        if self.consume_metabolites(
+            acetyl_coa=reaction_rate, oxaloacetate=reaction_rate
         ):
-            self.metabolites["acetyl_coa"] -= reaction_rate
-            self.metabolites["oxaloacetate"] -= reaction_rate
-            self.metabolites["citrate"] += reaction_rate
-            self.cofactors["coenzyme_a"] += reaction_rate
+            self.produce_metabolites(citrate=reaction_rate, coenzyme_a=reaction_rate)
         else:
             logger.warning("Insufficient substrates for step 1")
 
@@ -506,11 +603,10 @@ class KrebsCycle:
         vmax = 1.0  # Placeholder value
         km = 0.1  # Placeholder value
 
-        reaction_rate = self.michaelis_menten(substrate_conc, vmax, km)
+        reaction_rate = michaelis_menten(substrate_conc, vmax, km)
 
-        if self.metabolites["citrate"] >= reaction_rate:
-            self.metabolites["citrate"] -= reaction_rate
-            self.metabolites["isocitrate"] += reaction_rate
+        if self.consume_metabolites(citrate=reaction_rate):
+            self.produce_metabolites(isocitrate=reaction_rate)
         else:
             logger.warning("Insufficient citrate for step 2")
 
@@ -528,22 +624,17 @@ class KrebsCycle:
         regulated_activity = allosteric_regulation(
             self.enzyme_activities["isocitrate_dehydrogenase"],
             inhibitors=[atp_effector],
-            activators=[adp_effector]
+            activators=[adp_effector],
         )
 
         # Use Hill equation for cooperative binding
         n = 2  # Hill coefficient
         reaction_rate = hill_equation(substrate_conc, vmax * regulated_activity, km, n)
 
-        if (
-            self.metabolites["isocitrate"] >= reaction_rate
-            and self.cofactors["nad"] >= reaction_rate
-        ):
-            self.metabolites["isocitrate"] -= reaction_rate
-            self.metabolites["alpha_ketoglutarate"] += reaction_rate
-            self.cofactors["nad"] -= reaction_rate
-            self.cofactors["nadh"] += reaction_rate
-            self.cofactors["co2"] += reaction_rate
+        if self.consume_metabolites(isocitrate=reaction_rate, nad=reaction_rate):
+            self.produce_metabolites(
+                alpha_ketoglutarate=reaction_rate, nadh=reaction_rate, co2=reaction_rate
+            )
         else:
             logger.warning("Insufficient substrates or NAD⁺ for step 3")
 
@@ -563,19 +654,14 @@ class KrebsCycle:
             1 - (atp_inhibition + nadh_inhibition + succinyl_coa_inhibition) / 3
         )
 
-        reaction_rate = self.michaelis_menten(
-            substrate_conc, vmax * enzyme_activity, km
-        )
+        reaction_rate = michaelis_menten(substrate_conc, vmax * enzyme_activity, km)
 
-        if (
-            self.metabolites["alpha_ketoglutarate"] >= reaction_rate
-            and self.cofactors["nad"] >= reaction_rate
+        if self.consume_metabolites(
+            alpha_ketoglutarate=reaction_rate, nad=reaction_rate
         ):
-            self.metabolites["alpha_ketoglutarate"] -= reaction_rate
-            self.metabolites["succinyl_coa"] += reaction_rate
-            self.cofactors["nad"] -= reaction_rate
-            self.cofactors["nadh"] += reaction_rate
-            self.cofactors["co2"] += reaction_rate
+            self.produce_metabolites(
+                succinyl_coa=reaction_rate, nadh=reaction_rate, co2=reaction_rate
+            )
         else:
             logger.warning("Insufficient substrates or NAD⁺ for step 4")
 
@@ -585,17 +671,12 @@ class KrebsCycle:
         vmax = 1.0  # Placeholder value
         km = 0.1  # Placeholder value
 
-        reaction_rate = self.michaelis_menten(substrate_conc, vmax, km)
+        reaction_rate = michaelis_menten(substrate_conc, vmax, km)
 
-        if (
-            self.metabolites["succinyl_coa"] >= reaction_rate
-            and self.cofactors["gdp"] >= reaction_rate
-        ):
-            self.metabolites["succinyl_coa"] -= reaction_rate
-            self.metabolites["succinate"] += reaction_rate
-            self.cofactors["gdp"] -= reaction_rate
-            self.cofactors["gtp"] += reaction_rate
-            self.cofactors["coenzyme_a"] += reaction_rate
+        if self.consume_metabolites(succinyl_coa=reaction_rate, gdp=reaction_rate):
+            self.produce_metabolites(
+                succinate=reaction_rate, gtp=reaction_rate, coenzyme_a=reaction_rate
+            )
         else:
             logger.warning("Insufficient substrates or GDP for step 5")
 
@@ -605,16 +686,10 @@ class KrebsCycle:
         vmax = 1.0  # Placeholder value
         km = 0.1  # Placeholder value
 
-        reaction_rate = self.michaelis_menten(substrate_conc, vmax, km)
+        reaction_rate = michaelis_menten(substrate_conc, vmax, km)
 
-        if (
-            self.metabolites["succinate"] >= reaction_rate
-            and self.cofactors["fad"] >= reaction_rate
-        ):
-            self.metabolites["succinate"] -= reaction_rate
-            self.metabolites["fumarate"] += reaction_rate
-            self.cofactors["fad"] -= reaction_rate
-            self.cofactors["fadh2"] += reaction_rate
+        if self.consume_metabolites(succinate=reaction_rate, fad=reaction_rate):
+            self.produce_metabolites(fumarate=reaction_rate, fadh2=reaction_rate)
         else:
             logger.warning("Insufficient substrates or FAD for step 6")
 
@@ -624,11 +699,10 @@ class KrebsCycle:
         vmax = 1.0  # Placeholder value
         km = 0.1  # Placeholder value
 
-        reaction_rate = self.michaelis_menten(substrate_conc, vmax, km)
+        reaction_rate = michaelis_menten(substrate_conc, vmax, km)
 
-        if self.metabolites["fumarate"] >= reaction_rate:
-            self.metabolites["fumarate"] -= reaction_rate
-            self.metabolites["malate"] += reaction_rate
+        if self.consume_metabolites(fumarate=reaction_rate):
+            self.produce_metabolites(malate=reaction_rate)
         else:
             logger.warning("Insufficient fumarate for step 7")
 
@@ -638,16 +712,10 @@ class KrebsCycle:
         vmax = 1.0  # Placeholder value
         km = 0.1  # Placeholder value
 
-        reaction_rate = self.michaelis_menten(substrate_conc, vmax, km)
+        reaction_rate = michaelis_menten(substrate_conc, vmax, km)
 
-        if (
-            self.metabolites["malate"] >= reaction_rate
-            and self.cofactors["nad"] >= reaction_rate
-        ):
-            self.metabolites["malate"] -= reaction_rate
-            self.metabolites["oxaloacetate"] += reaction_rate
-            self.cofactors["nad"] -= reaction_rate
-            self.cofactors["nadh"] += reaction_rate
+        if self.consume_metabolites(malate=reaction_rate, nad=reaction_rate):
+            self.produce_metabolites(oxaloacetate=reaction_rate, nadh=reaction_rate)
         else:
             logger.warning("Insufficient substrates or NAD⁺ for step 8")
 
@@ -718,7 +786,9 @@ class Cell:
                 self.cytoplasm.adp.quantity -= adp_transfer
 
             # Implement feedback activation
-            adp_activation_factor = 1 + self.cytoplasm.adp.quantity / 500  # Example threshold
+            adp_activation_factor = (
+                1 + self.cytoplasm.adp.quantity / 500
+            )  # Example threshold
             self.cytoplasm.glycolysis_rate *= adp_activation_factor
 
             # Glycolysis with updated rate
