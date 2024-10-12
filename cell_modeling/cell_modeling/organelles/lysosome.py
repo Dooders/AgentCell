@@ -18,6 +18,7 @@ from organelle import Organelle
 
 
 class Lysosome(Organelle):
+    name = "Lysosome"
     """
     Represents the lysosome, a membrane-bound organelle containing
     hydrolytic enzymes that break down macromolecules.

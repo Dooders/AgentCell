@@ -24,6 +24,7 @@ from organelle import Organelle
 
 
 class EndoplasmicReticulum(Organelle):
+    name = "Endoplasmic Reticulum"
     """
     Represents the endoplasmic reticulum, a network of membranes that
     synthesizes proteins and lipids.

@@ -22,6 +22,18 @@ Receptors and Signaling:
 """
 
 
+class Channel(list):
+    pass
+
+
+class Transporter(list):
+    pass
+
+
+class Receptor(list):
+    pass
+
+
 class CellMembrane:
     """
     Represents the cell membrane of a cell.

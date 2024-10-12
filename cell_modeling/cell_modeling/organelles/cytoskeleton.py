@@ -25,6 +25,7 @@ from organelle import Organelle
 
 
 class Cytoskeleton(Organelle):
+    name = "Cytoskeleton"
     """
     Represents the cytoskeleton, a network of protein filaments that provide
     structural support and facilitate movement within the cell.

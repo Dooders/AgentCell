@@ -17,10 +17,12 @@ Modeling Considerations
         Simulate RNA polymerase activity, mRNA synthesis.
 """
 
-from organelle import Organelle
+class Organelle:
+    pass
 
 
 class Nucleus(Organelle):
+    name = "Nucleus"
     """
     Represents the nucleus, which houses DNA organized into chromosomes.
 

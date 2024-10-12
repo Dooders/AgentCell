@@ -17,6 +17,7 @@ from organelle import Organelle
 
 
 class Ribosome(Organelle):
+    name = "Ribosome"
     """
     Represents a ribosome, which translates mRNA into proteins.
 

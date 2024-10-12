@@ -18,6 +18,7 @@ from organelle import Organelle
 
 
 class GolgiApparatus(Organelle):
+    name = "Golgi Apparatus"
     """
     Represents the Golgi apparatus, a stack of flattened membranous sacs that
     modifies and sorts proteins and lipids.
