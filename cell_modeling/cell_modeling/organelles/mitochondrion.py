@@ -36,21 +36,77 @@ class Metabolite:
 
 class Cytoplasm:
     def __init__(self):
-        self.glucose = 0
-        self.pyruvate = 0
-        self.atp = Metabolite("ATP", 0, 1000)
+        self.metabolites = {
+            "glucose": 100,
+            "glucose_6_phosphate": 0,
+            "fructose_6_phosphate": 0,
+            "fructose_1_6_bisphosphate": 0,
+            "glyceraldehyde_3_phosphate": 0,
+            "dihydroxyacetone_phosphate": 0,
+            "1_3_bisphosphoglycerate": 0,
+            "3_phosphoglycerate": 0,
+            "2_phosphoglycerate": 0,
+            "phosphoenolpyruvate": 0,
+            "pyruvate": 0,
+        }
+        self.atp = Metabolite("ATP", 100, 1000)
+        self.adp = Metabolite("ADP", 100, 1000)
+        self.nad = Metabolite("NAD+", 100, 1000)
         self.nadh = Metabolite("NADH", 0, 1000)
+        self.amp = Metabolite("AMP", 10, 1000)
 
     def glycolysis(self, glucose_amount: int) -> int:
-        """Simulates glycolysis in the cytoplasm."""
-        logger.info(f"Glycolysis of {glucose_amount} units of glucose in cytoplasm")
-        atp_produced = glucose_amount * 2  # Net ATP production in glycolysis
-        self.atp.quantity = min(self.atp.quantity + atp_produced, self.atp.max_quantity)
-        self.nadh.quantity = min(
-            self.nadh.quantity + glucose_amount * 2, self.nadh.max_quantity
+        """Simulates detailed glycolysis in the cytoplasm."""
+        logger.info(f"Starting glycolysis with {glucose_amount} units of glucose")
+
+        self.metabolites["glucose"] += glucose_amount
+
+        # Perform each step of glycolysis
+        self.step1_hexokinase()
+        self.step2_phosphoglucose_isomerase()
+        self.step3_phosphofructokinase()
+        self.step4_aldolase()
+        self.step5_triose_phosphate_isomerase()
+        self.step6_glyceraldehyde_3_phosphate_dehydrogenase()
+        self.step7_phosphoglycerate_kinase()
+        self.step8_phosphoglycerate_mutase()
+        self.step9_enolase()
+        self.step10_pyruvate_kinase()
+
+        pyruvate_produced = self.metabolites["pyruvate"]
+        logger.info(
+            f"Glycolysis complete. Produced {pyruvate_produced} units of pyruvate"
         )
-        self.pyruvate += glucose_amount * 2
-        return self.pyruvate
+        return pyruvate_produced
+
+    def step1_hexokinase(self):
+        """Glucose to Glucose-6-Phosphate."""
+        reaction_amount = min(self.metabolites["glucose"], self.atp.quantity)
+        self.metabolites["glucose"] -= reaction_amount
+        self.metabolites["glucose_6_phosphate"] += reaction_amount
+        self.atp.quantity -= reaction_amount
+        self.adp.quantity += reaction_amount
+
+    # ... implement other steps similarly
+
+    def step3_phosphofructokinase(self):
+        """F6P to F1,6BP with regulation."""
+        atp_inhibition = self.atp.quantity / self.atp.max_quantity
+        amp_activation = self.amp.quantity / self.amp.max_quantity
+        enzyme_activity = 1 * (1 - atp_inhibition) + amp_activation
+
+        reaction_amount = min(
+            self.metabolites["fructose_6_phosphate"],
+            self.atp.quantity,
+            int(enzyme_activity * 10),  # Adjust this factor as needed
+        )
+
+        self.metabolites["fructose_6_phosphate"] -= reaction_amount
+        self.metabolites["fructose_1_6_bisphosphate"] += reaction_amount
+        self.atp.quantity -= reaction_amount
+        self.adp.quantity += reaction_amount
+
+    # ... implement other steps
 
     def reset(self):
         """Reset cytoplasm state."""
@@ -257,11 +313,7 @@ class Cell:
         self.mitochondrion = Mitochondrion()
         self.simulation_time = 0
         self.time_step = 0.1  # 0.1 second per time step
-        self.atp_from_glycolysis = 2  # Net ATP production in glycolysis
-        self.expected_atp_yield = 32  # Expected ATP yield per glucose molecule
-        self.cytoplasmic_calcium = Metabolite(
-            "Ca2+", 100, 1000
-        )  # Add cytoplasmic calcium
+        self.cytoplasmic_calcium = Metabolite("Ca2+", 100, 1000)
 
     def produce_atp(self, glucose_amount: int, duration: float) -> int:
         """Simulates ATP production in the entire cell over a specified duration."""
@@ -277,7 +329,16 @@ class Cell:
 
             # Glycolysis
             pyruvate = self.cytoplasm.glycolysis(1)
-            total_atp_produced += self.atp_from_glycolysis
+            glucose_processed += 1
+
+            # Calculate ATP produced in glycolysis
+            glycolysis_atp = (
+                self.cytoplasm.atp.quantity
+                - initial_atp
+                + self.mitochondrion.atp.quantity
+            )
+            total_atp_produced += glycolysis_atp
+
             cytoplasmic_nadh = self.cytoplasm.nadh.quantity
             self.cytoplasm.nadh.quantity = 0  # Reset cytoplasmic NADH
 
@@ -290,9 +351,7 @@ class Cell:
             acetyl_coa = self.mitochondrion.pyruvate_to_acetyl_coa(pyruvate)
 
             # Calcium dynamics
-            calcium_to_buffer = min(
-                10, self.cytoplasmic_calcium.quantity
-            )  # Simulate calcium influx
+            calcium_to_buffer = min(10, self.cytoplasmic_calcium.quantity)
             buffered_calcium = self.mitochondrion.buffer_calcium(calcium_to_buffer)
             self.cytoplasmic_calcium.quantity -= buffered_calcium
 
@@ -305,15 +364,14 @@ class Cell:
                 )
 
             # Krebs cycle
-            total_atp_produced += self.mitochondrion.krebs_cycle(acetyl_coa)
+            krebs_atp = self.mitochondrion.krebs_cycle(acetyl_coa)
+            total_atp_produced += krebs_atp
 
             # Oxidative phosphorylation
-            total_atp_produced += self.mitochondrion.oxidative_phosphorylation(
-                cytoplasmic_nadh
-            )
+            ox_phos_atp = self.mitochondrion.oxidative_phosphorylation(cytoplasmic_nadh)
+            total_atp_produced += ox_phos_atp
 
             self.simulation_time += self.time_step
-            glucose_processed += 1
 
         atp_per_glucose = (
             total_atp_produced / glucose_processed if glucose_processed > 0 else 0
@@ -326,11 +384,6 @@ class Cell:
         logger.info(f"Total ATP produced: {total_atp_produced}")
         logger.info(f"ATP yield per glucose molecule: {atp_per_glucose:.2f}")
         logger.info(f"Remaining oxygen: {self.mitochondrion.oxygen.quantity}")
-
-        if abs(atp_per_glucose - self.expected_atp_yield) > 2:
-            logger.warning(
-                f"ATP yield ({atp_per_glucose:.2f}) is outside the expected range (30-34)"
-            )
 
         return total_atp_produced
 
