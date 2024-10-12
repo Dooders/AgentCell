@@ -65,7 +65,11 @@ class Mitochondrion(Organelle):
         self.oxygen = 100  # Initial oxygen level (arbitrary units)
         self.oxygen_threshold = 20  # Threshold below which ETC efficiency decreases
         self.oxygen_uptake_rate = 0.1  # Rate of oxygen consumption per ETC cycle
-        logger.info("Mitochondrion initialized with oxygen dynamics")
+        self.ros_level = 0
+        self.ros_threshold = 50  # Threshold for ROS damage
+        self.ros_damage = 0  # Cumulative ROS damage
+        self.proton_pump_efficiency = 1.0  # Starting at 100% efficiency
+        logger.info("Mitochondrion initialized with ROS dynamics")
 
     def update_oxygen(self, amount: float) -> None:
         """
@@ -83,13 +87,16 @@ class Mitochondrion(Organelle):
         """
         Simulates the transfer of electrons from NADH and FADH2 to oxygen,
         pumping protons across the mitochondrial membrane and generating a proton
-        gradient that drives ATP synthesis. Accounts for oxygen availability.
+        gradient that drives ATP synthesis. Accounts for oxygen availability and ROS.
         """
         protons_pumped = 0
         oxygen_consumed = 0
 
         # Calculate oxygen-dependent efficiency
         efficiency = min(1.0, self.oxygen / self.oxygen_threshold)
+
+        # Apply ROS-adjusted efficiency
+        efficiency *= self.proton_pump_efficiency
 
         # Complex I: NADH to Ubiquinone
         if self.nadh > 0 and self.oxygen > 0:
@@ -181,7 +188,7 @@ class Mitochondrion(Organelle):
         """
         Simulates the oxidative phosphorylation process using the electron
         transport chain and ATP synthase, including proton leak, gradual ATP
-        production, and oxygen uptake dynamics.
+        production, oxygen uptake dynamics, and ROS effects.
         """
         logger.info("Performing oxidative phosphorylation")
         total_atp_produced = 0
@@ -210,6 +217,9 @@ class Mitochondrion(Organelle):
         logger.info(f"ATP produced in oxidative phosphorylation: {total_atp_produced}")
         logger.debug(f"Remaining proton gradient: {self.proton_gradient}")
         logger.debug(f"Remaining oxygen: {self.oxygen}")
+        logger.debug(f"Current ROS level: {self.ros_level}")
+        logger.debug(f"Cumulative ROS damage: {self.ros_damage}")
+        logger.debug(f"Proton pump efficiency: {self.proton_pump_efficiency}")
 
     def produce_atp(self, glucose_amount: int) -> int:
         """
