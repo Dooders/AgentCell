@@ -36,17 +36,19 @@ class Metabolite:
 
 class Cytoplasm:
     def __init__(self):
-        self.glucose = 0
-        self.atp = 0
-        self.adp = 0
-        self.nad = 10  # Starting NAD+ molecules
-        self.nadh = 0
-        self.pyruvate = 0
+        self.glucose = Metabolite("Glucose", 0, 1000)
+        self.atp = Metabolite("ATP", 0, 1000)
+        self.adp = Metabolite("ADP", 0, 1000)
+        self.nad = Metabolite("NAD+", 10, 1000)  # Starting NAD+ molecules
+        self.nadh = Metabolite("NADH", 0, 1000)
+        self.pyruvate = Metabolite("Pyruvate", 0, 1000)
         self.logger = logging.getLogger(__name__)
 
     def glycolysis(self, glucose_units):
-        self.glucose = glucose_units
-        self.logger.info(f"Starting glycolysis with {self.glucose} units of glucose")
+        self.glucose.quantity = glucose_units
+        self.logger.info(
+            f"Starting glycolysis with {self.glucose.quantity} units of glucose"
+        )
 
         self.step1_hexokinase()
         self.step2_phosphoglucose_isomerase()
@@ -60,24 +62,24 @@ class Cytoplasm:
         self.step10_pyruvate_kinase()
 
         self.logger.info(
-            f"Glycolysis complete. Produced {self.pyruvate} pyruvate molecules"
+            f"Glycolysis complete. Produced {self.pyruvate.quantity} pyruvate molecules"
         )
-        return self.pyruvate
+        return self.pyruvate.quantity
 
     def step1_hexokinase(self):
-        if self.glucose > 0 and self.atp >= 1:
-            self.glucose -= 1
-            self.atp -= 1
-            self.adp += 1
+        if self.glucose.quantity > 0 and self.atp.quantity >= 1:
+            self.glucose.quantity -= 1
+            self.atp.quantity -= 1
+            self.adp.quantity += 1
             self.logger.info("Step 1: Hexokinase - Glucose phosphorylation")
 
     def step2_phosphoglucose_isomerase(self):
         self.logger.info("Step 2: Phosphoglucose isomerase - Isomerization")
 
     def step3_phosphofructokinase(self):
-        if self.atp >= 1:
-            self.atp -= 1
-            self.adp += 1
+        if self.atp.quantity >= 1:
+            self.atp.quantity -= 1
+            self.adp.quantity += 1
             self.logger.info("Step 3: Phosphofructokinase - Phosphorylation")
 
     def step4_aldolase(self):
@@ -87,16 +89,16 @@ class Cytoplasm:
         self.logger.info("Step 5: Triose phosphate isomerase - Isomerization")
 
     def step6_glyceraldehyde_3_phosphate_dehydrogenase(self):
-        if self.nad >= 2:
-            self.nad -= 2
-            self.nadh += 2
+        if self.nad.quantity >= 2:
+            self.nad.quantity -= 2
+            self.nadh.quantity += 2
             self.logger.info(
                 "Step 6: Glyceraldehyde 3-phosphate dehydrogenase - Oxidation and phosphorylation"
             )
 
     def step7_phosphoglycerate_kinase(self):
-        self.atp += 2
-        self.adp -= 2
+        self.atp.quantity += 2
+        self.adp.quantity -= 2
         self.logger.info("Step 7: Phosphoglycerate kinase - ATP generation")
 
     def step8_phosphoglycerate_mutase(self):
@@ -106,12 +108,16 @@ class Cytoplasm:
         self.logger.info("Step 9: Enolase - Dehydration")
 
     def step10_pyruvate_kinase(self):
-        self.atp += 2
-        self.adp -= 2
-        self.pyruvate += 2
+        self.atp.quantity += 2
+        self.adp.quantity -= 2
+        self.pyruvate.quantity += 2
         self.logger.info(
             "Step 10: Pyruvate kinase - ATP generation and pyruvate formation"
         )
+
+    def reset(self):
+        self.__init__()
+        self.logger.info("Cytoplasm state reset")
 
 
 class Mitochondrion:
@@ -315,14 +321,16 @@ class Cell:
         self.time_step = 0.1  # 0.1 second per time step
         self.cytoplasmic_calcium = Metabolite("Ca2+", 100, 1000)
 
-    def produce_atp(self, glucose_amount: int, duration: float) -> int:
+    def produce_atp(self, glucose, simulation_duration):
         """Simulates ATP production in the entire cell over a specified duration."""
         initial_atp = self.cytoplasm.atp.quantity + self.mitochondrion.atp.quantity
         self.simulation_time = 0
         total_atp_produced = 0
         glucose_processed = 0
 
-        while glucose_processed < glucose_amount and self.simulation_time < duration:
+        while (
+            glucose_processed < glucose and self.simulation_time < simulation_duration
+        ):
             if self.mitochondrion.oxygen.quantity <= 0:
                 logger.warning("Oxygen depleted. Stopping simulation.")
                 break
@@ -340,7 +348,6 @@ class Cell:
             total_atp_produced += glycolysis_atp
 
             cytoplasmic_nadh = self.cytoplasm.nadh.quantity
-            self.cytoplasm.nadh.quantity = 0  # Reset cytoplasmic NADH
 
             # NADH shuttle
             mitochondrial_nadh = self.mitochondrion.transfer_cytoplasmic_nadh(
