@@ -196,25 +196,59 @@ class Mitochondrion(Organelle):
         # ROS clearance (simplified)
         self.ros_level = max(0, self.ros_level - random.uniform(0, 1))
 
-    def krebs_cycle(self, pyruvate_amount: int) -> None:
+    def pyruvate_to_acetyl_coa(self, pyruvate_amount: int) -> int:
         """
-        Simulates the Krebs cycle processing of pyruvate.
-
-        The Krebs cycle is a series of chemical reactions that occur in the
-        mitochondrial matrix. It converts pyruvate into acetyl-CoA, which is
-        then used to produce ATP.
+        Simulates the conversion of pyruvate to acetyl-CoA by the pyruvate dehydrogenase complex.
 
         Parameters
         ----------
         pyruvate_amount : int
-            The amount of pyruvate to be processed. Comes from the glycolysis.
-            Comes from the mitochondrion.
+            The amount of pyruvate to be converted.
+
+        Returns
+        -------
+        int
+            The amount of acetyl-CoA produced.
         """
-        logger.info(f"Krebs cycle processing {pyruvate_amount} units of pyruvate")
-        for _ in range(pyruvate_amount):
-            self.atp += 1  # 1 GTP (equivalent to ATP) per pyruvate
-            self.nadh = min(self.nadh + 3, self.nadh_max)  # 3 NADH per pyruvate
-            self.fadh2 = min(self.fadh2 + 1, self.fadh2_max)  # 1 FADH2 per pyruvate
+        logger.info(f"Converting {pyruvate_amount} units of pyruvate to acetyl-CoA")
+        acetyl_coa_produced = pyruvate_amount
+        self.nadh = min(
+            self.nadh + pyruvate_amount, self.nadh_max
+        )  # 1 NADH per pyruvate
+        # CO2 production could be tracked here if needed
+        logger.debug(f"Acetyl-CoA produced: {acetyl_coa_produced}, NADH: {self.nadh}")
+        return acetyl_coa_produced
+
+    def process_pyruvate(self, pyruvate_amount: int) -> None:
+        """
+        Processes pyruvate received from glycolysis in the cytoplasm.
+
+        Parameters
+        ----------
+        pyruvate_amount : int
+            The amount of pyruvate to be processed.
+        """
+        logger.info(f"Processing {pyruvate_amount} units of pyruvate from cytoplasm")
+        acetyl_coa = self.pyruvate_to_acetyl_coa(pyruvate_amount)
+        self.krebs_cycle(acetyl_coa)
+
+    def krebs_cycle(self, acetyl_coa_amount: int) -> None:
+        """
+        Simulates the Krebs cycle processing of acetyl-CoA.
+
+        The Krebs cycle is a series of chemical reactions that occur in the
+        mitochondrial matrix. It uses acetyl-CoA to produce ATP, NADH, and FADH2.
+
+        Parameters
+        ----------
+        acetyl_coa_amount : int
+            The amount of acetyl-CoA to be processed. Comes from pyruvate conversion.
+        """
+        logger.info(f"Krebs cycle processing {acetyl_coa_amount} units of acetyl-CoA")
+        for _ in range(acetyl_coa_amount):
+            self.atp += 1  # 1 GTP (equivalent to ATP) per acetyl-CoA
+            self.nadh = min(self.nadh + 3, self.nadh_max)  # 3 NADH per acetyl-CoA
+            self.fadh2 = min(self.fadh2 + 1, self.fadh2_max)  # 1 FADH2 per acetyl-CoA
 
         logger.debug(
             f"After Krebs cycle: ATP: {self.atp}, NADH: {self.nadh}, FADH2: {self.fadh2}"
@@ -266,18 +300,6 @@ class Mitochondrion(Organelle):
         self.nadh = min(self.nadh + self.nadh_production_rate, self.nadh_max)
         self.fadh2 = min(self.fadh2 + self.fadh2_production_rate, self.fadh2_max)
         logger.debug(f"Updated NADH: {self.nadh}, FADH2: {self.fadh2}")
-
-    def process_pyruvate(self, pyruvate_amount: int) -> None:
-        """
-        Processes pyruvate received from glycolysis in the cytoplasm.
-
-        Parameters
-        ----------
-        pyruvate_amount : int
-            The amount of pyruvate to be processed.
-        """
-        logger.info(f"Processing {pyruvate_amount} units of pyruvate from cytoplasm")
-        self.krebs_cycle(pyruvate_amount)
 
     def function(self) -> str:
         """
