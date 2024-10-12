@@ -64,19 +64,28 @@ class Mitochondrion(Organelle):
         )
         self.oxygen = 100  # Initial oxygen level (arbitrary units)
         self.oxygen_threshold = 20  # Threshold below which ETC efficiency decreases
-        self.oxygen_uptake_rate = 0.1  # Rate of oxygen consumption per ETC cycle
+        self.oxygen_uptake_rate = (
+            0.5  # Increased rate of oxygen consumption per glucose unit
+        )
         self.ros_level = 0
         self.ros_threshold = 50  # Threshold for ROS damage
         self.ros_damage = 0  # Cumulative ROS damage
         self.proton_pump_efficiency = 1.0  # Starting at 100% efficiency
-        self.nadh_production_rate = 0.5  # NADH produced per time step
-        self.fadh2_production_rate = 0.2  # FADH2 produced per time step
-        self.nadh_max = 20  # Maximum NADH capacity
-        self.fadh2_max = 10  # Maximum FADH2 capacity
+        self.nadh_production_rate = 10  # NADH produced per glucose unit
+        self.fadh2_production_rate = 2  # FADH2 produced per glucose unit
+        self.nadh_max = 100  # Increased maximum NADH capacity
+        self.fadh2_max = 40  # Increased maximum FADH2 capacity
         self.time_step = 0  # Current time step
-        logger.info(
-            "Mitochondrion initialized with time-dependent NADH and FADH2 dynamics"
+        self.metabolic_load = 0  # New variable to track metabolic load
+        self.max_metabolic_load = 100  # Maximum metabolic load
+        self.atp_yield_per_nadh = 2.5  # Adjusted ATP yield per NADH
+        self.atp_yield_per_fadh2 = 1.5  # Adjusted ATP yield per FADH2
+        self.ros_generation_rate = (
+            0.01  # Rate of ROS generation per NADH/FADH2 consumed
         )
+        self.nadh_consumption_rate = 0.2  # Rate of NADH consumption per time step
+        self.fadh2_consumption_rate = 0.1  # Rate of FADH2 consumption per time step
+        logger.info("Mitochondrion initialized with updated metabolic parameters")
 
     def update_oxygen(self, amount: float) -> None:
         """
@@ -97,59 +106,57 @@ class Mitochondrion(Organelle):
         gradient that drives ATP synthesis. Accounts for oxygen availability and ROS.
         """
         protons_pumped = 0
-        oxygen_consumed = 0
-
-        # Calculate oxygen-dependent efficiency
         efficiency = min(1.0, self.oxygen / self.oxygen_threshold)
-
-        # Apply ROS-adjusted efficiency
         efficiency *= self.proton_pump_efficiency
 
-        # Time-dependent NADH and FADH2 consumption
-        nadh_consumed = min(self.nadh, 1)  # Consume up to 1 NADH per time step
-        fadh2_consumed = min(self.fadh2, 0.5)  # Consume up to 0.5 FADH2 per time step
+        nadh_consumed = min(self.nadh, self.nadh_consumption_rate)
+        fadh2_consumed = min(self.fadh2, self.fadh2_consumption_rate)
 
-        # Complex I: NADH to Ubiquinone
+        oxygen_consumed = (
+            nadh_consumed + fadh2_consumed * 0.5
+        ) * self.oxygen_uptake_rate
+
         if nadh_consumed > 0 and self.oxygen > 0:
-            protons_pumped += 4 * efficiency * nadh_consumed
+            protons_pumped += 10 * efficiency * nadh_consumed  # Increased from 4 to 10
             self.nadh -= nadh_consumed
-            oxygen_consumed += self.oxygen_uptake_rate * nadh_consumed
 
-        # Complex II: FADH2 to Ubiquinone (no protons pumped)
         if fadh2_consumed > 0 and self.oxygen > 0:
-            self.fadh2 -= fadh2_consumed
-            oxygen_consumed += self.oxygen_uptake_rate / 2 * fadh2_consumed
-
-        # Complex III: Ubiquinol to Cytochrome c
-        if self.oxygen > 0:
-            protons_pumped += 4 * efficiency  # 4 H+ per cycle, adjusted for oxygen
-            oxygen_consumed += self.oxygen_uptake_rate
-
-        # Complex IV: Cytochrome c to Oxygen
-        if self.oxygen > 0:
             protons_pumped += (
-                2 * efficiency
-            )  # 2 H+ per 1/2 O2 reduced, adjusted for oxygen
-            oxygen_consumed += self.oxygen_uptake_rate
+                6 * efficiency * fadh2_consumed
+            )  # Added proton pumping for FADH2
+            self.fadh2 -= fadh2_consumed
 
-        # Add some variability to the proton gradient
+        if self.oxygen > 0:
+            protons_pumped += 4 * efficiency  # Complex III
+            protons_pumped += 2 * efficiency  # Complex IV
+
         protons_pumped += random.randint(-1, 1)
 
         self.proton_gradient += protons_pumped
         self.update_oxygen(-oxygen_consumed)
-        logger.debug(f"Proton gradient after ETC: {self.proton_gradient}")
-        logger.debug(f"Oxygen consumed in ETC: {oxygen_consumed}")
 
-        # ROS generation
-        ros_generated = random.uniform(0, 2)  # Random ROS generation
+        # ROS generation based on metabolic activity
+        ros_generated = self.ros_generation_rate * (nadh_consumed + fadh2_consumed)
         self.ros_level += ros_generated
         logger.debug(f"ROS generated: {ros_generated}")
+
+        # Update metabolic load
+        self.metabolic_load = min(
+            self.metabolic_load + (nadh_consumed + fadh2_consumed),
+            self.max_metabolic_load,
+        )
+
+        # Dynamic proton pump efficiency
+        load_factor = self.metabolic_load / self.max_metabolic_load
+        ros_factor = self.ros_level / self.ros_threshold
+        self.proton_pump_efficiency = max(
+            0.5, 1 - (load_factor * 0.3 + ros_factor * 0.2)
+        )
 
         # ROS damage calculation
         if self.ros_level > self.ros_threshold:
             damage = (self.ros_level - self.ros_threshold) * 0.1
             self.ros_damage += damage
-            self.proton_pump_efficiency = max(0.5, 1 - (self.ros_damage / 100))
             logger.debug(f"ROS damage: {damage}, Total damage: {self.ros_damage}")
             logger.debug(
                 f"Updated proton pump efficiency: {self.proton_pump_efficiency}"
@@ -177,14 +184,12 @@ class Mitochondrion(Organelle):
             The amount of pyruvate produced. Used for the Krebs cycle.
         """
         logger.info(f"Glycolysis of {glucose_amount} units of glucose")
-        # Initial ATP investment
-        self.atp -= glucose_amount * 2
-        # Net ATP production
-        atp_produced = glucose_amount * 4
+        # Net ATP production (2 ATP per glucose)
+        atp_produced = glucose_amount * 2
         self.atp += atp_produced
-        # NADH production
-        self.nadh += glucose_amount * 2
-        pyruvate = glucose_amount * 2  # Each glucose yields 2 pyruvate molecules
+        # NADH production (2 NADH per glucose)
+        self.nadh = min(self.nadh + glucose_amount * 2, self.nadh_max)
+        pyruvate = glucose_amount * 2
         return pyruvate
 
     def krebs_cycle(self, pyruvate_amount: int) -> None:
@@ -204,8 +209,8 @@ class Mitochondrion(Organelle):
         logger.info(f"Krebs cycle processing {pyruvate_amount} units of pyruvate")
         for _ in range(pyruvate_amount):
             self.atp += 1  # 1 GTP (equivalent to ATP) per pyruvate
-            self.nadh += 4  # 3 NADH from Krebs cycle + 1 from pyruvate dehydrogenase
-            self.fadh2 += 1  # 1 FADH2 per pyruvate
+            self.nadh = min(self.nadh + 3, self.nadh_max)  # 3 NADH per pyruvate
+            self.fadh2 = min(self.fadh2 + 1, self.fadh2_max)  # 1 FADH2 per pyruvate
 
         logger.debug(
             f"After Krebs cycle: ATP: {self.atp}, NADH: {self.nadh}, FADH2: {self.fadh2}"
@@ -221,18 +226,17 @@ class Mitochondrion(Organelle):
         total_atp_produced = 0
 
         while (self.nadh > 0 or self.fadh2 > 0) and self.oxygen > 0:
-            # Run the electron transport chain
             self.electron_transport_chain()
 
-            # Simulate proton leak
             leaked_protons = int(self.proton_gradient * self.proton_leak_rate)
             self.proton_gradient -= leaked_protons
-            logger.debug(f"Protons leaked: {leaked_protons}")
 
-            # Simulate ATP synthase using the proton gradient
-            while self.proton_gradient >= 3:  # 3 protons minimum for ATP production
+            while self.proton_gradient >= 3:
                 protons_used = 3
-                atp_produced = 1 * self.atp_synthase_efficiency
+                atp_produced = (
+                    self.atp_yield_per_nadh * self.nadh_consumption_rate
+                    + self.atp_yield_per_fadh2 * self.fadh2_consumption_rate
+                ) * self.atp_synthase_efficiency
                 self.atp += atp_produced
                 total_atp_produced += atp_produced
                 self.proton_gradient -= protons_used
@@ -240,6 +244,9 @@ class Mitochondrion(Organelle):
         # Round the total ATP produced to the nearest whole number
         total_atp_produced = round(total_atp_produced)
         self.atp = round(self.atp)
+
+        # Gradual decrease in metabolic load
+        self.metabolic_load = max(0, self.metabolic_load - 1)
 
         logger.info(f"ATP produced in oxidative phosphorylation: {total_atp_produced}")
         logger.debug(f"Remaining proton gradient: {self.proton_gradient}")
@@ -264,11 +271,15 @@ class Mitochondrion(Organelle):
         pyruvate: int = self.glycolysis(glucose_amount)
         self.krebs_cycle(pyruvate)
 
-        # Run oxidative phosphorylation for multiple time steps
-        for _ in range(10):  # Simulate 10 time steps
+        oxygen_consumed = glucose_amount * self.oxygen_uptake_rate
+        self.update_oxygen(-oxygen_consumed)
+
+        for _ in range(10):
             self.time_step += 1
-            self.update_nadh_fadh2()
             self.oxidative_phosphorylation()
+            # Replenish some NADH and FADH2 to allow for continued ATP production
+            self.nadh = min(self.nadh + self.nadh_production_rate, self.nadh_max)
+            self.fadh2 = min(self.fadh2 + self.fadh2_production_rate, self.fadh2_max)
 
         atp_produced = self.atp - initial_atp
         logger.info(f"Total ATP produced: {atp_produced}")
