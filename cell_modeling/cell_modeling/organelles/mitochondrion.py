@@ -89,7 +89,8 @@ class Mitochondrion(Organelle):
         self.nadh = 0
         self.fadh2 = 0
         self.proton_gradient = 0
-        self.proton_leak_rate = 0.05  # Reduced to 5% of protons leak per cycle
+        self.proton_leak_rate = 0.05  # Base proton leak rate (5%)
+        self.membrane_integrity = 1.0  # 1.0 represents full integrity
         self.atp_synthase_efficiency = (
             0.75  # Adjusted to 75% efficiency in ATP production
         )
@@ -143,31 +144,33 @@ class Mitochondrion(Organelle):
         nadh_consumed = min(self.nadh, self.nadh_consumption_rate)
         fadh2_consumed = min(self.fadh2, self.fadh2_consumption_rate)
 
-        oxygen_consumed = (
-            nadh_consumed + fadh2_consumed * 0.5
-        ) * self.oxygen_uptake_rate
+        # Updated oxygen consumption calculation
+        oxygen_consumed = 0.5 * (nadh_consumed + fadh2_consumed)
 
         if nadh_consumed > 0 and self.oxygen > 0:
-            protons_pumped += 10 * efficiency * nadh_consumed  # Increased from 4 to 10
+            protons_pumped += 10 * efficiency * nadh_consumed
             self.nadh -= nadh_consumed
 
         if fadh2_consumed > 0 and self.oxygen > 0:
-            protons_pumped += (
-                6 * efficiency * fadh2_consumed
-            )  # Added proton pumping for FADH2
+            protons_pumped += 6 * efficiency * fadh2_consumed
             self.fadh2 -= fadh2_consumed
 
-        if self.oxygen > 0:
-            protons_pumped += 4 * efficiency  # Complex III
-            protons_pumped += 2 * efficiency  # Complex IV
-
-        protons_pumped += random.randint(-1, 1)
+        # Adjust proton pumping based on available oxygen
+        protons_pumped *= min(1.0, self.oxygen / oxygen_consumed)
 
         self.proton_gradient += protons_pumped
         self.update_oxygen(-oxygen_consumed)
 
-        # ROS generation based on metabolic activity
-        ros_generated = self.ros_generation_rate * (nadh_consumed + fadh2_consumed)
+        # Updated ROS generation model
+        electron_leakage = 1 - efficiency
+        ros_generated = (
+            self.ros_generation_rate
+            * (nadh_consumed + fadh2_consumed)
+            * electron_leakage
+        )
+        ros_generated *= min(
+            1.0, self.oxygen / self.oxygen_threshold
+        )  # ROS production depends on oxygen availability
         self.ros_level += ros_generated
         logger.debug(f"ROS generated: {ros_generated}")
 
@@ -188,10 +191,17 @@ class Mitochondrion(Organelle):
         if self.ros_level > self.ros_threshold:
             damage = (self.ros_level - self.ros_threshold) * 0.1
             self.ros_damage += damage
+            self.membrane_integrity = max(0.5, self.membrane_integrity - damage * 0.01)
             logger.debug(f"ROS damage: {damage}, Total damage: {self.ros_damage}")
+            logger.debug(f"Updated membrane integrity: {self.membrane_integrity}")
             logger.debug(
                 f"Updated proton pump efficiency: {self.proton_pump_efficiency}"
             )
+
+        # Dynamic proton leak rate
+        self.proton_leak_rate = (
+            0.05 + (1 - self.membrane_integrity) * 0.1 + ros_factor * 0.05
+        )
 
         # ROS clearance (simplified)
         self.ros_level = max(0, self.ros_level - random.uniform(0, 1))
