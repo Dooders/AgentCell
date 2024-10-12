@@ -1,6 +1,6 @@
 import logging
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List
 
@@ -10,18 +10,26 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class Metabolite:
+class Enzyme:
     name: str
-    quantity: int
-    max_quantity: int
+    activity: float = field(default=1.0)
+    vmax: float = field(default=1.0)
+    km: float = field(default=0.1)
+
+
+@dataclass
+class Metabolite:
+    name: str = field(default="")
+    quantity: int = field(default=0)
+    max_quantity: int = field(default=1000)
 
 
 @dataclass
 class Effector:
-    name: str
-    concentration: float
-    Ki: float  # Inhibition constant
-    Ka: float  # Activation constant
+    name: str = field(default="")
+    concentration: float = field(default=0)
+    Ki: float = field(default=0.1)  # Inhibition constant
+    Ka: float = field(default=0.1)  # Activation constant
 
 
 def michaelis_menten(substrate_conc: float, vmax: float, km: float) -> float:
@@ -294,10 +302,10 @@ class Mitochondrion:
 
         # Implement feedback inhibition
         atp_inhibition_factor = 1 / (1 + self.atp.quantity / 1000)  # Example threshold
-        self.krebs_cycle.enzyme_activities["citrate_synthase"] *= atp_inhibition_factor
-        self.krebs_cycle.enzyme_activities[
+        self.krebs_cycle.enzymes["citrate_synthase"].activity *= atp_inhibition_factor
+        self.krebs_cycle.enzymes[
             "isocitrate_dehydrogenase"
-        ] *= atp_inhibition_factor
+        ].activity *= atp_inhibition_factor
 
         krebs_products = self.krebs_cycle_process(acetyl_coa)
 
@@ -557,14 +565,17 @@ class KrebsCycle:
             "gdp": 0,
             "co2": 0,
         }
-        self.enzyme_activities = {
-            "citrate_synthase": 1.0,
-            "isocitrate_dehydrogenase": 1.0,
-            "alpha_ketoglutarate_dehydrogenase": 1.0,
-            "succinyl_coa_synthetase": 1.0,
-            "succinate_dehydrogenase": 1.0,
-            "fumarase": 1.0,
-            "malate_dehydrogenase": 1.0,
+        self.enzymes = {
+            "citrate_synthase": Enzyme("Citrate Synthase"),
+            "aconitase": Enzyme("Aconitase"),
+            "isocitrate_dehydrogenase": Enzyme("Isocitrate Dehydrogenase"),
+            "alpha_ketoglutarate_dehydrogenase": Enzyme(
+                "α-Ketoglutarate Dehydrogenase"
+            ),
+            "succinyl_coa_synthetase": Enzyme("Succinyl-CoA Synthetase"),
+            "succinate_dehydrogenase": Enzyme("Succinate Dehydrogenase"),
+            "fumarase": Enzyme("Fumarase"),
+            "malate_dehydrogenase": Enzyme("Malate Dehydrogenase"),
         }
 
     def is_metabolite_available(self, metabolite: str, amount: float) -> bool:
@@ -602,13 +613,13 @@ class KrebsCycle:
 
     def step1_citrate_synthase(self):
         """Acetyl-CoA + Oxaloacetate to Citrate"""
+        enzyme = self.enzymes["citrate_synthase"]
         substrate_conc = min(
             self.metabolites["acetyl_coa"], self.metabolites["oxaloacetate"]
         )
-        vmax = 1.0  # Placeholder value
-        km = 0.1  # Placeholder value
-
-        reaction_rate = michaelis_menten(substrate_conc, vmax, km)
+        reaction_rate = michaelis_menten(
+            substrate_conc, enzyme.vmax * enzyme.activity, enzyme.km
+        )
 
         if self.consume_metabolites(
             acetyl_coa=reaction_rate, oxaloacetate=reaction_rate
@@ -619,11 +630,11 @@ class KrebsCycle:
 
     def step2_aconitase(self):
         """Citrate to Isocitrate"""
+        enzyme = self.enzymes["aconitase"]
         substrate_conc = self.metabolites["citrate"]
-        vmax = 1.0  # Placeholder value
-        km = 0.1  # Placeholder value
-
-        reaction_rate = michaelis_menten(substrate_conc, vmax, km)
+        reaction_rate = michaelis_menten(
+            substrate_conc, enzyme.vmax * enzyme.activity, enzyme.km
+        )
 
         if self.consume_metabolites(citrate=reaction_rate):
             self.produce_metabolites(isocitrate=reaction_rate)
@@ -632,9 +643,8 @@ class KrebsCycle:
 
     def step3_isocitrate_dehydrogenase(self):
         """Isocitrate to α-Ketoglutarate with allosteric regulation"""
+        enzyme = self.enzymes["isocitrate_dehydrogenase"]
         substrate_conc = self.metabolites["isocitrate"]
-        vmax = V_MAX_DEFAULT  # Base Vmax
-        km = KM_DEFAULT  # Base Km
 
         # Define effectors
         atp_effector = Effector("ATP", self.cofactors["atp"], Ki=100, Ka=1000)
@@ -642,14 +652,16 @@ class KrebsCycle:
 
         # Calculate regulated enzyme activity
         regulated_activity = allosteric_regulation(
-            self.enzyme_activities["isocitrate_dehydrogenase"],
+            enzyme.activity,
             inhibitors=[atp_effector],
             activators=[adp_effector],
         )
 
         # Use Hill equation for cooperative binding
         n = 2  # Hill coefficient
-        reaction_rate = hill_equation(substrate_conc, vmax * regulated_activity, km, n)
+        reaction_rate = hill_equation(
+            substrate_conc, enzyme.vmax * regulated_activity, enzyme.km, n
+        )
 
         if self.consume_metabolites(isocitrate=reaction_rate, nad=reaction_rate):
             self.produce_metabolites(
@@ -660,9 +672,8 @@ class KrebsCycle:
 
     def step4_alpha_ketoglutarate_dehydrogenase(self):
         """α-Ketoglutarate to Succinyl-CoA"""
+        enzyme = self.enzymes["alpha_ketoglutarate_dehydrogenase"]
         substrate_conc = self.metabolites["alpha_ketoglutarate"]
-        vmax = 1.0  # Placeholder value
-        km = 0.1  # Placeholder value
 
         # Enzyme regulation
         atp_inhibition = self.cofactors["atp"] / 100
@@ -674,7 +685,9 @@ class KrebsCycle:
             1 - (atp_inhibition + nadh_inhibition + succinyl_coa_inhibition) / 3
         )
 
-        reaction_rate = michaelis_menten(substrate_conc, vmax * enzyme_activity, km)
+        reaction_rate = michaelis_menten(
+            substrate_conc, enzyme.vmax * enzyme_activity * enzyme.activity, enzyme.km
+        )
 
         if self.consume_metabolites(
             alpha_ketoglutarate=reaction_rate, nad=reaction_rate
@@ -687,11 +700,11 @@ class KrebsCycle:
 
     def step5_succinyl_coa_synthetase(self):
         """Succinyl-CoA to Succinate"""
+        enzyme = self.enzymes["succinyl_coa_synthetase"]
         substrate_conc = self.metabolites["succinyl_coa"]
-        vmax = 1.0  # Placeholder value
-        km = 0.1  # Placeholder value
-
-        reaction_rate = michaelis_menten(substrate_conc, vmax, km)
+        reaction_rate = michaelis_menten(
+            substrate_conc, enzyme.vmax * enzyme.activity, enzyme.km
+        )
 
         if self.consume_metabolites(succinyl_coa=reaction_rate, gdp=reaction_rate):
             self.produce_metabolites(
@@ -702,11 +715,11 @@ class KrebsCycle:
 
     def step6_succinate_dehydrogenase(self):
         """Succinate to Fumarate"""
+        enzyme = self.enzymes["succinate_dehydrogenase"]
         substrate_conc = self.metabolites["succinate"]
-        vmax = 1.0  # Placeholder value
-        km = 0.1  # Placeholder value
-
-        reaction_rate = michaelis_menten(substrate_conc, vmax, km)
+        reaction_rate = michaelis_menten(
+            substrate_conc, enzyme.vmax * enzyme.activity, enzyme.km
+        )
 
         if self.consume_metabolites(succinate=reaction_rate, fad=reaction_rate):
             self.produce_metabolites(fumarate=reaction_rate, fadh2=reaction_rate)
@@ -715,11 +728,11 @@ class KrebsCycle:
 
     def step7_fumarase(self):
         """Fumarate to Malate"""
+        enzyme = self.enzymes["fumarase"]
         substrate_conc = self.metabolites["fumarate"]
-        vmax = 1.0  # Placeholder value
-        km = 0.1  # Placeholder value
-
-        reaction_rate = michaelis_menten(substrate_conc, vmax, km)
+        reaction_rate = michaelis_menten(
+            substrate_conc, enzyme.vmax * enzyme.activity, enzyme.km
+        )
 
         if self.consume_metabolites(fumarate=reaction_rate):
             self.produce_metabolites(malate=reaction_rate)
@@ -728,11 +741,11 @@ class KrebsCycle:
 
     def step8_malate_dehydrogenase(self):
         """Malate to Oxaloacetate"""
+        enzyme = self.enzymes["malate_dehydrogenase"]
         substrate_conc = self.metabolites["malate"]
-        vmax = 1.0  # Placeholder value
-        km = 0.1  # Placeholder value
-
-        reaction_rate = michaelis_menten(substrate_conc, vmax, km)
+        reaction_rate = michaelis_menten(
+            substrate_conc, enzyme.vmax * enzyme.activity, enzyme.km
+        )
 
         if self.consume_metabolites(malate=reaction_rate, nad=reaction_rate):
             self.produce_metabolites(oxaloacetate=reaction_rate, nadh=reaction_rate)
