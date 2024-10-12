@@ -62,36 +62,67 @@ class Mitochondrion(Organelle):
         self.atp_synthase_efficiency = (
             0.75  # Adjusted to 75% efficiency in ATP production
         )
-        logger.info("Mitochondrion initialized")
+        self.oxygen = 100  # Initial oxygen level (arbitrary units)
+        self.oxygen_threshold = 20  # Threshold below which ETC efficiency decreases
+        self.oxygen_uptake_rate = 0.1  # Rate of oxygen consumption per ETC cycle
+        logger.info("Mitochondrion initialized with oxygen dynamics")
+
+    def update_oxygen(self, amount: float) -> None:
+        """
+        Updates the oxygen level in the mitochondrion.
+
+        Parameters
+        ----------
+        amount : float
+            The amount of oxygen to add (positive) or remove (negative).
+        """
+        self.oxygen = max(0, self.oxygen + amount)
+        logger.debug(f"Oxygen level updated to: {self.oxygen}")
 
     def electron_transport_chain(self) -> None:
         """
         Simulates the transfer of electrons from NADH and FADH2 to oxygen,
         pumping protons across the mitochondrial membrane and generating a proton
-        gradient that drives ATP synthesis.
+        gradient that drives ATP synthesis. Accounts for oxygen availability.
         """
         protons_pumped = 0
+        oxygen_consumed = 0
+
+        # Calculate oxygen-dependent efficiency
+        efficiency = min(1.0, self.oxygen / self.oxygen_threshold)
 
         # Complex I: NADH to Ubiquinone
-        if self.nadh > 0:
-            protons_pumped += 4  # 4 H+ per NADH
+        if self.nadh > 0 and self.oxygen > 0:
+            protons_pumped += 4 * efficiency  # 4 H+ per NADH, adjusted for oxygen
             self.nadh -= 1
+            oxygen_consumed += self.oxygen_uptake_rate
 
         # Complex II: FADH2 to Ubiquinone (no protons pumped)
-        if self.fadh2 > 0:
+        if self.fadh2 > 0 and self.oxygen > 0:
             self.fadh2 -= 1
+            oxygen_consumed += (
+                self.oxygen_uptake_rate / 2
+            )  # Less oxygen consumed compared to NADH
 
         # Complex III: Ubiquinol to Cytochrome c
-        protons_pumped += 4  # 4 H+ per cycle
+        if self.oxygen > 0:
+            protons_pumped += 4 * efficiency  # 4 H+ per cycle, adjusted for oxygen
+            oxygen_consumed += self.oxygen_uptake_rate
 
         # Complex IV: Cytochrome c to Oxygen
-        protons_pumped += 2  # 2 H+ per 1/2 O2 reduced
+        if self.oxygen > 0:
+            protons_pumped += (
+                2 * efficiency
+            )  # 2 H+ per 1/2 O2 reduced, adjusted for oxygen
+            oxygen_consumed += self.oxygen_uptake_rate
 
         # Add some variability to the proton gradient
         protons_pumped += random.randint(-1, 1)
 
         self.proton_gradient += protons_pumped
+        self.update_oxygen(-oxygen_consumed)
         logger.debug(f"Proton gradient after ETC: {self.proton_gradient}")
+        logger.debug(f"Oxygen consumed in ETC: {oxygen_consumed}")
 
     def glycolysis(self, glucose_amount: int) -> int:
         """
@@ -149,13 +180,13 @@ class Mitochondrion(Organelle):
     def oxidative_phosphorylation(self) -> None:
         """
         Simulates the oxidative phosphorylation process using the electron
-        transport chain and ATP synthase, including proton leak and gradual ATP
-        production.
+        transport chain and ATP synthase, including proton leak, gradual ATP
+        production, and oxygen uptake dynamics.
         """
         logger.info("Performing oxidative phosphorylation")
         total_atp_produced = 0
 
-        while self.nadh > 0 or self.fadh2 > 0:
+        while (self.nadh > 0 or self.fadh2 > 0) and self.oxygen > 0:
             # Run the electron transport chain
             self.electron_transport_chain()
 
@@ -178,6 +209,7 @@ class Mitochondrion(Organelle):
 
         logger.info(f"ATP produced in oxidative phosphorylation: {total_atp_produced}")
         logger.debug(f"Remaining proton gradient: {self.proton_gradient}")
+        logger.debug(f"Remaining oxygen: {self.oxygen}")
 
     def produce_atp(self, glucose_amount: int) -> int:
         """
@@ -243,11 +275,13 @@ if __name__ == "__main__":
         logger.info(f"Remaining NADH: {mito.nadh}")
         logger.info(f"Remaining FADH2: {mito.fadh2}")
         logger.info(f"Remaining proton gradient: {mito.proton_gradient}")
+        logger.info(f"Remaining oxygen: {mito.oxygen}")
 
         # Reset the mitochondrion for the next simulation
         mito.atp = 0
         mito.nadh = 0
         mito.fadh2 = 0
         mito.proton_gradient = 0
+        mito.oxygen = 100  # Reset oxygen level
 
     logger.info("Simulation complete.")
