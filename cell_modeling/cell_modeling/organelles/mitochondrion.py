@@ -9,6 +9,30 @@ from constants import *
 logger = logging.getLogger(__name__)
 
 
+class MetaboliteError(Exception):
+    """Base class for exceptions related to metabolites."""
+
+    pass
+
+
+class UnknownMetaboliteError(MetaboliteError):
+    """Raised when a metabolite is unknown."""
+
+    pass
+
+
+class InsufficientMetaboliteError(MetaboliteError):
+    """Raised when there is not enough metabolite for a reaction."""
+
+    pass
+
+
+class QuantityError(MetaboliteError):
+    """Raised when an invalid quantity is specified."""
+
+    pass
+
+
 class Organelle:
     def __init__(self):
         self.metabolites: Dict[str, Metabolite] = {}
@@ -29,29 +53,26 @@ class Organelle:
         if not isinstance(amount, (int, float)):
             raise TypeError("Amount must be a number.")
         if metabolite_name not in self.metabolites:
-            raise ValueError(f"Unknown metabolite: {metabolite_name}")
+            raise UnknownMetaboliteError(f"Unknown metabolite: {metabolite_name}")
 
         metabolite = self.metabolites[metabolite_name]
         new_quantity = metabolite.quantity + amount
 
         if new_quantity < 0:
-            raise ValueError(
+            raise QuantityError(
                 f"Cannot reduce {metabolite_name} below zero. Attempted to set {metabolite_name} to {new_quantity}."
             )
         if new_quantity > metabolite.max_quantity:
-            raise ValueError(
+            raise QuantityError(
                 f"Cannot exceed max quantity for {metabolite_name}. Attempted to set {metabolite_name} to {new_quantity}, but max is {metabolite.max_quantity}."
             )
 
         metabolite.quantity = new_quantity
 
     def is_metabolite_available(self, metabolite: str, amount: float) -> bool:
-        if metabolite in self.metabolites:
-            return self.metabolites[metabolite].quantity >= amount
-        elif metabolite in self.cofactors:
-            return self.cofactors[metabolite] >= amount
-        else:
-            raise ValueError(f"Unknown metabolite: {metabolite}")
+        if metabolite not in self.metabolites:
+            raise UnknownMetaboliteError(f"Unknown metabolite: {metabolite}")
+        return self.metabolites[metabolite].quantity >= amount
 
     def consume_metabolites(self, **metabolites: Dict[str, float]):
         for metabolite, amount in metabolites.items():
@@ -60,11 +81,15 @@ class Organelle:
             if not isinstance(amount, (int, float)):
                 raise TypeError("Amounts must be numbers.")
             if amount < 0:
-                raise ValueError(f"Cannot consume a negative amount of {metabolite}.")
+                raise QuantityError(
+                    f"Cannot consume a negative amount of {metabolite}."
+                )
             if metabolite not in self.metabolites:
-                raise ValueError(f"Unknown metabolite: {metabolite}")
+                raise UnknownMetaboliteError(f"Unknown metabolite: {metabolite}")
             if self.metabolites[metabolite].quantity < amount:
-                raise ValueError(f"Insufficient {metabolite} for reaction.")
+                raise InsufficientMetaboliteError(
+                    f"Insufficient {metabolite} for reaction."
+                )
 
         # If all validations pass, proceed to consume
         for metabolite, amount in metabolites.items():
@@ -78,12 +103,14 @@ class Organelle:
             if not isinstance(amount, (int, float)):
                 raise TypeError("Amounts must be numbers.")
             if amount < 0:
-                raise ValueError(f"Cannot produce a negative amount of {metabolite}.")
+                raise QuantityError(
+                    f"Cannot produce a negative amount of {metabolite}."
+                )
             if metabolite not in self.metabolites:
-                raise ValueError(f"Unknown metabolite: {metabolite}")
+                raise UnknownMetaboliteError(f"Unknown metabolite: {metabolite}")
             new_quantity = self.metabolites[metabolite].quantity + amount
             if new_quantity > self.metabolites[metabolite].max_quantity:
-                raise ValueError(
+                raise QuantityError(
                     f"Cannot exceed max quantity for {metabolite}. Attempted to set {metabolite} to {new_quantity}, but max is {self.metabolites[metabolite].max_quantity}."
                 )
 
@@ -1279,47 +1306,68 @@ class SimulationController:
                 glucose_processed < glucose_amount
                 and self.simulation_time < self.simulation_duration
             ):
+                try:
+                    if self.cell.mitochondrion.metabolites["oxygen"].quantity <= 0:
+                        self.reporter.log_warning(
+                            "Oxygen depleted. Stopping simulation."
+                        )
+                        break
 
-                if self.cell.mitochondrion.metabolites["oxygen"].quantity <= 0:
-                    self.reporter.log_warning("Oxygen depleted. Stopping simulation.")
-                    break
+                    # Check and handle ADP availability
+                    self._handle_adp_availability()
 
-                # Check and handle ADP availability
-                self._handle_adp_availability()
+                    # Implement feedback activation
+                    self._apply_feedback_activation()
 
-                # Implement feedback activation
-                self._apply_feedback_activation()
+                    # Perform glycolysis
+                    pyruvate = self.cell.cytoplasm.glycolysis(
+                        int(1 * self.cell.cytoplasm.glycolysis_rate)
+                    )
+                    glucose_processed += round(
+                        1 * self.cell.cytoplasm.glycolysis_rate, 2
+                    )
 
-                # Perform glycolysis
-                pyruvate = self.cell.cytoplasm.glycolysis(
-                    int(1 * self.cell.cytoplasm.glycolysis_rate)
-                )
-                glucose_processed += round(1 * self.cell.cytoplasm.glycolysis_rate, 2)
+                    # Calculate ATP produced in glycolysis
+                    glycolysis_atp = (
+                        self.cell.cytoplasm.metabolites["atp"].quantity
+                        - initial_atp
+                        + self.cell.mitochondrion.metabolites["atp"].quantity
+                    )
+                    total_atp_produced += glycolysis_atp
 
-                # Calculate ATP produced in glycolysis
-                glycolysis_atp = (
-                    self.cell.cytoplasm.metabolites["atp"].quantity
-                    - initial_atp
-                    + self.cell.mitochondrion.metabolites["atp"].quantity
-                )
-                total_atp_produced += glycolysis_atp
+                    # Handle NADH shuttle
+                    self._handle_nadh_shuttle()
 
-                # Handle NADH shuttle
-                self._handle_nadh_shuttle()
+                    # Perform cellular respiration
+                    mitochondrial_atp = self.cell.mitochondrion.cellular_respiration(
+                        pyruvate
+                    )
+                    total_atp_produced += mitochondrial_atp
 
-                # Perform cellular respiration
-                mitochondrial_atp = self.cell.mitochondrion.cellular_respiration(
-                    pyruvate
-                )
-                total_atp_produced += mitochondrial_atp
+                    # Transfer excess ATP from mitochondrion to cytoplasm
+                    self._transfer_excess_atp()
 
-                # Transfer excess ATP from mitochondrion to cytoplasm
-                self._transfer_excess_atp()
+                    self.simulation_time += self.time_step
 
-                self.simulation_time += self.time_step
+                    if self.simulation_time % 10 == 0:
+                        self._log_intermediate_state()
 
-                if self.simulation_time % 10 == 0:
-                    self._log_intermediate_state()
+                except UnknownMetaboliteError as e:
+                    self.reporter.log_error(f"Unknown metabolite error: {str(e)}")
+                    self.reporter.log_warning("Skipping current simulation step.")
+                    continue
+                except InsufficientMetaboliteError as e:
+                    self.reporter.log_error(f"Insufficient metabolite error: {str(e)}")
+                    self.reporter.log_warning(
+                        "Attempting to continue simulation with available metabolites."
+                    )
+                    continue
+                except QuantityError as e:
+                    self.reporter.log_error(f"Quantity error: {str(e)}")
+                    self.reporter.log_warning(
+                        "Adjusting quantities and continuing simulation."
+                    )
+                    continue
 
             # Return simulation results
             results = {
@@ -1338,7 +1386,7 @@ class SimulationController:
             return results
 
         except Exception as e:
-            self.reporter.log_error(f"Simulation error: {str(e)}")
+            self.reporter.log_error(f"Unhandled simulation error: {str(e)}")
             raise
 
     def _handle_adp_availability(self):
