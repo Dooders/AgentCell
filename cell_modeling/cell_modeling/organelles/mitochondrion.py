@@ -36,32 +36,18 @@ class Metabolite:
 
 class Cytoplasm:
     def __init__(self):
-        self.metabolites = {
-            "glucose": 100,
-            "glucose_6_phosphate": 0,
-            "fructose_6_phosphate": 0,
-            "fructose_1_6_bisphosphate": 0,
-            "glyceraldehyde_3_phosphate": 0,
-            "dihydroxyacetone_phosphate": 0,
-            "1_3_bisphosphoglycerate": 0,
-            "3_phosphoglycerate": 0,
-            "2_phosphoglycerate": 0,
-            "phosphoenolpyruvate": 0,
-            "pyruvate": 0,
-        }
-        self.atp = Metabolite("ATP", 100, 1000)
-        self.adp = Metabolite("ADP", 100, 1000)
-        self.nad = Metabolite("NAD+", 100, 1000)
-        self.nadh = Metabolite("NADH", 0, 1000)
-        self.amp = Metabolite("AMP", 10, 1000)
+        self.glucose = 0
+        self.atp = 0
+        self.adp = 0
+        self.nad = 10  # Starting NAD+ molecules
+        self.nadh = 0
+        self.pyruvate = 0
+        self.logger = logging.getLogger(__name__)
 
-    def glycolysis(self, glucose_amount: int) -> int:
-        """Simulates detailed glycolysis in the cytoplasm."""
-        logger.info(f"Starting glycolysis with {glucose_amount} units of glucose")
+    def glycolysis(self, glucose_units):
+        self.glucose = glucose_units
+        self.logger.info(f"Starting glycolysis with {self.glucose} units of glucose")
 
-        self.metabolites["glucose"] += glucose_amount
-
-        # Perform each step of glycolysis
         self.step1_hexokinase()
         self.step2_phosphoglucose_isomerase()
         self.step3_phosphofructokinase()
@@ -73,45 +59,59 @@ class Cytoplasm:
         self.step9_enolase()
         self.step10_pyruvate_kinase()
 
-        pyruvate_produced = self.metabolites["pyruvate"]
-        logger.info(
-            f"Glycolysis complete. Produced {pyruvate_produced} units of pyruvate"
+        self.logger.info(
+            f"Glycolysis complete. Produced {self.pyruvate} pyruvate molecules"
         )
-        return pyruvate_produced
+        return self.pyruvate
 
     def step1_hexokinase(self):
-        """Glucose to Glucose-6-Phosphate."""
-        reaction_amount = min(self.metabolites["glucose"], self.atp.quantity)
-        self.metabolites["glucose"] -= reaction_amount
-        self.metabolites["glucose_6_phosphate"] += reaction_amount
-        self.atp.quantity -= reaction_amount
-        self.adp.quantity += reaction_amount
+        if self.glucose > 0 and self.atp >= 1:
+            self.glucose -= 1
+            self.atp -= 1
+            self.adp += 1
+            self.logger.info("Step 1: Hexokinase - Glucose phosphorylation")
 
-    # ... implement other steps similarly
+    def step2_phosphoglucose_isomerase(self):
+        self.logger.info("Step 2: Phosphoglucose isomerase - Isomerization")
 
     def step3_phosphofructokinase(self):
-        """F6P to F1,6BP with regulation."""
-        atp_inhibition = self.atp.quantity / self.atp.max_quantity
-        amp_activation = self.amp.quantity / self.amp.max_quantity
-        enzyme_activity = 1 * (1 - atp_inhibition) + amp_activation
+        if self.atp >= 1:
+            self.atp -= 1
+            self.adp += 1
+            self.logger.info("Step 3: Phosphofructokinase - Phosphorylation")
 
-        reaction_amount = min(
-            self.metabolites["fructose_6_phosphate"],
-            self.atp.quantity,
-            int(enzyme_activity * 10),  # Adjust this factor as needed
+    def step4_aldolase(self):
+        self.logger.info("Step 4: Aldolase - Splitting fructose-1,6-bisphosphate")
+
+    def step5_triose_phosphate_isomerase(self):
+        self.logger.info("Step 5: Triose phosphate isomerase - Isomerization")
+
+    def step6_glyceraldehyde_3_phosphate_dehydrogenase(self):
+        if self.nad >= 2:
+            self.nad -= 2
+            self.nadh += 2
+            self.logger.info(
+                "Step 6: Glyceraldehyde 3-phosphate dehydrogenase - Oxidation and phosphorylation"
+            )
+
+    def step7_phosphoglycerate_kinase(self):
+        self.atp += 2
+        self.adp -= 2
+        self.logger.info("Step 7: Phosphoglycerate kinase - ATP generation")
+
+    def step8_phosphoglycerate_mutase(self):
+        self.logger.info("Step 8: Phosphoglycerate mutase - Shifting phosphate group")
+
+    def step9_enolase(self):
+        self.logger.info("Step 9: Enolase - Dehydration")
+
+    def step10_pyruvate_kinase(self):
+        self.atp += 2
+        self.adp -= 2
+        self.pyruvate += 2
+        self.logger.info(
+            "Step 10: Pyruvate kinase - ATP generation and pyruvate formation"
         )
-
-        self.metabolites["fructose_6_phosphate"] -= reaction_amount
-        self.metabolites["fructose_1_6_bisphosphate"] += reaction_amount
-        self.atp.quantity -= reaction_amount
-        self.adp.quantity += reaction_amount
-
-    # ... implement other steps
-
-    def reset(self):
-        """Reset cytoplasm state."""
-        self.__init__()
-        logger.info("Cytoplasm state reset")
 
 
 class Mitochondrion:
