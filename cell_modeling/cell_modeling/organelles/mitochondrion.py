@@ -27,24 +27,37 @@ class Organelle:
             self.logger.warning(f"Unknown metabolite: {metabolite_name}")
 
     def is_metabolite_available(self, metabolite: str, amount: float) -> bool:
+        """Check if a metabolite is available in sufficient quantity."""
         if metabolite in self.metabolites:
             return self.metabolites[metabolite].quantity >= amount
+        elif metabolite in self.cofactors:
+            return self.cofactors[metabolite] >= amount
         else:
             self.logger.warning(f"Unknown metabolite: {metabolite}")
             return False
 
     def consume_metabolites(self, **metabolites: Dict[str, float]):
+        """Consume multiple metabolites at once."""
         for metabolite, amount in metabolites.items():
             if self.is_metabolite_available(metabolite, amount):
-                self.change_metabolite_quantity(metabolite, -amount)
+                if metabolite in self.metabolites:
+                    self.metabolites[metabolite].quantity -= amount
+                elif metabolite in self.cofactors:
+                    self.cofactors[metabolite] -= amount
             else:
-                self.logger.warning(f"Insufficient {metabolite} for reaction")
+                logger.warning(f"Insufficient {metabolite} for reaction")
                 return False
         return True
 
     def produce_metabolites(self, **metabolites: Dict[str, float]):
+        """Produce multiple metabolites at once."""
         for metabolite, amount in metabolites.items():
-            self.change_metabolite_quantity(metabolite, amount)
+            if metabolite in self.metabolites:
+                self.metabolites[metabolite].quantity += amount
+            elif metabolite in self.cofactors:
+                self.cofactors[metabolite] += amount
+            else:
+                logger.warning(f"Unknown metabolite: {metabolite}")
 
 
 @dataclass
@@ -307,7 +320,7 @@ class Mitochondrion(Organelle):
             f"Processing {acetyl_coa_amount} units of acetyl-CoA through the Krebs cycle"
         )
 
-        self.krebs_cycle.add_substrate("acetyl_coa", acetyl_coa_amount)
+        self.krebs_cycle.add_substrate("Acetyl-CoA", acetyl_coa_amount)
 
         # Ensure there's enough oxaloacetate to start the cycle
         if self.metabolites["oxaloacetate"].quantity < acetyl_coa_amount:
@@ -338,8 +351,8 @@ class Mitochondrion(Organelle):
         return total_nadh + total_fadh2
 
     def pyruvate_to_acetyl_coa(self, pyruvate_amount: int) -> int:
-        """Converts pyruvate to acetyl-CoA."""
-        logger.info(f"Converting {pyruvate_amount} units of pyruvate to acetyl-CoA")
+        """Converts pyruvate to Acetyl-CoA."""
+        logger.info(f"Converting {pyruvate_amount} units of pyruvate to Acetyl-CoA")
         acetyl_coa_produced = pyruvate_amount
         self.change_metabolite_quantity("nadh", pyruvate_amount)
         self.change_metabolite_quantity("co2", pyruvate_amount)
@@ -352,6 +365,7 @@ class Mitochondrion(Organelle):
             return 0
 
         acetyl_coa = self.pyruvate_to_acetyl_coa(pyruvate_amount)
+        self.krebs_cycle.add_substrate("Acetyl-CoA", acetyl_coa)
 
         # Implement feedback inhibition
         atp_inhibition_factor = 1 / (
@@ -362,7 +376,19 @@ class Mitochondrion(Organelle):
             "isocitrate_dehydrogenase"
         ].activity *= atp_inhibition_factor
 
-        krebs_products = self.krebs_cycle_process(acetyl_coa)
+        # Use the new generator-based method for the Krebs cycle
+        for reaction_name, result in self.krebs_cycle.reaction_iterator():
+            logger.info(f"Completed Krebs cycle step: {reaction_name}")
+            if result is False:
+                logger.warning(
+                    f"Krebs cycle step {reaction_name} failed due to insufficient substrates"
+                )
+                break
+
+            # After each reaction, check the state of metabolites
+            logger.info("Current metabolite state in Krebs cycle:")
+            for metabolite, quantity in self.krebs_cycle.metabolite_iterator():
+                logger.info(f"  {metabolite}: {quantity:.2f}")
 
         # Transfer NADH and FADH2 from Krebs cycle to ETC
         self.change_metabolite_quantity("nadh", self.krebs_cycle.cofactors["nadh"])
@@ -647,7 +673,7 @@ class KrebsCycle(Organelle):
     def is_metabolite_available(self, metabolite: str, amount: float) -> bool:
         """Check if a metabolite is available in sufficient quantity."""
         if metabolite in self.metabolites:
-            return self.metabolites[metabolite] >= amount
+            return self.metabolites[metabolite].quantity >= amount
         elif metabolite in self.cofactors:
             return self.cofactors[metabolite] >= amount
         else:
@@ -659,7 +685,7 @@ class KrebsCycle(Organelle):
         for metabolite, amount in metabolites.items():
             if self.is_metabolite_available(metabolite, amount):
                 if metabolite in self.metabolites:
-                    self.metabolites[metabolite] -= amount
+                    self.metabolites[metabolite].quantity -= amount
                 elif metabolite in self.cofactors:
                     self.cofactors[metabolite] -= amount
             else:
@@ -671,7 +697,7 @@ class KrebsCycle(Organelle):
         """Produce multiple metabolites at once."""
         for metabolite, amount in metabolites.items():
             if metabolite in self.metabolites:
-                self.metabolites[metabolite] += amount
+                self.metabolites[metabolite].quantity += amount
             elif metabolite in self.cofactors:
                 self.cofactors[metabolite] += amount
             else:
@@ -681,36 +707,42 @@ class KrebsCycle(Organelle):
         """Acetyl-CoA + Oxaloacetate to Citrate"""
         enzyme = self.enzymes["citrate_synthase"]
         substrate_conc = min(
-            self.metabolites["acetyl_coa"], self.metabolites["oxaloacetate"]
+            self.metabolites["Acetyl-CoA"].quantity,
+            self.metabolites["Oxaloacetate"].quantity,
         )
         reaction_rate = michaelis_menten(
             substrate_conc, enzyme.vmax * enzyme.activity, enzyme.km
         )
 
         if self.consume_metabolites(
-            acetyl_coa=reaction_rate, oxaloacetate=reaction_rate
+            **{"Acetyl-CoA": reaction_rate, "Oxaloacetate": reaction_rate}
         ):
-            self.produce_metabolites(citrate=reaction_rate, coenzyme_a=reaction_rate)
+            self.produce_metabolites(Citrate=reaction_rate)
+            self.cofactors["coenzyme_a"] += reaction_rate
+            return True
         else:
             logger.warning("Insufficient substrates for step 1")
+            return False
 
     def step2_aconitase(self):
         """Citrate to Isocitrate"""
         enzyme = self.enzymes["aconitase"]
-        substrate_conc = self.metabolites["citrate"]
+        substrate_conc = self.metabolites["Citrate"].quantity
         reaction_rate = michaelis_menten(
             substrate_conc, enzyme.vmax * enzyme.activity, enzyme.km
         )
 
-        if self.consume_metabolites(citrate=reaction_rate):
-            self.produce_metabolites(isocitrate=reaction_rate)
+        if self.consume_metabolites(Citrate=reaction_rate):
+            self.produce_metabolites(Isocitrate=reaction_rate)
         else:
-            logger.warning("Insufficient citrate for step 2")
+            logger.warning("Insufficient Citrate for step 2")
 
     def step3_isocitrate_dehydrogenase(self):
         """Isocitrate to α-Ketoglutarate with allosteric regulation"""
         enzyme = self.enzymes["isocitrate_dehydrogenase"]
-        substrate_conc = self.metabolites["isocitrate"]
+        substrate_conc = self.metabolites[
+            "Isocitrate"
+        ].quantity  # Changed from "isocitrate" to "Isocitrate"
 
         # Define effectors
         atp_effector = Effector("ATP", self.cofactors["atp"], Ki=100, Ka=1000)
@@ -729,23 +761,27 @@ class KrebsCycle(Organelle):
             substrate_conc, enzyme.vmax * regulated_activity, enzyme.km, n
         )
 
-        if self.consume_metabolites(isocitrate=reaction_rate, nad=reaction_rate):
+        if self.consume_metabolites(
+            Isocitrate=reaction_rate, nad=reaction_rate
+        ):  # Changed from "isocitrate" to "Isocitrate"
             self.produce_metabolites(
-                α_ketoglutarate=reaction_rate, nadh=reaction_rate, co2=reaction_rate
-            )
+                α_Ketoglutarate=reaction_rate, nadh=reaction_rate, co2=reaction_rate
+            )  # Changed from "α-ketoglutarate" to "α_Ketoglutarate"
         else:
             logger.warning("Insufficient substrates or NAD⁺ for step 3")
 
     def step4_alpha_ketoglutarate_dehydrogenase(self):
         """α-Ketoglutarate to Succinyl-CoA"""
         enzyme = self.enzymes["alpha_ketoglutarate_dehydrogenase"]
-        substrate_conc = self.metabolites["α-Ketoglutarate"]
+        substrate_conc = self.metabolites[
+            "α-Ketoglutarate"
+        ].quantity  # Access the quantity attribute
 
         # Enzyme regulation
         atp_inhibition = self.cofactors["atp"] / 100
         nadh_inhibition = self.cofactors["nadh"] / 100
         succinyl_coa_inhibition = (
-            self.metabolites["succinyl_coa"] / 10
+            self.metabolites["Succinyl-CoA"].quantity / 10
         )  # Assuming max succinyl-CoA is 10
         enzyme_activity = (
             1 - (atp_inhibition + nadh_inhibition + succinyl_coa_inhibition) / 3
@@ -757,9 +793,9 @@ class KrebsCycle(Organelle):
             enzyme.km,
         )
 
-        if self.consume_metabolites(α_ketoglutarate=reaction_rate, nad=reaction_rate):
+        if self.consume_metabolites(α_Ketoglutarate=reaction_rate, nad=reaction_rate):
             self.produce_metabolites(
-                succinyl_coa=reaction_rate, nadh=reaction_rate, co2=reaction_rate
+                Succinyl_CoA=reaction_rate, nadh=reaction_rate, co2=reaction_rate
             )
         else:
             logger.warning("Insufficient substrates or NAD⁺ for step 4")
@@ -767,14 +803,14 @@ class KrebsCycle(Organelle):
     def step5_succinyl_coa_synthetase(self):
         """Succinyl-CoA to Succinate"""
         enzyme = self.enzymes["succinyl_coa_synthetase"]
-        substrate_conc = self.metabolites["succinyl_coa"]
+        substrate_conc = self.metabolites["Succinyl-CoA"].quantity
         reaction_rate = michaelis_menten(
             substrate_conc, enzyme.vmax * enzyme.activity, enzyme.km
         )
 
-        if self.consume_metabolites(succinyl_coa=reaction_rate, gdp=reaction_rate):
+        if self.consume_metabolites(Succinyl_CoA=reaction_rate, gdp=reaction_rate):
             self.produce_metabolites(
-                succinate=reaction_rate, gtp=reaction_rate, coenzyme_a=reaction_rate
+                Succinate=reaction_rate, gtp=reaction_rate, coenzyme_a=reaction_rate
             )
         else:
             logger.warning("Insufficient substrates or GDP for step 5")
@@ -782,12 +818,12 @@ class KrebsCycle(Organelle):
     def step6_succinate_dehydrogenase(self):
         """Succinate to Fumarate"""
         enzyme = self.enzymes["succinate_dehydrogenase"]
-        substrate_conc = self.metabolites["succinate"]
+        substrate_conc = self.metabolites["Succinate"].quantity
         reaction_rate = michaelis_menten(
             substrate_conc, enzyme.vmax * enzyme.activity, enzyme.km
         )
 
-        if self.consume_metabolites(succinate=reaction_rate, fad=reaction_rate):
+        if self.consume_metabolites(Succinate=reaction_rate, fad=reaction_rate):
             self.produce_metabolites(fumarate=reaction_rate, fadh2=reaction_rate)
         else:
             logger.warning("Insufficient substrates or FAD for step 6")
@@ -795,38 +831,41 @@ class KrebsCycle(Organelle):
     def step7_fumarase(self):
         """Fumarate to Malate"""
         enzyme = self.enzymes["fumarase"]
-        substrate_conc = self.metabolites["fumarate"]
+        substrate_conc = self.metabolites["Fumarate"].quantity
         reaction_rate = michaelis_menten(
             substrate_conc, enzyme.vmax * enzyme.activity, enzyme.km
         )
 
-        if self.consume_metabolites(fumarate=reaction_rate):
-            self.produce_metabolites(malate=reaction_rate)
+        if self.consume_metabolites(Fumarate=reaction_rate):
+            self.produce_metabolites(Malate=reaction_rate)
         else:
             logger.warning("Insufficient fumarate for step 7")
 
     def step8_malate_dehydrogenase(self):
         """Malate to Oxaloacetate"""
         enzyme = self.enzymes["malate_dehydrogenase"]
-        substrate_conc = self.metabolites["malate"]
+        substrate_conc = self.metabolites["Malate"].quantity
         reaction_rate = michaelis_menten(
             substrate_conc, enzyme.vmax * enzyme.activity, enzyme.km
         )
 
-        if self.consume_metabolites(malate=reaction_rate, nad=reaction_rate):
-            self.produce_metabolites(oxaloacetate=reaction_rate, nadh=reaction_rate)
+        if self.consume_metabolites(Malate=reaction_rate, nad=reaction_rate):
+            self.produce_metabolites(Oxaloacetate=reaction_rate, nadh=reaction_rate)
         else:
             logger.warning("Insufficient substrates or NAD⁺ for step 8")
 
     def run_cycle(self):
-        self.step1_citrate_synthase()
-        self.step2_aconitase()
-        self.step3_isocitrate_dehydrogenase()
-        self.step4_alpha_ketoglutarate_dehydrogenase()
-        self.step5_succinyl_coa_synthetase()
-        self.step6_succinate_dehydrogenase()
-        self.step7_fumarase()
-        self.step8_malate_dehydrogenase()
+        if self.metabolites["Acetyl-CoA"].quantity > 0:
+            self.step1_citrate_synthase()
+            self.step2_aconitase()
+            self.step3_isocitrate_dehydrogenase()
+            self.step4_alpha_ketoglutarate_dehydrogenase()
+            self.step5_succinyl_coa_synthetase()
+            self.step6_succinate_dehydrogenase()
+            self.step7_fumarase()
+            self.step8_malate_dehydrogenase()
+        else:
+            logger.warning("Insufficient Acetyl-CoA to start Krebs cycle")
 
     def krebs_cycle_iterator(self, num_cycles: int = None):
         """Generator that yields the state after each Krebs cycle."""
@@ -838,8 +877,10 @@ class KrebsCycle(Organelle):
 
     def add_substrate(self, substrate: str, amount: float):
         """Add initial substrate to start the cycle"""
-        if substrate in self.metabolites:
-            self.metabolites[substrate] += amount
+        if substrate == "Acetyl-CoA":
+            self.metabolites["Acetyl-CoA"].quantity += amount
+        elif substrate in self.metabolites:
+            self.metabolites[substrate].quantity += amount
         elif substrate in self.cofactors:
             self.cofactors[substrate] += amount
         else:
@@ -857,6 +898,51 @@ class KrebsCycle(Organelle):
     def reset(self):
         """Reset the Krebs cycle to its initial state"""
         self.__init__()
+
+    def metabolite_iterator(self):
+        """Generator that yields each metabolite name and quantity in the Krebs cycle."""
+        for metabolite_name, metabolite in self.metabolites.items():
+            yield metabolite_name, metabolite.quantity
+
+    def reaction_iterator(self):
+        """Generator that yields each reaction step in the Krebs cycle."""
+        reactions = [
+            self.step1_citrate_synthase,
+            self.step2_aconitase,
+            self.step3_isocitrate_dehydrogenase,
+            self.step4_alpha_ketoglutarate_dehydrogenase,
+            self.step5_succinyl_coa_synthetase,
+            self.step6_succinate_dehydrogenase,
+            self.step7_fumarase,
+            self.step8_malate_dehydrogenase,
+        ]
+        for reaction in reactions:
+            yield reaction.__name__, reaction()
+
+    def run_cycle_with_generators(self):
+        """Runs the Krebs cycle using generators for finer control."""
+        logger.info("Starting Krebs cycle with generators")
+
+        for reaction_name, result in self.reaction_iterator():
+            logger.info(f"Completed {reaction_name}")
+
+            # You can process the result here if needed
+            # For example, you might want to check if the reaction was successful
+            if result is False:
+                logger.warning(f"{reaction_name} failed due to insufficient substrates")
+                break
+
+            # After each reaction, you can check the state of metabolites
+            logger.info("Current metabolite state:")
+            for metabolite, quantity in self.metabolite_iterator():
+                logger.info(f"  {metabolite}: {quantity:.2f}")
+
+            # You can also add additional logic here, such as:
+            # - Checking for rate-limiting steps
+            # - Applying regulatory effects
+            # - Pausing or modifying the cycle based on certain conditions
+
+        logger.info("Krebs cycle complete")
 
 
 class Cell:
