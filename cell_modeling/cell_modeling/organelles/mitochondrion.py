@@ -23,7 +23,7 @@ import logging
 import math
 import time
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,30 @@ class Metabolite:
     max_quantity: int
 
 
+@dataclass
+class Effector:
+    name: str
+    concentration: float
+    Ki: float  # Inhibition constant
+    Ka: float  # Activation constant
+
+
+def allosteric_regulation(base_activity: float, inhibitors: List[Effector], activators: List[Effector]) -> float:
+    """Calculates enzyme activity considering inhibitors and activators."""
+    inhibition_factor = 1
+    for inhibitor in inhibitors:
+        inhibition_factor *= (1 / (1 + inhibitor.concentration / inhibitor.Ki))
+    activation_factor = 1
+    for activator in activators:
+        activation_factor *= (1 + activator.concentration / activator.Ka)
+    return base_activity * inhibition_factor * activation_factor
+
+
+def hill_equation(substrate_conc: float, Vmax: float, K: float, n: float) -> float:
+    """Calculates reaction rate using the Hill equation for cooperative binding."""
+    return Vmax * (substrate_conc**n) / (K**n + substrate_conc**n)
+
+
 class Cytoplasm:
     def __init__(self):
         self.glucose = Metabolite("Glucose", 0, 1000)
@@ -44,6 +68,7 @@ class Cytoplasm:
         self.nadh = Metabolite("NADH", 0, 1000)
         self.pyruvate = Metabolite("Pyruvate", 0, 1000)
         self.logger = logging.getLogger(__name__)
+        self.glycolysis_rate = 1.0  # Base glycolysis rate
 
     def glycolysis(self, glucose_units):
         self.glucose.quantity = glucose_units
@@ -193,12 +218,18 @@ class Mitochondrion:
         return acetyl_coa_produced
 
     def cellular_respiration(self, pyruvate_amount: int):
-        """Simulates the entire cellular respiration process"""
+        """Simulates the entire cellular respiration process with feedback inhibition"""
         if self.oxygen.quantity <= 0:
             logger.warning("No oxygen available. Cellular respiration halted.")
             return 0
 
         acetyl_coa = self.pyruvate_to_acetyl_coa(pyruvate_amount)
+
+        # Implement feedback inhibition
+        atp_inhibition_factor = 1 / (1 + self.atp.quantity / 1000)  # Example threshold
+        self.krebs_cycle.enzyme_activities["citrate_synthase"] *= atp_inhibition_factor
+        self.krebs_cycle.enzyme_activities["isocitrate_dehydrogenase"] *= atp_inhibition_factor
+
         krebs_products = self.krebs_cycle_process(acetyl_coa)
 
         # Transfer NADH and FADH2 from Krebs cycle to ETC
@@ -435,6 +466,15 @@ class KrebsCycle:
             "gdp": 0,
             "co2": 0,
         }
+        self.enzyme_activities = {
+            "citrate_synthase": 1.0,
+            "isocitrate_dehydrogenase": 1.0,
+            "alpha_ketoglutarate_dehydrogenase": 1.0,
+            "succinyl_coa_synthetase": 1.0,
+            "succinate_dehydrogenase": 1.0,
+            "fumarase": 1.0,
+            "malate_dehydrogenase": 1.0,
+        }
 
     def michaelis_menten(self, substrate_conc: float, vmax: float, km: float) -> float:
         return (vmax * substrate_conc) / (km + substrate_conc)
@@ -475,19 +515,25 @@ class KrebsCycle:
             logger.warning("Insufficient citrate for step 2")
 
     def step3_isocitrate_dehydrogenase(self):
-        """Isocitrate to α-Ketoglutarate"""
+        """Isocitrate to α-Ketoglutarate with allosteric regulation"""
         substrate_conc = self.metabolites["isocitrate"]
-        vmax = 1.0  # Placeholder value
-        km = 0.1  # Placeholder value
+        vmax = 1.0  # Base Vmax
+        km = 0.1  # Base Km
 
-        # Enzyme regulation
-        atp_inhibition = self.cofactors["atp"] / 100
-        nadh_inhibition = self.cofactors["nadh"] / 100
-        enzyme_activity = 1 - (atp_inhibition + nadh_inhibition) / 2
+        # Define effectors
+        atp_effector = Effector("ATP", self.cofactors["atp"], Ki=100, Ka=1000)
+        adp_effector = Effector("ADP", self.cofactors["adp"], Ki=1000, Ka=100)
 
-        reaction_rate = self.michaelis_menten(
-            substrate_conc, vmax * enzyme_activity, km
+        # Calculate regulated enzyme activity
+        regulated_activity = allosteric_regulation(
+            self.enzyme_activities["isocitrate_dehydrogenase"],
+            inhibitors=[atp_effector],
+            activators=[adp_effector]
         )
+
+        # Use Hill equation for cooperative binding
+        n = 2  # Hill coefficient
+        reaction_rate = hill_equation(substrate_conc, vmax * regulated_activity, km, n)
 
         if (
             self.metabolites["isocitrate"] >= reaction_rate
@@ -671,9 +717,13 @@ class Cell:
                 self.mitochondrion.adp.quantity += adp_transfer
                 self.cytoplasm.adp.quantity -= adp_transfer
 
-            # Glycolysis
-            pyruvate = self.cytoplasm.glycolysis(1)
-            glucose_processed += 1
+            # Implement feedback activation
+            adp_activation_factor = 1 + self.cytoplasm.adp.quantity / 500  # Example threshold
+            self.cytoplasm.glycolysis_rate *= adp_activation_factor
+
+            # Glycolysis with updated rate
+            pyruvate = self.cytoplasm.glycolysis(1 * self.cytoplasm.glycolysis_rate)
+            glucose_processed += 1 * self.cytoplasm.glycolysis_rate
 
             # Calculate ATP produced in glycolysis
             glycolysis_atp = (
