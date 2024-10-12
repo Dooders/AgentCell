@@ -19,9 +19,13 @@ Modeling Considerations
         Model the stoichiometry of ATP production from substrates.
 """
 
+import logging
 import random
 
 from organelle import Organelle
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 class Mitochondrion(Organelle):
@@ -58,6 +62,7 @@ class Mitochondrion(Organelle):
         self.atp_synthase_efficiency = (
             0.75  # Adjusted to 75% efficiency in ATP production
         )
+        logger.info("Mitochondrion initialized")
 
     def electron_transport_chain(self) -> None:
         """
@@ -86,7 +91,7 @@ class Mitochondrion(Organelle):
         protons_pumped += random.randint(-1, 1)
 
         self.proton_gradient += protons_pumped
-        print(f"Proton gradient after ETC: {self.proton_gradient}")
+        logger.debug(f"Proton gradient after ETC: {self.proton_gradient}")
 
     def glycolysis(self, glucose_amount: int) -> int:
         """
@@ -106,7 +111,7 @@ class Mitochondrion(Organelle):
         int
             The amount of pyruvate produced. Used for the Krebs cycle.
         """
-        print(f"Glycolysis of {glucose_amount} units of glucose")
+        logger.info(f"Glycolysis of {glucose_amount} units of glucose")
         # Initial ATP investment
         self.atp -= glucose_amount * 2
         # Net ATP production
@@ -131,13 +136,13 @@ class Mitochondrion(Organelle):
             The amount of pyruvate to be processed. Comes from the glycolysis.
             Comes from the mitochondrion.
         """
-        print(f"Krebs cycle processing {pyruvate_amount} units of pyruvate")
+        logger.info(f"Krebs cycle processing {pyruvate_amount} units of pyruvate")
         for _ in range(pyruvate_amount):
             self.atp += 1  # 1 GTP (equivalent to ATP) per pyruvate
             self.nadh += 4  # 3 NADH from Krebs cycle + 1 from pyruvate dehydrogenase
             self.fadh2 += 1  # 1 FADH2 per pyruvate
 
-        print(
+        logger.debug(
             f"After Krebs cycle: ATP: {self.atp}, NADH: {self.nadh}, FADH2: {self.fadh2}"
         )
 
@@ -147,7 +152,7 @@ class Mitochondrion(Organelle):
         transport chain and ATP synthase, including proton leak and gradual ATP
         production.
         """
-        print("Performing oxidative phosphorylation")
+        logger.info("Performing oxidative phosphorylation")
         total_atp_produced = 0
 
         while self.nadh > 0 or self.fadh2 > 0:
@@ -157,7 +162,7 @@ class Mitochondrion(Organelle):
             # Simulate proton leak
             leaked_protons = int(self.proton_gradient * self.proton_leak_rate)
             self.proton_gradient -= leaked_protons
-            print(f"Protons leaked: {leaked_protons}")
+            logger.debug(f"Protons leaked: {leaked_protons}")
 
             # Simulate ATP synthase using the proton gradient
             while self.proton_gradient >= 3:  # 3 protons minimum for ATP production
@@ -171,8 +176,8 @@ class Mitochondrion(Organelle):
         total_atp_produced = round(total_atp_produced)
         self.atp = round(self.atp)
 
-        print(f"ATP produced in oxidative phosphorylation: {total_atp_produced}")
-        print(f"Remaining proton gradient: {self.proton_gradient}")
+        logger.info(f"ATP produced in oxidative phosphorylation: {total_atp_produced}")
+        logger.debug(f"Remaining proton gradient: {self.proton_gradient}")
 
     def produce_atp(self, glucose_amount: int) -> int:
         """
@@ -200,7 +205,7 @@ class Mitochondrion(Organelle):
         pyruvate: int = self.glycolysis(glucose_amount)
         self.krebs_cycle(pyruvate)
         self.oxidative_phosphorylation()
-        print(f"Total ATP produced: {self.atp}")
+        logger.info(f"Total ATP produced: {self.atp}")
         return self.atp
 
     def function(self) -> str:
@@ -217,6 +222,12 @@ class Mitochondrion(Organelle):
 
 # Simulation code
 if __name__ == "__main__":
+    # Set up logging configuration
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+
     # Create a Mitochondrion instance
     mito = Mitochondrion()
 
@@ -224,14 +235,14 @@ if __name__ == "__main__":
     glucose_amounts = [1, 2, 5, 10]
 
     for glucose in glucose_amounts:
-        print(f"\nSimulating ATP production with {glucose} glucose units:")
+        logger.info(f"\nSimulating ATP production with {glucose} glucose units:")
         mito.produce_atp(glucose)
 
-        # Print the current state of the mitochondrion
-        print(f"Current ATP: {mito.atp}")
-        print(f"Remaining NADH: {mito.nadh}")
-        print(f"Remaining FADH2: {mito.fadh2}")
-        print(f"Remaining proton gradient: {mito.proton_gradient}")
+        # Log the current state of the mitochondrion
+        logger.info(f"Current ATP: {mito.atp}")
+        logger.info(f"Remaining NADH: {mito.nadh}")
+        logger.info(f"Remaining FADH2: {mito.fadh2}")
+        logger.info(f"Remaining proton gradient: {mito.proton_gradient}")
 
         # Reset the mitochondrion for the next simulation
         mito.atp = 0
@@ -239,4 +250,4 @@ if __name__ == "__main__":
         mito.fadh2 = 0
         mito.proton_gradient = 0
 
-    print("\nSimulation complete.")
+    logger.info("Simulation complete.")
