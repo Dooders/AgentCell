@@ -1,7 +1,10 @@
 import logging
 import math
 from dataclasses import dataclass
+from enum import Enum
 from typing import Dict, List
+
+from constants import *
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +47,21 @@ def hill_equation(substrate_conc: float, Vmax: float, K: float, n: float) -> flo
     return Vmax * (substrate_conc**n) / (K**n + substrate_conc**n)
 
 
+class GlycolysisSteps(Enum):
+    STEP1_HEXOKINASE = "Hexokinase"
+    STEP2_PHOSPHOGLUCOSE_ISOMERASE = "Phosphoglucose Isomerase"
+    STEP3_PHOSPHOFRUCTOKINASE = "Phosphofructokinase"
+    STEP4_ALDOLASE = "Aldolase"
+    STEP5_TRIOSE_PHOSPHATE_ISOMERASE = "Triose Phosphate Isomerase"
+    STEP6_GLYCERALDEHYDE_3_PHOSPHATE_DEHYDROGENASE = (
+        "Glyceraldehyde 3-Phosphate Dehydrogenase"
+    )
+    STEP7_PHOSPHOGLYCERATE_KINASE = "Phosphoglycerate Kinase"
+    STEP8_PHOSPHOGLYCERATE_MUTASE = "Phosphoglycerate Mutase"
+    STEP9_ENOLASE = "Enolase"
+    STEP10_PYRUVATE_KINASE = "Pyruvate Kinase"
+
+
 class Cytoplasm:
     def __init__(self):
         self.glucose = Metabolite("Glucose", 0, 1000)
@@ -52,7 +70,6 @@ class Cytoplasm:
         self.nad = Metabolite("NAD+", 10, 1000)  # Starting NAD+ molecules
         self.nadh = Metabolite("NADH", 0, 1000)
         self.pyruvate = Metabolite("Pyruvate", 0, 1000)
-        self.logger = logging.getLogger(__name__)
         self.glycolysis_rate = 1.0  # Base glycolysis rate
 
     def glycolysis(self, glucose_units):
@@ -61,22 +78,14 @@ class Cytoplasm:
         production.
         """
         self.glucose.quantity = glucose_units
-        self.logger.info(
+        logger.info(
             f"Starting glycolysis with {self.glucose.quantity} units of glucose"
         )
 
-        self.step1_hexokinase()
-        self.step2_phosphoglucose_isomerase()
-        self.step3_phosphofructokinase()
-        self.step4_aldolase()
-        self.step5_triose_phosphate_isomerase()
-        self.step6_glyceraldehyde_3_phosphate_dehydrogenase()
-        self.step7_phosphoglycerate_kinase()
-        self.step8_phosphoglycerate_mutase()
-        self.step9_enolase()
-        self.step10_pyruvate_kinase()
+        for step in GlycolysisSteps:
+            getattr(self, f"{step.name.lower()}")()
 
-        self.logger.info(
+        logger.info(
             f"Glycolysis complete. Produced {self.pyruvate.quantity} pyruvate molecules"
         )
         return self.pyruvate.quantity
@@ -86,7 +95,7 @@ class Cytoplasm:
         if hasattr(self, metabolite):
             return getattr(self, metabolite).quantity >= amount
         else:
-            self.logger.warning(f"Unknown metabolite: {metabolite}")
+            logger.warning(f"Unknown metabolite: {metabolite}")
             return False
 
     def consume_metabolites(self, **metabolites: Dict[str, float]):
@@ -95,7 +104,7 @@ class Cytoplasm:
             if self.is_metabolite_available(metabolite, amount):
                 getattr(self, metabolite).quantity -= amount
             else:
-                self.logger.warning(f"Insufficient {metabolite} for reaction")
+                logger.warning(f"Insufficient {metabolite} for reaction")
                 return False
         return True
 
@@ -105,55 +114,69 @@ class Cytoplasm:
             if hasattr(self, metabolite):
                 getattr(self, metabolite).quantity += amount
             else:
-                self.logger.warning(f"Unknown metabolite: {metabolite}")
+                logger.warning(f"Unknown metabolite: {metabolite}")
 
     def step1_hexokinase(self):
         if self.consume_metabolites(glucose=1, atp=1):
             self.produce_metabolites(adp=1)
-            self.logger.info("Step 1: Hexokinase - Glucose phosphorylation")
+            logger.info(
+                f"Step 1: {GlycolysisSteps.STEP1_HEXOKINASE.value} - Glucose phosphorylation"
+            )
 
     def step2_phosphoglucose_isomerase(self):
-        self.logger.info("Step 2: Phosphoglucose isomerase - Isomerization")
+        logger.info(
+            f"Step 2: {GlycolysisSteps.STEP2_PHOSPHOGLUCOSE_ISOMERASE.value} - Isomerization"
+        )
 
     def step3_phosphofructokinase(self):
         if self.consume_metabolites(atp=1):
             self.produce_metabolites(adp=1)
-            self.logger.info("Step 3: Phosphofructokinase - Phosphorylation")
+            logger.info(
+                f"Step 3: {GlycolysisSteps.STEP3_PHOSPHOFRUCTOKINASE.value} - Phosphorylation"
+            )
 
     def step4_aldolase(self):
-        self.logger.info("Step 4: Aldolase - Splitting fructose-1,6-bisphosphate")
+        logger.info(
+            f"Step 4: {GlycolysisSteps.STEP4_ALDOLASE.value} - Splitting fructose-1,6-bisphosphate"
+        )
 
     def step5_triose_phosphate_isomerase(self):
-        self.logger.info("Step 5: Triose phosphate isomerase - Isomerization")
+        logger.info(
+            f"Step 5: {GlycolysisSteps.STEP5_TRIOSE_PHOSPHATE_ISOMERASE.value} - Isomerization"
+        )
 
     def step6_glyceraldehyde_3_phosphate_dehydrogenase(self):
         if self.consume_metabolites(nad=2):
             self.produce_metabolites(nadh=2)
-            self.logger.info(
-                "Step 6: Glyceraldehyde 3-phosphate dehydrogenase - Oxidation and phosphorylation"
+            logger.info(
+                f"Step 6: {GlycolysisSteps.STEP6_GLYCERALDEHYDE_3_PHOSPHATE_DEHYDROGENASE.value} - Oxidation and phosphorylation"
             )
 
     def step7_phosphoglycerate_kinase(self):
         if self.consume_metabolites(adp=2):
             self.produce_metabolites(atp=2)
-            self.logger.info("Step 7: Phosphoglycerate kinase - ATP generation")
+            logger.info(
+                f"Step 7: {GlycolysisSteps.STEP7_PHOSPHOGLYCERATE_KINASE.value} - ATP generation"
+            )
 
     def step8_phosphoglycerate_mutase(self):
-        self.logger.info("Step 8: Phosphoglycerate mutase - Shifting phosphate group")
+        logger.info(
+            f"Step 8: {GlycolysisSteps.STEP8_PHOSPHOGLYCERATE_MUTASE.value} - Shifting phosphate group"
+        )
 
     def step9_enolase(self):
-        self.logger.info("Step 9: Enolase - Dehydration")
+        logger.info(f"Step 9: {GlycolysisSteps.STEP9_ENOLASE.value} - Dehydration")
 
     def step10_pyruvate_kinase(self):
         if self.consume_metabolites(adp=2):
             self.produce_metabolites(atp=2, pyruvate=2)
-            self.logger.info(
-                "Step 10: Pyruvate kinase - ATP generation and pyruvate formation"
+            logger.info(
+                f"Step 10: {GlycolysisSteps.STEP10_PYRUVATE_KINASE.value} - ATP generation and pyruvate formation"
             )
 
     def reset(self):
         self.__init__()
-        self.logger.info("Cytoplasm state reset")
+        logger.info("Cytoplasm state reset")
 
 
 class Mitochondrion:
@@ -186,17 +209,42 @@ class Mitochondrion:
         self.oxygen_per_nadh = 0.5  # Oxygen consumed per NADH oxidized
         self.oxygen_per_fadh2 = 0.5  # Oxygen consumed per FADH2 oxidized
         self.calcium = Metabolite("Ca2+", 0, 1000)  # Add calcium metabolite
-        self.calcium_threshold = 800  # Threshold for calcium overload
-        self.calcium_boost_factor = 1.2  # ATP production boost from calcium
-        self.max_proton_gradient = 200  # Maximum sustainable proton gradient
-        self.leak_rate = 0.1  # Base leak rate
-        self.leak_steepness = 0.1  # Steepness of the logistic curve
-        self.leak_midpoint = 150  # Midpoint of the logistic curve
+        self.calcium_threshold = CALCIUM_THRESHOLD
+        self.calcium_boost_factor = CALCIUM_BOOST_FACTOR
+        self.max_proton_gradient = MAX_PROTON_GRADIENT
+        self.leak_rate = LEAK_RATE
+        self.leak_steepness = LEAK_STEEPNESS
+        self.leak_midpoint = LEAK_MIDPOINT
         self.krebs_cycle = KrebsCycle()
         self.ubiquinone = Metabolite("Ubiquinone", 100, 1000)
         self.ubiquinol = Metabolite("Ubiquinol", 0, 1000)
         self.cytochrome_c_oxidized = Metabolite("Cytochrome c (oxidized)", 100, 1000)
         self.cytochrome_c_reduced = Metabolite("Cytochrome c (reduced)", 0, 1000)
+
+    def change_metabolite_quantity(self, metabolite_name: str, amount: float):
+        """Centralized method to change metabolite quantities."""
+        if hasattr(self, metabolite_name):
+            metabolite = getattr(self, metabolite_name)
+            metabolite.quantity = max(
+                0, min(metabolite.quantity + amount, metabolite.max_quantity)
+            )
+        else:
+            logger.warning(f"Unknown metabolite: {metabolite_name}")
+
+    def consume_metabolites(self, **metabolites: Dict[str, float]):
+        """Consume multiple metabolites at once."""
+        for metabolite, amount in metabolites.items():
+            if self.is_metabolite_available(metabolite, amount):
+                self.change_metabolite_quantity(metabolite, -amount)
+            else:
+                logger.warning(f"Insufficient {metabolite} for reaction")
+                return False
+        return True
+
+    def produce_metabolites(self, **metabolites: Dict[str, float]):
+        """Produce multiple metabolites at once."""
+        for metabolite, amount in metabolites.items():
+            self.change_metabolite_quantity(metabolite, amount)
 
     def krebs_cycle_process(self, acetyl_coa_amount: int):
         """Processes acetyl-CoA through the Krebs cycle"""
@@ -217,11 +265,11 @@ class Mitochondrion:
             self.krebs_cycle.run_cycle()
 
         # Transfer the products to the mitochondrion
-        self.nadh.quantity += self.krebs_cycle.cofactors["nadh"]
-        self.fadh2.quantity += self.krebs_cycle.cofactors["fadh2"]
-        self.atp.quantity += self.krebs_cycle.cofactors[
-            "gtp"
-        ]  # GTP is equivalent to ATP
+        self.change_metabolite_quantity("nadh", self.krebs_cycle.cofactors["nadh"])
+        self.change_metabolite_quantity("fadh2", self.krebs_cycle.cofactors["fadh2"])
+        self.change_metabolite_quantity(
+            "atp", self.krebs_cycle.cofactors["gtp"]
+        )  # GTP is equivalent to ATP
 
         # Reset the Krebs cycle for the next round
         self.krebs_cycle.reset()
@@ -232,12 +280,8 @@ class Mitochondrion:
         """Converts pyruvate to acetyl-CoA."""
         logger.info(f"Converting {pyruvate_amount} units of pyruvate to acetyl-CoA")
         acetyl_coa_produced = pyruvate_amount
-        self.nadh.quantity = min(
-            self.nadh.quantity + pyruvate_amount, self.nadh.max_quantity
-        )
-        self.co2.quantity = min(
-            self.co2.quantity + pyruvate_amount, self.co2.max_quantity
-        )
+        self.change_metabolite_quantity("nadh", pyruvate_amount)
+        self.change_metabolite_quantity("co2", pyruvate_amount)
         return acetyl_coa_produced
 
     def cellular_respiration(self, pyruvate_amount: int):
@@ -258,8 +302,8 @@ class Mitochondrion:
         krebs_products = self.krebs_cycle_process(acetyl_coa)
 
         # Transfer NADH and FADH2 from Krebs cycle to ETC
-        self.nadh.quantity += self.krebs_cycle.cofactors["nadh"]
-        self.fadh2.quantity += self.krebs_cycle.cofactors["fadh2"]
+        self.change_metabolite_quantity("nadh", self.krebs_cycle.cofactors["nadh"])
+        self.change_metabolite_quantity("fadh2", self.krebs_cycle.cofactors["fadh2"])
 
         # Check ADP availability
         if self.adp.quantity < 10:  # Arbitrary threshold
@@ -298,9 +342,9 @@ class Mitochondrion:
             reaction_rate = min(self.nadh.quantity, self.ubiquinone.quantity)
             if self.consume_metabolites(nadh=reaction_rate, ubiquinone=reaction_rate):
                 self.produce_metabolites(ubiquinol=reaction_rate)
-                self.proton_gradient += 4 * reaction_rate  # 4 H⁺ pumped per NADH
+                self.proton_gradient += PROTONS_PER_NADH * reaction_rate
                 logger.info(
-                    f"Complex I: Oxidized {reaction_rate} NADH, pumped {4 * reaction_rate} protons"
+                    f"Complex I: Oxidized {reaction_rate} NADH, pumped {PROTONS_PER_NADH * reaction_rate} protons"
                 )
                 return reaction_rate
         logger.warning("Insufficient NADH or ubiquinone for Complex I")
@@ -333,11 +377,9 @@ class Mitochondrion:
                 self.produce_metabolites(
                     ubiquinone=reaction_rate, cytochrome_c_reduced=reaction_rate
                 )
-                self.proton_gradient += (
-                    4 * reaction_rate
-                )  # 4 H⁺ pumped per electron pair
+                self.proton_gradient += PROTONS_PER_FADH2 * reaction_rate
                 logger.info(
-                    f"Complex III: Transferred {reaction_rate} electron pairs, pumped {4 * reaction_rate} protons"
+                    f"Complex III: Transferred {reaction_rate} electron pairs, pumped {PROTONS_PER_FADH2 * reaction_rate} protons"
                 )
                 return reaction_rate
         logger.warning("Insufficient ubiquinol or cytochrome c for Complex III")
@@ -356,11 +398,9 @@ class Mitochondrion:
                 cytochrome_c_reduced=reaction_rate, oxygen=oxygen_consumed
             ):
                 self.produce_metabolites(cytochrome_c_oxidized=reaction_rate)
-                self.proton_gradient += (
-                    2 * reaction_rate
-                )  # 2 H⁺ pumped per electron pair
+                self.proton_gradient += PROTONS_PER_FADH2 * reaction_rate
                 logger.info(
-                    f"Complex IV: Consumed {oxygen_consumed} O2, pumped {2 * reaction_rate} protons"
+                    f"Complex IV: Consumed {oxygen_consumed} O2, pumped {PROTONS_PER_FADH2 * reaction_rate} protons"
                 )
                 return reaction_rate
         if self.oxygen.quantity <= 0:
@@ -377,31 +417,13 @@ class Mitochondrion:
             logger.warning(f"Unknown metabolite: {metabolite}")
             return False
 
-    def consume_metabolites(self, **metabolites: Dict[str, float]):
-        """Consume multiple metabolites at once."""
-        for metabolite, amount in metabolites.items():
-            if self.is_metabolite_available(metabolite, amount):
-                getattr(self, metabolite).quantity -= amount
-            else:
-                logger.warning(f"Insufficient {metabolite} for reaction")
-                return False
-        return True
-
-    def produce_metabolites(self, **metabolites: Dict[str, float]):
-        """Produce multiple metabolites at once."""
-        for metabolite, amount in metabolites.items():
-            if hasattr(self, metabolite):
-                getattr(self, metabolite).quantity += amount
-            else:
-                logger.warning(f"Unknown metabolite: {metabolite}")
-
     def atp_synthase(self):
         """Synthesizes ATP using the proton gradient."""
-        protons_required_per_atp = 4  # Approximate value
+        protons_required_per_atp = PROTONS_PER_ATP
         possible_atp = int(self.proton_gradient / protons_required_per_atp)
         atp_produced = min(possible_atp, self.adp.quantity)
-        self.atp.quantity += atp_produced
-        self.adp.quantity -= atp_produced
+        self.change_metabolite_quantity("atp", atp_produced)
+        self.change_metabolite_quantity("adp", -atp_produced)
         self.proton_gradient -= atp_produced * protons_required_per_atp
         logger.info(f"ATP Synthase: Produced {atp_produced} ATP")
         return atp_produced
@@ -412,8 +434,8 @@ class Mitochondrion:
             self.ubiquinol.quantity,
             self.ubiquinone.max_quantity - self.ubiquinone.quantity,
         )
-        self.ubiquinone.quantity += replenish_amount
-        self.ubiquinol.quantity -= replenish_amount
+        self.change_metabolite_quantity("ubiquinone", replenish_amount)
+        self.change_metabolite_quantity("ubiquinol", -replenish_amount)
         logger.info(f"Replenished {replenish_amount} ubiquinone")
 
     def replenish_cytochrome_c(self):
@@ -423,8 +445,8 @@ class Mitochondrion:
             self.cytochrome_c_oxidized.max_quantity
             - self.cytochrome_c_oxidized.quantity,
         )
-        self.cytochrome_c_oxidized.quantity += replenish_amount
-        self.cytochrome_c_reduced.quantity -= replenish_amount
+        self.change_metabolite_quantity("cytochrome_c_oxidized", replenish_amount)
+        self.change_metabolite_quantity("cytochrome_c_reduced", -replenish_amount)
         logger.info(f"Replenished {replenish_amount} oxidized cytochrome c")
 
     def oxidative_phosphorylation(self, cytoplasmic_nadh_used: int = 0):
@@ -463,7 +485,7 @@ class Mitochondrion:
         calcium_uptake = min(
             cytoplasmic_calcium, self.calcium.max_quantity - self.calcium.quantity
         )
-        self.calcium.quantity += calcium_uptake
+        self.change_metabolite_quantity("calcium", calcium_uptake)
         logger.info(f"Mitochondrion buffered {calcium_uptake} units of calcium")
 
         if self.calcium.quantity > self.calcium_threshold:
@@ -476,7 +498,7 @@ class Mitochondrion:
     def release_calcium(self, amount: int):
         """Releases calcium from the mitochondrion."""
         released = min(amount, self.calcium.quantity)
-        self.calcium.quantity -= released
+        self.change_metabolite_quantity("calcium", -released)
         logger.info(f"Mitochondrion released {released} units of calcium")
         return released
 
@@ -490,11 +512,9 @@ class Mitochondrion:
         Transfers cytoplasmic NADH into the mitochondrion using shuttle systems.
         Returns the amount of mitochondrial NADH produced.
         """
-        shuttle_efficiency = 0.67  # Efficiency of the glycerol-phosphate shuttle
+        shuttle_efficiency = SHUTTLE_EFFICIENCY
         mitochondrial_nadh = int(cytoplasmic_nadh * shuttle_efficiency)
-        self.nadh.quantity = min(
-            self.nadh.quantity + mitochondrial_nadh, self.nadh.max_quantity
-        )
+        self.change_metabolite_quantity("nadh", mitochondrial_nadh)
         logger.info(
             f"Transferred {cytoplasmic_nadh} cytoplasmic NADH, produced {mitochondrial_nadh} mitochondrial NADH"
         )
@@ -526,7 +546,7 @@ class KrebsCycle:
             "malate": 0,
         }
         self.cofactors = {
-            "nad": 100,
+            "nad": INITIAL_NAD,
             "nadh": 0,
             "fad": 100,
             "fadh2": 0,
@@ -613,8 +633,8 @@ class KrebsCycle:
     def step3_isocitrate_dehydrogenase(self):
         """Isocitrate to α-Ketoglutarate with allosteric regulation"""
         substrate_conc = self.metabolites["isocitrate"]
-        vmax = 1.0  # Base Vmax
-        km = 0.1  # Base Km
+        vmax = V_MAX_DEFAULT  # Base Vmax
+        km = KM_DEFAULT  # Base Km
 
         # Define effectors
         atp_effector = Effector("ATP", self.cofactors["atp"], Ki=100, Ka=1000)
@@ -757,10 +777,10 @@ class Cell:
         self.cytoplasm = Cytoplasm()
         self.mitochondrion = Mitochondrion()
         self.simulation_time = 0
-        self.time_step = 0.1  # 0.1 second per time step
+        self.time_step = TIME_STEP
         self.cytoplasmic_calcium = Metabolite("Ca2+", 100, 1000)
 
-    def produce_atp(self, glucose, simulation_duration):
+    def produce_atp(self, glucose, simulation_duration=SIMULATION_DURATION):
         """Simulates ATP production in the entire cell over a specified duration."""
         initial_atp = self.cytoplasm.atp.quantity + self.mitochondrion.atp.quantity
         self.simulation_time = 0
@@ -857,9 +877,7 @@ if __name__ == "__main__":
 
     cell = Cell()
     glucose_amounts = [1, 2, 5, 10]
-    simulation_duration = (
-        5  # 5 seconds should be enough for complete glucose processing
-    )
+    simulation_duration = SIMULATION_DURATION
 
     for glucose in glucose_amounts:
         logger.info(f"\nSimulating ATP production with {glucose} glucose units:")
