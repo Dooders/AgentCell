@@ -1,5 +1,7 @@
 from typing import Dict
 
+import math
+
 from .exceptions import GlycolysisError
 from .mitochondrion import GlycolysisSteps
 from .organelle import Organelle
@@ -7,6 +9,7 @@ from .organelle import Organelle
 
 class Cytoplasm(Organelle):
     name = "Cytoplasm"
+
     def __init__(self):
         super().__init__()
         self.add_metabolite("glucose", 100, 1000)  # Start with some glucose
@@ -17,9 +20,10 @@ class Cytoplasm(Organelle):
         self.add_metabolite("pyruvate", 0, 1000)
         self.glycolysis_rate = 1.0
 
-    def glycolysis(self, glucose_units: int):
-        if not isinstance(glucose_units, int):
-            raise TypeError("The number of glucose units must be an integer.")
+    def glycolysis(self, glucose_units: float):
+        # Round down to nearest integer
+        glucose_units = math.floor(glucose_units)
+
         if glucose_units < 0:
             raise ValueError("The number of glucose units cannot be negative.")
         if glucose_units == 0:
