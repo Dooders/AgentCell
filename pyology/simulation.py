@@ -37,12 +37,12 @@ class Reporter:
 
 
 class SimulationController:
-    def __init__(self, cell, reporter, simulation_duration=SIMULATION_DURATION):
+    def __init__(self, cell, reporter):
         self.cell = cell
         self.reporter = reporter
-        self.simulation_duration = simulation_duration
+        self.simulation_duration = SIMULATION_DURATION
         self.simulation_time = 0
-        self.time_step = TIME_STEP
+        self.time_step = 0.001  # Decreased time step
         self.base_glycolysis_rate = (
             self.cell.cytoplasm.glycolysis_rate
         )  # Store base rate
@@ -50,6 +50,7 @@ class SimulationController:
         self.max_cytoplasmic_atp = 500
         self.max_mitochondrial_nadh = 50
         self.max_cytoplasmic_nadh = 100
+        self.max_simulation_time = 20  # Increased max simulation time
 
     def run_simulation(self, glucose_amount):
         self.cell.cytoplasm.metabolites["glucose"].quantity = round(glucose_amount, 2)
@@ -63,7 +64,7 @@ class SimulationController:
 
             while (
                 glucose_processed < glucose_amount
-                and self.simulation_time < self.simulation_duration
+                and self.simulation_time < self.max_simulation_time
             ):
                 try:
                     glucose_available = self.cell.cytoplasm.metabolites[
@@ -143,6 +144,8 @@ class SimulationController:
                         next_log_time = round(
                             next_log_time + 10, 2
                         )  # Schedule next log time
+
+                    self.reporter.log_event(f"Simulation time: {self.simulation_time:.3f}")
 
                 except UnknownMetaboliteError as e:
                     self.reporter.log_error(f"Unknown metabolite error: {str(e)}")

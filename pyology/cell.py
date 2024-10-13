@@ -14,6 +14,7 @@ class Cell(Organelle):
     def __init__(self):
         self.cytoplasm = Cytoplasm()
         # The Cytoplasm now initializes with some glucose, ATP, and ADP
+        self.cytoplasm.add_metabolite("glucose", 10, 1000)  # Increase initial glucose
         self.mitochondrion = Mitochondrion()
         self.krebs_cycle = KrebsCycle()
         self.simulation_time = 0
@@ -58,6 +59,8 @@ class Cell(Organelle):
 
             # Glycolysis with updated rate
             pyruvate = self.cytoplasm.glycolysis(1 * self.cytoplasm.glycolysis_rate)
+            self.mitochondrion.add_metabolite("pyruvate", pyruvate)
+            logger.info(f"Transferred {pyruvate} pyruvate to mitochondrion")
             glucose_processed += 1 * self.cytoplasm.glycolysis_rate
 
             # Calculate ATP produced in glycolysis

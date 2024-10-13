@@ -265,6 +265,7 @@ class Mitochondrion(Organelle):
         int
             The amount of ATP produced.
         """
+        logger.info(f"Starting cellular respiration with {pyruvate_amount} pyruvate")
         if self.metabolites["oxygen"].quantity <= 0:
             logger.warning("No oxygen available. Cellular respiration halted.")
             return 0
@@ -315,6 +316,7 @@ class Mitochondrion(Organelle):
         # Add ATP from substrate-level phosphorylation in Krebs cycle
         atp_produced += self.krebs_cycle.cofactors["GTP"]  # GTP is equivalent to ATP
 
+        logger.info(f"Cellular respiration completed. ATP produced: {atp_produced}")
         return atp_produced
 
     def calculate_proton_leak(self) -> float:
@@ -352,7 +354,8 @@ class Mitochondrion(Organelle):
         self.proton_gradient += protons_pumped
         leak = self.calculate_proton_leak()
         self.proton_gradient = max(0, self.proton_gradient - leak)
-        logger.info(f"Proton gradient: {self.proton_gradient:.2f}, Leak: {leak:.2f}")
+        logger.info(f"Updated proton gradient: {self.proton_gradient:.2f}")
+        return self.proton_gradient
 
     def complex_I(self) -> int:
         """
@@ -651,24 +654,24 @@ class Mitochondrion(Organelle):
         self.__init__()
         logger.info("Mitochondrion state reset")
 
-    def transfer_cytoplasmic_nadh(self, cytoplasmic_nadh: int) -> int:
+    def transfer_cytoplasmic_nadh(self, cytoplasmic_nadh: float) -> float:
         """
         Transfers cytoplasmic NADH into the mitochondrion using shuttle systems.
         Returns the amount of mitochondrial NADH produced.
 
         Parameters
         ----------
-        cytoplasmic_nadh: int
+        cytoplasmic_nadh: float
             The amount of cytoplasmic NADH to transfer.
 
         Returns
         -------
-        int
+        float
             The amount of mitochondrial NADH produced.
         """
         shuttle_efficiency = SHUTTLE_EFFICIENCY
         mitochondrial_nadh = int(cytoplasmic_nadh * shuttle_efficiency)
-        self.change_metabolite_quantity("nadh", mitochondrial_nadh)
+        self.metabolites["nadh"].quantity += mitochondrial_nadh
         logger.info(
             f"Transferred {cytoplasmic_nadh} cytoplasmic NADH, produced {mitochondrial_nadh} mitochondrial NADH"
         )

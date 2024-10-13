@@ -128,6 +128,7 @@ class KrebsCycle(Organelle):
         ):
             self.produce_metabolites(Citrate=reaction_rate)
             self.cofactors["Coenzyme-A"] += reaction_rate
+            logger.info(f"Citrate synthase: Produced {reaction_rate} Citrate")
             return True
         else:
             logger.warning("Insufficient substrates for step 1")
