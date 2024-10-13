@@ -1,6 +1,5 @@
 import logging
 import math
-from enum import Enum
 from typing import Dict
 
 from .constants import *
@@ -12,23 +11,7 @@ from .reactions import KrebsCycle
 logger = logging.getLogger(__name__)
 
 
-class GlycolysisSteps(Enum):
-    STEP1_HEXOKINASE = "Hexokinase"
-    STEP2_PHOSPHOGLUCOSE_ISOMERASE = "Phosphoglucose Isomerase"
-    STEP3_PHOSPHOFRUCTOKINASE = "Phosphofructokinase"
-    STEP4_ALDOLASE = "Aldolase"
-    STEP5_TRIOSE_PHOSPHATE_ISOMERASE = "Triose Phosphate Isomerase"
-    STEP6_GLYCERALDEHYDE_3_PHOSPHATE_DEHYDROGENASE = (
-        "Glyceraldehyde 3-Phosphate Dehydrogenase"
-    )
-    STEP7_PHOSPHOGLYCERATE_KINASE = "Phosphoglycerate Kinase"
-    STEP8_PHOSPHOGLYCERATE_MUTASE = "Phosphoglycerate Mutase"
-    STEP9_ENOLASE = "Enolase"
-    STEP10_PYRUVATE_KINASE = "Pyruvate Kinase"
-
-
 class Mitochondrion(Organelle):
-    name = "Mitochondrion"
     """
     Simulates the electron transport chain with individual complexes.
 
@@ -40,9 +23,38 @@ class Mitochondrion(Organelle):
 
     Feedback inhibition for ATP levels is implemented, mimicking real cellular
     regulation mechanisms.
+
+    Methods
+    -------
+    krebs_cycle_process:
+        Processes acetyl-CoA through the Krebs cycle
+    pyruvate_to_acetyl_coa:
+        Converts pyruvate to Acetyl-CoA
+    calculate_oxygen_needed:
+        Calculates the amount of oxygen needed for cellular respiration
+    cellular_respiration:
+        Simulates the entire cellular respiration process with feedback inhibition
+    calculate_proton_leak:
+        Calculates the proton leak using a logistic function
+    update_proton_gradient:
+        Updates the proton gradient considering nonlinear leak
+    complex_I:
+        Simulates Complex I activity
+    complex_II:
+        Simulates Complex II activity
+    complex_III:
+        Simulates Complex III activity
+    complex_IV:
+        Simulates Complex IV activity
+    is_metabolite_available:
+        Checks if a metabolite is available in sufficient quantity
+    atp_synthase:
+        Synthesizes ATP using the proton gradient
     """
 
-    def __init__(self):
+    name = "Mitochondrion"
+
+    def __init__(self) -> None:
         super().__init__()
         self.add_metabolite("nadh", 0, 1000)
         self.add_metabolite("fadh2", 0, 1000)
@@ -73,16 +85,25 @@ class Mitochondrion(Organelle):
 
         self.krebs_cycle = KrebsCycle()
 
-    def change_metabolite_quantity(self, metabolite: str, amount: float):
+    def change_metabolite_quantity(self, metabolite: str, amount: float) -> float:
         """
         Changes the quantity of a metabolite, ensuring it doesn't go negative.
 
-        Args:
-            metabolite (str): The name of the metabolite to change.
-            amount (float): The amount to change the metabolite by (positive or negative).
+        The method ensures that the metabolite quantity does not go negative by
+        adjusting the amount to the maximum of the current quantity plus the
+        requested change or zero.
 
-        Returns:
-            float: The actual amount changed (may be different if preventing negative values).
+        Parameters
+        ----------
+        metabolite: str
+            The name of the metabolite to change.
+        amount: float
+            The amount to change the metabolite by (positive or negative).
+
+        Returns
+        -------
+        float
+            The actual amount changed (may be different if preventing negative values).
         """
         if metabolite not in self.metabolites:
             self.metabolites[metabolite] = Metabolite(metabolite, 0)
@@ -103,7 +124,16 @@ class Mitochondrion(Organelle):
     def consume_metabolites(self, **metabolites: Dict[str, float]) -> bool:
         """
         Consume multiple metabolites at once.
-        Returns True if all metabolites were consumed successfully, False otherwise.
+
+        Parameters
+        ----------
+        metabolites: Dict[str, float]
+            The metabolites to consume and their amounts.
+
+        Returns
+        -------
+        bool
+            True if all metabolites were consumed successfully, False otherwise.
         """
         temp_changes = {}
         for metabolite, amount in metabolites.items():
@@ -120,6 +150,11 @@ class Mitochondrion(Organelle):
     def produce_metabolites(self, **metabolites: Dict[str, float]) -> None:
         """
         Produce multiple metabolites at once.
+
+        Parameters
+        ----------
+        metabolites: Dict[str, float]
+            The metabolites to produce and their amounts.
         """
         for metabolite, amount in metabolites.items():
             actual_change = self.change_metabolite_quantity(metabolite, amount)
@@ -128,8 +163,23 @@ class Mitochondrion(Organelle):
                     f"Could not produce full amount of {metabolite}. Produced {actual_change} instead of {amount}."
                 )
 
-    def krebs_cycle_process(self, acetyl_coa_amount: int):
-        """Processes acetyl-CoA through the Krebs cycle"""
+    def krebs_cycle_process(self, acetyl_coa_amount: int) -> int:
+        """
+        Processes acetyl-CoA through the Krebs cycle.
+
+        The Krebs cycle is a series of reactions that convert acetyl-CoA into
+        ATP, NADH, and FADH2.
+
+        Parameters
+        ----------
+        acetyl_coa_amount: int
+            The amount of acetyl-CoA to process.
+
+        Returns
+        -------
+        int
+            The total amount of NADH and FADH2 produced.
+        """
         logger.info(
             f"Processing {acetyl_coa_amount} units of acetyl-CoA through the Krebs cycle"
         )
@@ -152,9 +202,9 @@ class Mitochondrion(Organelle):
         for metabolites, cofactors in self.krebs_cycle.krebs_cycle_iterator(
             num_cycles=acetyl_coa_amount
         ):
-            total_nadh += cofactors["nadh"]
-            total_fadh2 += cofactors["fadh2"]
-            total_atp += cofactors["gtp"]  # GTP is equivalent to ATP
+            total_nadh += cofactors["NADH"]
+            total_fadh2 += cofactors["FADH2"]
+            total_atp += cofactors["GTP"]  # GTP is equivalent to ATP
 
         # Transfer the products to the mitochondrion
         self.produce_metabolites(nadh=total_nadh, fadh2=total_fadh2, atp=total_atp)
@@ -165,7 +215,19 @@ class Mitochondrion(Organelle):
         return total_nadh + total_fadh2
 
     def pyruvate_to_acetyl_coa(self, pyruvate_amount: int) -> int:
-        """Converts pyruvate to Acetyl-CoA."""
+        """
+        Converts pyruvate to Acetyl-CoA.
+
+        Parameters
+        ----------
+        pyruvate_amount: int
+            The amount of pyruvate to convert.
+
+        Returns
+        -------
+        int
+            The amount of acetyl-CoA produced.
+        """
         logger.info(f"Converting {pyruvate_amount} units of pyruvate to Acetyl-CoA")
         acetyl_coa_produced = pyruvate_amount
         self.change_metabolite_quantity("nadh", pyruvate_amount)
@@ -174,14 +236,35 @@ class Mitochondrion(Organelle):
 
     def calculate_oxygen_needed(self, pyruvate_amount: int) -> float:
         """
-        Calculate the amount of oxygen needed for cellular respiration based on pyruvate amount.
+        Calculate the amount of oxygen needed for cellular respiration based on
+        pyruvate amount.
+
+        Parameters
+        ----------
+        pyruvate_amount: int
+            The amount of pyruvate to convert.
+
+        Returns
+        -------
+        float
+            The amount of oxygen needed.
         """
-        # Assuming each pyruvate molecule requires 2.5 oxygen molecules
-        # (This is an approximation, you may need to adjust based on your model's specifics)
         return pyruvate_amount * 2.5
 
-    def cellular_respiration(self, pyruvate_amount: int):
-        """Simulates the entire cellular respiration process with feedback inhibition"""
+    def cellular_respiration(self, pyruvate_amount: int) -> int:
+        """
+        Simulates the entire cellular respiration process with feedback inhibition.
+
+        Parameters
+        ----------
+        pyruvate_amount: int
+            The amount of pyruvate to convert.
+
+        Returns
+        -------
+        int
+            The amount of ATP produced.
+        """
         if self.metabolites["oxygen"].quantity <= 0:
             logger.warning("No oxygen available. Cellular respiration halted.")
             return 0
@@ -213,8 +296,8 @@ class Mitochondrion(Organelle):
                 logger.info(f"  {metabolite}: {quantity:.2f}")
 
         # Transfer NADH and FADH2 from Krebs cycle to ETC
-        self.change_metabolite_quantity("NADH", self.krebs_cycle.cofactors["NADH"])
-        self.change_metabolite_quantity("FADH2", self.krebs_cycle.cofactors["FADH2"])
+        self.change_metabolite_quantity("nadh", self.krebs_cycle.cofactors["NADH"])
+        self.change_metabolite_quantity("fadh2", self.krebs_cycle.cofactors["FADH2"])
 
         # Check ADP availability
         if self.metabolites["adp"].quantity < 10:  # Arbitrary threshold
@@ -234,8 +317,15 @@ class Mitochondrion(Organelle):
 
         return atp_produced
 
-    def calculate_proton_leak(self):
-        """Calculate the proton leak using a logistic function."""
+    def calculate_proton_leak(self) -> float:
+        """
+        Calculate the proton leak using a logistic function.
+
+        Returns
+        -------
+        float
+            The amount of proton leak.
+        """
         relative_gradient = self.proton_gradient / self.max_proton_gradient
         leak = self.leak_rate / (
             1
@@ -245,15 +335,37 @@ class Mitochondrion(Organelle):
         )
         return leak
 
-    def update_proton_gradient(self, protons_pumped):
-        """Update the proton gradient considering nonlinear leak."""
+    def update_proton_gradient(self, protons_pumped: float) -> float:
+        """
+        Update the proton gradient considering nonlinear leak.
+
+        Parameters
+        ----------
+        protons_pumped: float
+            The amount of protons pumped.
+
+        Returns
+        -------
+        float
+            The updated proton gradient.
+        """
         self.proton_gradient += protons_pumped
         leak = self.calculate_proton_leak()
         self.proton_gradient = max(0, self.proton_gradient - leak)
         logger.info(f"Proton gradient: {self.proton_gradient:.2f}, Leak: {leak:.2f}")
 
-    def complex_I(self):
-        """Simulates Complex I activity."""
+    def complex_I(self) -> int:
+        """
+        Simulates Complex I activity.
+
+        Complex I is the first enzyme in the electron transport chain and
+        catalyzes the oxidation of NADH.
+
+        Returns
+        -------
+        int
+            The amount of electrons transferred.
+        """
         if self.is_metabolite_available("nadh", 1) and self.is_metabolite_available(
             "ubiquinone", 1
         ):
@@ -271,8 +383,18 @@ class Mitochondrion(Organelle):
         logger.warning("Insufficient NADH or ubiquinone for Complex I")
         return 0
 
-    def complex_II(self):
-        """Simulates Complex II activity."""
+    def complex_II(self) -> int:
+        """
+        Simulates Complex II activity.
+
+        Complex II is the second enzyme in the electron transport chain and
+        catalyzes the oxidation of FADH2.
+
+        Returns
+        -------
+        int
+            The amount of electrons transferred.
+        """
         if self.is_metabolite_available("fadh2", 1) and self.is_metabolite_available(
             "ubiquinone", 1
         ):
@@ -287,8 +409,18 @@ class Mitochondrion(Organelle):
         logger.warning("Insufficient FADH2 or ubiquinone for Complex II")
         return 0
 
-    def complex_III(self):
-        """Simulates Complex III activity."""
+    def complex_III(self) -> int:
+        """
+        Simulates Complex III activity.
+
+        Complex III is the third enzyme in the electron transport chain and
+        catalyzes the transfer of electrons from ubiquinol to cytochrome c.
+
+        Returns
+        -------
+        int
+            The amount of electrons transferred.
+        """
         if self.is_metabolite_available(
             "ubiquinol", 1
         ) and self.is_metabolite_available("cytochrome_c_oxidized", 1):
@@ -310,8 +442,18 @@ class Mitochondrion(Organelle):
         logger.warning("Insufficient ubiquinol or cytochrome c for Complex III")
         return 0
 
-    def complex_IV(self):
-        """Simulates Complex IV activity."""
+    def complex_IV(self) -> int:
+        """
+        Simulates Complex IV activity.
+
+        Complex IV is the fourth and final enzyme in the electron transport chain
+        and catalyzes the oxidation of cytochrome c.
+
+        Returns
+        -------
+        int
+            The amount of electrons transferred.
+        """
         if self.is_metabolite_available(
             "cytochrome_c_reduced", 1
         ) and self.is_metabolite_available("oxygen", 0.5):
@@ -336,15 +478,36 @@ class Mitochondrion(Organelle):
         return 0
 
     def is_metabolite_available(self, metabolite: str, amount: float) -> bool:
-        """Check if a metabolite is available in sufficient quantity."""
+        """
+        Check if a metabolite is available in sufficient quantity.
+
+        Parameters
+        ----------
+        metabolite: str
+            The metabolite to check.
+        amount: float
+            The amount of the metabolite to check.
+
+        Returns
+        -------
+        bool
+            True if the metabolite is available in sufficient quantity, False otherwise.
+        """
         if hasattr(self, metabolite):
             return getattr(self, metabolite).quantity >= amount
         else:
             logger.warning(f"Unknown metabolite: {metabolite}")
             return False
 
-    def atp_synthase(self):
-        """Synthesizes ATP using the proton gradient."""
+    def atp_synthase(self) -> int:
+        """
+        Synthesizes ATP using the proton gradient.
+
+        Returns
+        -------
+        int
+            The amount of ATP produced.
+        """
         protons_required_per_atp = PROTONS_PER_ATP
         possible_atp = int(self.proton_gradient / protons_required_per_atp)
         atp_produced = min(possible_atp, self.metabolites["adp"].quantity)
@@ -356,8 +519,15 @@ class Mitochondrion(Organelle):
         logger.warning("Insufficient ADP for ATP synthesis")
         return 0
 
-    def replenish_ubiquinone(self):
-        """Replenishes ubiquinone from ubiquinol"""
+    def replenish_ubiquinone(self) -> int:
+        """
+        Replenishes ubiquinone from ubiquinol.
+
+        Returns
+        -------
+        int
+            The amount of ubiquinone replenished.
+        """
         replenish_amount = min(
             self.metabolites["ubiquinol"].quantity,
             self.metabolites["ubiquinone"].max_quantity
@@ -367,8 +537,15 @@ class Mitochondrion(Organelle):
         self.change_metabolite_quantity("ubiquinol", -replenish_amount)
         logger.info(f"Replenished {replenish_amount} ubiquinone")
 
-    def replenish_cytochrome_c(self):
-        """Replenishes oxidized cytochrome c from reduced form"""
+    def replenish_cytochrome_c(self) -> int:
+        """
+        Replenishes oxidized cytochrome c from reduced form.
+
+        Returns
+        -------
+        int
+            The amount of oxidized cytochrome c replenished.
+        """
         replenish_amount = min(
             self.metabolites["cytochrome_c_reduced"].quantity,
             self.metabolites["cytochrome_c_oxidized"].max_quantity
@@ -378,8 +555,20 @@ class Mitochondrion(Organelle):
         self.change_metabolite_quantity("cytochrome_c_reduced", -replenish_amount)
         logger.info(f"Replenished {replenish_amount} oxidized cytochrome c")
 
-    def oxidative_phosphorylation(self, cytoplasmic_nadh_used: int = 0):
-        """Simulates oxidative phosphorylation with the electron transport chain."""
+    def oxidative_phosphorylation(self, cytoplasmic_nadh_used: int = 0) -> int:
+        """
+        Simulates oxidative phosphorylation with the electron transport chain.
+
+        Parameters
+        ----------
+        cytoplasmic_nadh_used: int
+            The amount of cytoplasmic NADH used.
+
+        Returns
+        -------
+        int
+            The amount of ATP produced.
+        """
         if self.metabolites["oxygen"].quantity <= 0:
             logger.warning("No oxygen available. Oxidative phosphorylation halted.")
             return 0
@@ -409,15 +598,27 @@ class Mitochondrion(Organelle):
 
         return atp_produced
 
-    def buffer_calcium(self, cytoplasmic_calcium: int):
-        """Simulates calcium buffering by the mitochondrion."""
+    def buffer_calcium(self, cytoplasmic_calcium: float) -> float:
+        """
+        Simulates calcium buffering by the mitochondrion.
+
+        Parameters
+        ----------
+        cytoplasmic_calcium: float
+            The amount of cytoplasmic calcium to buffer.
+
+        Returns
+        -------
+        float
+            The amount of calcium buffered.
+        """
         calcium_uptake = min(
             cytoplasmic_calcium,
             self.metabolites["calcium"].max_quantity
             - self.metabolites["calcium"].quantity,
         )
         self.change_metabolite_quantity("calcium", calcium_uptake)
-        logger.info(f"Mitochondrion buffered {calcium_uptake} units of calcium")
+        logger.info(f"Mitochondrion buffered {calcium_uptake:.2f} units of calcium")
 
         if self.metabolites["calcium"].quantity > self.calcium_threshold:
             logger.warning(
@@ -426,14 +627,26 @@ class Mitochondrion(Organelle):
 
         return calcium_uptake
 
-    def release_calcium(self, amount: int):
-        """Releases calcium from the mitochondrion."""
+    def release_calcium(self, amount: float) -> float:
+        """
+        Releases calcium from the mitochondrion.
+
+        Parameters
+        ----------
+        amount: float
+            The amount of calcium to release.
+
+        Returns
+        -------
+        float
+            The amount of calcium released.
+        """
         released = min(amount, self.metabolites["calcium"].quantity)
         self.change_metabolite_quantity("calcium", -released)
-        logger.info(f"Mitochondrion released {released} units of calcium")
+        logger.info(f"Mitochondrion released {released:.2f} units of calcium")
         return released
 
-    def reset(self):
+    def reset(self) -> None:
         """Reset mitochondrion state."""
         self.__init__()
         logger.info("Mitochondrion state reset")
@@ -442,6 +655,16 @@ class Mitochondrion(Organelle):
         """
         Transfers cytoplasmic NADH into the mitochondrion using shuttle systems.
         Returns the amount of mitochondrial NADH produced.
+
+        Parameters
+        ----------
+        cytoplasmic_nadh: int
+            The amount of cytoplasmic NADH to transfer.
+
+        Returns
+        -------
+        int
+            The amount of mitochondrial NADH produced.
         """
         shuttle_efficiency = SHUTTLE_EFFICIENCY
         mitochondrial_nadh = int(cytoplasmic_nadh * shuttle_efficiency)

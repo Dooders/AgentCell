@@ -1,3 +1,5 @@
+from enum import Enum
+
 # Mitochondrion constants
 CALCIUM_THRESHOLD = 800
 CALCIUM_BOOST_FACTOR = 1.2
@@ -29,3 +31,18 @@ INITIAL_CYTOCHROME_C = 100
 # Simulation constants
 TIME_STEP = 0.1
 SIMULATION_DURATION = 5
+
+
+class GlycolysisSteps(Enum):
+    STEP1_HEXOKINASE = "Hexokinase"
+    STEP2_PHOSPHOGLUCOSE_ISOMERASE = "Phosphoglucose Isomerase"
+    STEP3_PHOSPHOFRUCTOKINASE = "Phosphofructokinase"
+    STEP4_ALDOLASE = "Aldolase"
+    STEP5_TRIOSE_PHOSPHATE_ISOMERASE = "Triose Phosphate Isomerase"
+    STEP6_GLYCERALDEHYDE_3_PHOSPHATE_DEHYDROGENASE = (
+        "Glyceraldehyde 3-Phosphate Dehydrogenase"
+    )
+    STEP7_PHOSPHOGLYCERATE_KINASE = "Phosphoglycerate Kinase"
+    STEP8_PHOSPHOGLYCERATE_MUTASE = "Phosphoglycerate Mutase"
+    STEP9_ENOLASE = "Enolase"
+    STEP10_PYRUVATE_KINASE = "Pyruvate Kinase"
