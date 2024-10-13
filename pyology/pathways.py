@@ -1,6 +1,7 @@
 import math
 from typing import Dict
 
+from .enzymes import Enzyme
 from .exceptions import GlycolysisError, MetaboliteError
 from .mitochondrion import GlycolysisSteps
 
@@ -12,6 +13,38 @@ class GlycolysisPathway:
 
     def __init__(self, organelle):
         self.organelle = organelle
+        self.define_enzymes()
+        self.time_step = 0.1  # Default time step in seconds
+
+    def define_enzymes(self):
+        """Define enzymes for each step of glycolysis."""
+        self.enzymes = {
+            "hexokinase": Enzyme("Hexokinase", vmax=10.0, km=0.1),
+            "phosphoglucose_isomerase": Enzyme(
+                "Phosphoglucose Isomerase", vmax=12.0, km=0.2
+            ),
+            "phosphofructokinase": Enzyme("Phosphofructokinase", vmax=8.0, km=0.15),
+            "aldolase": Enzyme("Aldolase", vmax=7.0, km=0.3),
+            "triose_phosphate_isomerase": Enzyme(
+                "Triose Phosphate Isomerase", vmax=15.0, km=0.1
+            ),
+            "glyceraldehyde_3_phosphate_dehydrogenase": Enzyme(
+                "Glyceraldehyde 3-Phosphate Dehydrogenase", vmax=6.0, km=0.25
+            ),
+            "phosphoglycerate_kinase": Enzyme(
+                "Phosphoglycerate Kinase", vmax=9.0, km=0.2
+            ),
+            "phosphoglycerate_mutase": Enzyme(
+                "Phosphoglycerate Mutase", vmax=11.0, km=0.15
+            ),
+            "enolase": Enzyme("Enolase", vmax=7.5, km=0.3),
+            "pyruvate_kinase": Enzyme("Pyruvate Kinase", vmax=10.0, km=0.2),
+        }
+
+    def calculate_reaction_rate(self, enzyme_name: str, substrate_conc: float) -> float:
+        """Calculate the reaction rate based on enzyme kinetics."""
+        enzyme = self.enzymes[enzyme_name]
+        return enzyme.calculate_rate(substrate_conc) * self.time_step
 
     def glycolysis(self, glucose_units: float) -> float:
         """
@@ -191,48 +224,51 @@ class GlycolysisPathway:
         """
         Step 1 of glycolysis: Hexokinase reaction.
 
-        This step consumes 1 glucose and 1 ATP, and produces 1 glucose-6-phosphate and 1 ADP.
-
-        Raises
-        ------
-        GlycolysisError
-            If the reaction fails.
+        This step consumes glucose and ATP, and produces glucose-6-phosphate and ADP.
         """
-        self.ensure_metabolite_availability("glucose", 1)
-        self.ensure_metabolite_availability("atp", 1)
-        self.consume_metabolites(glucose=1, atp=1)
-        self.produce_metabolites(glucose_6_phosphate=1, adp=1)
+        substrate_conc = self.organelle.get_metabolite_quantity("glucose")
+        reaction_rate = self.calculate_reaction_rate("hexokinase", substrate_conc)
+
+        actual_rate = min(
+            reaction_rate, substrate_conc, self.organelle.get_metabolite_quantity("atp")
+        )
+
+        self.consume_metabolites(glucose=actual_rate, atp=actual_rate)
+        self.produce_metabolites(glucose_6_phosphate=actual_rate, adp=actual_rate)
 
     def step2_phosphoglucose_isomerase(self) -> None:
         """
         Step 2 of glycolysis: Phosphoglucose isomerase reaction.
 
-        This step consumes 1 glucose-6-phosphate and produces 1 fructose-6-phosphate.
-
-        Raises
-        ------
-        GlycolysisError
-            If the reaction fails.
+        This step consumes glucose-6-phosphate and produces fructose-6-phosphate.
         """
-        self.ensure_metabolite_availability("glucose_6_phosphate", 1)
-        self.consume_metabolites(glucose_6_phosphate=1)
-        self.produce_metabolites(fructose_6_phosphate=1)
+        substrate_conc = self.organelle.get_metabolite_quantity("glucose_6_phosphate")
+        reaction_rate = self.calculate_reaction_rate(
+            "phosphoglucose_isomerase", substrate_conc
+        )
+
+        actual_rate = min(reaction_rate, substrate_conc)
+
+        self.consume_metabolites(glucose_6_phosphate=actual_rate)
+        self.produce_metabolites(fructose_6_phosphate=actual_rate)
 
     def step3_phosphofructokinase(self) -> None:
         """
         Step 3 of glycolysis: Phosphofructokinase reaction.
 
-        This step consumes 1 ATP and produces 1 ADP.
-
-        Raises
-        ------
-        GlycolysisError
-            If the reaction fails.
+        This step consumes fructose-6-phosphate and ATP, and produces fructose-1,6-bisphosphate and ADP.
         """
-        self.ensure_metabolite_availability("fructose_6_phosphate", 1)
-        self.ensure_metabolite_availability("atp", 1)
-        self.consume_metabolites(fructose_6_phosphate=1, atp=1)
-        self.produce_metabolites(fructose_1_6_bisphosphate=1, adp=1)
+        substrate_conc = self.organelle.get_metabolite_quantity("fructose_6_phosphate")
+        reaction_rate = self.calculate_reaction_rate(
+            "phosphofructokinase", substrate_conc
+        )
+
+        actual_rate = min(
+            reaction_rate, substrate_conc, self.organelle.get_metabolite_quantity("atp")
+        )
+
+        self.consume_metabolites(fructose_6_phosphate=actual_rate, atp=actual_rate)
+        self.produce_metabolites(fructose_1_6_bisphosphate=actual_rate, adp=actual_rate)
 
     def step4_aldolase(self) -> None:
         """
@@ -240,16 +276,18 @@ class GlycolysisPathway:
 
         This step splits fructose-1,6-bisphosphate into
         glyceraldehyde-3-phosphate (G3P) and dihydroxyacetone phosphate (DHAP).
-
-        Raises
-        ------
-        GlycolysisError
-            If the reaction fails.
         """
-        self.ensure_metabolite_availability("fructose_1_6_bisphosphate", 1)
-        self.consume_metabolites(fructose_1_6_bisphosphate=1)
+        substrate_conc = self.organelle.get_metabolite_quantity(
+            "fructose_1_6_bisphosphate"
+        )
+        reaction_rate = self.calculate_reaction_rate("aldolase", substrate_conc)
+
+        actual_rate = min(reaction_rate, substrate_conc)
+
+        self.consume_metabolites(fructose_1_6_bisphosphate=actual_rate)
         self.produce_metabolites(
-            glyceraldehyde_3_phosphate=1, dihydroxyacetone_phosphate=1
+            glyceraldehyde_3_phosphate=actual_rate,
+            dihydroxyacetone_phosphate=actual_rate,
         )
 
     def step5_triose_phosphate_isomerase(self) -> None:
@@ -257,92 +295,109 @@ class GlycolysisPathway:
         Step 5 of glycolysis: Triose phosphate isomerase reaction.
 
         This step converts dihydroxyacetone phosphate (DHAP) to glyceraldehyde-3-phosphate (G3P).
-
-        Raises
-        ------
-        GlycolysisError
-            If the reaction fails.
         """
-        self.ensure_metabolite_availability("dihydroxyacetone_phosphate", 1)
-        self.consume_metabolites(dihydroxyacetone_phosphate=1)
-        self.produce_metabolites(glyceraldehyde_3_phosphate=1)
+        substrate_conc = self.organelle.get_metabolite_quantity(
+            "dihydroxyacetone_phosphate"
+        )
+        reaction_rate = self.calculate_reaction_rate(
+            "triose_phosphate_isomerase", substrate_conc
+        )
+
+        actual_rate = min(reaction_rate, substrate_conc)
+
+        self.consume_metabolites(dihydroxyacetone_phosphate=actual_rate)
+        self.produce_metabolites(glyceraldehyde_3_phosphate=actual_rate)
 
     def step6_glyceraldehyde_3_phosphate_dehydrogenase(self) -> None:
         """
         Step 6 of glycolysis: Glyceraldehyde-3-phosphate dehydrogenase reaction.
 
-        This step consumes 1 glyceraldehyde-3-phosphate, 1 NAD+, and 1 Pi,
-        and produces 1 1,3-bisphosphoglycerate, 1 NADH, and 1 H+.
-
-        Raises
-        ------
-        GlycolysisError
-            If the reaction fails.
+        This step consumes glyceraldehyde-3-phosphate, NAD+, and Pi,
+        and produces 1,3-bisphosphoglycerate, NADH, and H+.
         """
-        self.ensure_metabolite_availability("glyceraldehyde_3_phosphate", 1)
-        self.ensure_metabolite_availability("nad", 1)
-        self.ensure_metabolite_availability("pi", 1)
-        self.consume_metabolites(glyceraldehyde_3_phosphate=1, nad=1, pi=1)
-        self.produce_metabolites(bisphosphoglycerate_1_3=1, nadh=1, h_plus=1)
+        substrate_conc = self.organelle.get_metabolite_quantity(
+            "glyceraldehyde_3_phosphate"
+        )
+        reaction_rate = self.calculate_reaction_rate(
+            "glyceraldehyde_3_phosphate_dehydrogenase", substrate_conc
+        )
+
+        actual_rate = min(
+            reaction_rate,
+            substrate_conc,
+            self.organelle.get_metabolite_quantity("nad"),
+            self.organelle.get_metabolite_quantity("pi"),
+        )
+
+        self.consume_metabolites(
+            glyceraldehyde_3_phosphate=actual_rate, nad=actual_rate, pi=actual_rate
+        )
+        self.produce_metabolites(
+            bisphosphoglycerate_1_3=actual_rate, nadh=actual_rate, h_plus=actual_rate
+        )
 
     def step7_phosphoglycerate_kinase(self) -> None:
         """
         Step 7 of glycolysis: Phosphoglycerate kinase reaction.
 
-        This step consumes 1 1,3-bisphosphoglycerate and 1 ADP, and produces 1 3-phosphoglycerate and 1 ATP.
-
-        Raises
-        ------
-        GlycolysisError
-            If the reaction fails.
+        This step consumes 1,3-bisphosphoglycerate and ADP, and produces 3-phosphoglycerate and ATP.
         """
-        self.ensure_metabolite_availability("bisphosphoglycerate_1_3", 1)
-        self.ensure_metabolite_availability("adp", 1)
-        self.consume_metabolites(bisphosphoglycerate_1_3=1, adp=1)
-        self.produce_metabolites(phosphoglycerate_3=1, atp=1)
+        substrate_conc = self.organelle.get_metabolite_quantity(
+            "bisphosphoglycerate_1_3"
+        )
+        reaction_rate = self.calculate_reaction_rate(
+            "phosphoglycerate_kinase", substrate_conc
+        )
+
+        actual_rate = min(
+            reaction_rate, substrate_conc, self.organelle.get_metabolite_quantity("adp")
+        )
+
+        self.consume_metabolites(bisphosphoglycerate_1_3=actual_rate, adp=actual_rate)
+        self.produce_metabolites(phosphoglycerate_3=actual_rate, atp=actual_rate)
 
     def step8_phosphoglycerate_mutase(self) -> None:
         """
         Step 8 of glycolysis: Phosphoglycerate mutase reaction.
 
-        This step consumes 1 3-phosphoglycerate and produces 1 2-phosphoglycerate.
-
-        Raises
-        ------
-        GlycolysisError
-            If the reaction fails.
+        This step consumes 3-phosphoglycerate and produces 2-phosphoglycerate.
         """
-        self.ensure_metabolite_availability("phosphoglycerate_3", 1)
-        self.consume_metabolites(phosphoglycerate_3=1)
-        self.produce_metabolites(phosphoglycerate_2=1)
+        substrate_conc = self.organelle.get_metabolite_quantity("phosphoglycerate_3")
+        reaction_rate = self.calculate_reaction_rate(
+            "phosphoglycerate_mutase", substrate_conc
+        )
+
+        actual_rate = min(reaction_rate, substrate_conc)
+
+        self.consume_metabolites(phosphoglycerate_3=actual_rate)
+        self.produce_metabolites(phosphoglycerate_2=actual_rate)
 
     def step9_enolase(self) -> None:
         """
         Step 9 of glycolysis: Enolase reaction.
 
-        This step consumes 1 2-phosphoglycerate and produces 1 phosphoenolpyruvate and 1 H2O.
-
-        Raises
-        ------
-        GlycolysisError
-            If the reaction fails.
+        This step consumes 2-phosphoglycerate and produces phosphoenolpyruvate and H2O.
         """
-        self.ensure_metabolite_availability("phosphoglycerate_2", 1)
-        self.consume_metabolites(phosphoglycerate_2=1)
-        self.produce_metabolites(phosphoenolpyruvate=1, h2o=1)
+        substrate_conc = self.organelle.get_metabolite_quantity("phosphoglycerate_2")
+        reaction_rate = self.calculate_reaction_rate("enolase", substrate_conc)
+
+        actual_rate = min(reaction_rate, substrate_conc)
+
+        self.consume_metabolites(phosphoglycerate_2=actual_rate)
+        self.produce_metabolites(phosphoenolpyruvate=actual_rate, h2o=actual_rate)
 
     def step10_pyruvate_kinase(self) -> None:
         """
         Step 10 of glycolysis: Pyruvate kinase reaction.
 
-        This step consumes 1 phosphoenolpyruvate and 1 ADP, and produces 1 pyruvate and 1 ATP.
-
-        Raises
-        ------
-        GlycolysisError
-            If the reaction fails.
+        This step consumes phosphoenolpyruvate and ADP, and produces pyruvate and ATP.
         """
-        self.ensure_metabolite_availability("phosphoenolpyruvate", 1)
-        self.ensure_metabolite_availability("adp", 1)
-        self.consume_metabolites(phosphoenolpyruvate=1, adp=1)
-        self.produce_metabolites(pyruvate=1, atp=1)
+        substrate_conc = self.organelle.get_metabolite_quantity("phosphoenolpyruvate")
+        reaction_rate = self.calculate_reaction_rate("pyruvate_kinase", substrate_conc)
+
+        actual_rate = min(
+            reaction_rate, substrate_conc, self.organelle.get_metabolite_quantity("adp")
+        )
+
+        self.consume_metabolites(phosphoenolpyruvate=actual_rate, adp=actual_rate)
+        self.produce_metabolites(pyruvate=actual_rate, atp=actual_rate)

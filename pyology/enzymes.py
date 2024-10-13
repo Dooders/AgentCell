@@ -31,9 +31,9 @@ class Enzyme:
         self.vmax = vmax
         self.km = km
 
-    def catalyze(self, substrate_conc: float) -> float:
+    def calculate_rate(self, substrate_conc: float) -> float:
         """
-        Catalyzes a biochemical reaction.
+        Calculates the reaction rate based on substrate concentration.
 
         Parameters
         ----------
@@ -46,5 +46,4 @@ class Enzyme:
             The rate of the reaction.
         """
         rate = (self.vmax * substrate_conc) / (self.km + substrate_conc)
-        print(f"{self.name} catalyzing at rate: {rate}")
         return rate
