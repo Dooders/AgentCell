@@ -20,6 +20,7 @@ class Cell(Organelle):
         self.simulation_time = 0
         self.time_step = TIME_STEP
         self.cytoplasmic_calcium = Metabolite("Ca2+", 100, 1000)
+        self.base_glycolysis_rate = 1.0  # This is now in the Cell class
 
     def produce_atp(self, glucose, simulation_duration=SIMULATION_DURATION):
         """Simulates ATP production in the entire cell over a specified duration."""
@@ -57,13 +58,13 @@ class Cell(Organelle):
             adp_activation_factor = (
                 1 + self.cytoplasm.metabolites["adp"].quantity / 500
             )  # Example threshold
-            self.cytoplasm.glycolysis_rate *= adp_activation_factor
+            current_glycolysis_rate = self.base_glycolysis_rate * adp_activation_factor
 
             # Glycolysis with updated rate
-            pyruvate = self.cytoplasm.glycolysis(1 * self.cytoplasm.glycolysis_rate)
+            pyruvate = self.cytoplasm.glycolysis(1 * current_glycolysis_rate)
             self.mitochondrion.add_metabolite("pyruvate", pyruvate)
             logger.info(f"Transferred {pyruvate} pyruvate to mitochondrion")
-            glucose_processed += 1 * self.cytoplasm.glycolysis_rate
+            glucose_processed += 1 * current_glycolysis_rate
 
             cytoplasmic_nadh = self.cytoplasm.metabolites["nadh"].quantity
 
@@ -128,11 +129,11 @@ class Cell(Organelle):
 
             # Implement feedback activation
             adp_activation_factor = 1 + self.cytoplasm.metabolites["adp"].quantity / 500
-            self.cytoplasm.glycolysis_rate *= adp_activation_factor
+            current_glycolysis_rate = self.base_glycolysis_rate * adp_activation_factor
 
             # Glycolysis with updated rate
-            pyruvate = self.cytoplasm.glycolysis(1 * self.cytoplasm.glycolysis_rate)
-            glucose_processed += 1 * self.cytoplasm.glycolysis_rate
+            pyruvate = self.cytoplasm.glycolysis(1 * current_glycolysis_rate)
+            glucose_processed += 1 * current_glycolysis_rate
 
             cytoplasmic_nadh = self.cytoplasm.metabolites["nadh"].quantity
 

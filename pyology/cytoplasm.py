@@ -13,7 +13,7 @@ class Cytoplasm(Organelle):
 
     name = "Cytoplasm"
 
-    def __init__(self, glycolysis_rate: float = 1.0):
+    def __init__(self):
         super().__init__()
         self.add_metabolite("glucose", 100, 1000)
         self.add_metabolite("atp", 100, 1000)
@@ -34,24 +34,24 @@ class Cytoplasm(Organelle):
         self.add_metabolite("pi", 1000, 10000)
         self.add_metabolite("h_plus", 0, 1000)  # Add H+ (proton) metabolite
         self.add_metabolite("h2o", 1000, 10000)  # Add H2O (water) metabolite
-        self.glycolysis_rate = glycolysis_rate
-        self.glycolysis_pathway = GlycolysisPathway(self)
 
-    def glycolysis(self, glucose_units: float) -> float:
+    def glycolysis(self, glucose_amount):
         """
-        Perform glycolysis on the given number of glucose units.
-
-        Parameters
-        ----------
-        glucose_units : float
-            The number of glucose units to process.
-
-        Returns
-        -------
-        float
-            The amount of pyruvate produced.
+        Perform glycolysis on the given amount of glucose.
+        Returns the amount of pyruvate produced.
         """
-        return self.glycolysis_pathway.glycolysis(glucose_units)
+        if self.metabolites["glucose"].quantity < glucose_amount:
+            glucose_amount = self.metabolites["glucose"].quantity
+
+        self.metabolites["glucose"].quantity -= glucose_amount
+        pyruvate_produced = glucose_amount * 2  # Each glucose molecule produces 2 pyruvate molecules
+
+        # Update other metabolites involved in glycolysis
+        self.metabolites["atp"].quantity += glucose_amount * 2  # Net gain of 2 ATP per glucose
+        self.metabolites["nadh"].quantity += glucose_amount * 2  # 2 NADH produced per glucose
+        self.metabolites["adp"].quantity -= glucose_amount * 2  # 2 ADP consumed per glucose
+
+        return pyruvate_produced
 
     def reset(self) -> None:
         self.__init__()
