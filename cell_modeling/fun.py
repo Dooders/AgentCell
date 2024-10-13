@@ -1,10 +1,7 @@
 import logging
 
-from cell_modeling.organelles.cell import Cell
-from cell_modeling.organelles.simulation import (
-    Reporter,
-    SimulationController,
-)
+from pyology.cell import Cell
+from pyology.simulation import Reporter, SimulationController
 
 logging.basicConfig(
     level=logging.INFO,
