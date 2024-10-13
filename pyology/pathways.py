@@ -260,7 +260,7 @@ class GlycolysisPathway:
         Step 6 of glycolysis: Glyceraldehyde-3-phosphate dehydrogenase reaction.
 
         This step consumes 1 glyceraldehyde-3-phosphate, 1 NAD+, and 1 Pi,
-        and produces 1 1,3-bisphosphoglycerate and 1 NADH.
+        and produces 1 1,3-bisphosphoglycerate, 1 NADH, and 1 H+.
 
         Returns
         -------
@@ -271,7 +271,7 @@ class GlycolysisPathway:
         self.ensure_metabolite_availability("nad", 1)
         self.ensure_metabolite_availability("pi", 1)
         if self.consume_metabolites(glyceraldehyde_3_phosphate=1, nad=1, pi=1):
-            return self.produce_metabolites(bisphosphoglycerate_1_3=1, nadh=1)
+            return self.produce_metabolites(bisphosphoglycerate_1_3=1, nadh=1, h_plus=1)
         return False
 
     def step7_phosphoglycerate_kinase(self) -> bool:
@@ -311,7 +311,7 @@ class GlycolysisPathway:
         """
         Step 9 of glycolysis: Enolase reaction.
 
-        This step consumes 1 2-phosphoglycerate and produces 1 phosphoenolpyruvate.
+        This step consumes 1 2-phosphoglycerate and produces 1 phosphoenolpyruvate and 1 H2O.
 
         Returns
         -------
@@ -320,7 +320,7 @@ class GlycolysisPathway:
         """
         self.ensure_metabolite_availability("phosphoglycerate_2", 1)
         if self.consume_metabolites(phosphoglycerate_2=1):
-            return self.produce_metabolites(phosphoenolpyruvate=1)
+            return self.produce_metabolites(phosphoenolpyruvate=1, h2o=1)
         return False
 
     def step10_pyruvate_kinase(self) -> bool:

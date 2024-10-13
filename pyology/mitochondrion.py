@@ -85,6 +85,8 @@ class Mitochondrion(Organelle):
 
         self.krebs_cycle = KrebsCycle()
 
+        # TODO: Consider the roles of H2O and H+ in the electron transport chain
+
     def change_metabolite_quantity(self, metabolite: str, amount: float) -> float:
         """
         Changes the quantity of a metabolite, ensuring it doesn't go negative.

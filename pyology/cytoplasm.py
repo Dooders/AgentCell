@@ -31,6 +31,9 @@ class Cytoplasm(Organelle):
         self.add_metabolite("phosphoenolpyruvate", 0, 1000)
         self.add_metabolite("pyruvate", 0, 1000)
         self.add_metabolite("pi", 1000, 10000)
+        self.add_metabolite("h_plus", 0, 1000)  # Add H+ (proton) metabolite
+        self.add_metabolite("h2o", 0, 1000)  # Add H2O (water) metabolite
+        self.add_metabolite("h2", 0, 1000)  # Add H2 (hydrogen gas) metabolite
         self.glycolysis_rate = glycolysis_rate
         self.glycolysis_pathway = GlycolysisPathway(self)
 
