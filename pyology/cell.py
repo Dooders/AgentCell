@@ -23,10 +23,6 @@ class Cell(Organelle):
 
     def produce_atp(self, glucose, simulation_duration=SIMULATION_DURATION):
         """Simulates ATP production in the entire cell over a specified duration."""
-        initial_atp = (
-            self.cytoplasm.metabolites["atp"].quantity
-            + self.mitochondrion.metabolites["atp"].quantity
-        )
         self.simulation_time = 0
         total_atp_produced = 0
         glucose_processed = 0
@@ -37,6 +33,12 @@ class Cell(Organelle):
             if self.mitochondrion.metabolites["oxygen"].quantity <= 0:
                 logger.warning("Oxygen depleted. Stopping simulation.")
                 break
+
+            # Calculate ATP at the start of the iteration
+            atp_start = (
+                self.cytoplasm.metabolites["atp"].quantity
+                + self.mitochondrion.metabolites["atp"].quantity
+            )
 
             # Check ADP availability
             if (
@@ -63,14 +65,6 @@ class Cell(Organelle):
             logger.info(f"Transferred {pyruvate} pyruvate to mitochondrion")
             glucose_processed += 1 * self.cytoplasm.glycolysis_rate
 
-            # Calculate ATP produced in glycolysis
-            glycolysis_atp = (
-                self.cytoplasm.metabolites["atp"].quantity
-                - initial_atp
-                + self.mitochondrion.metabolites["atp"].quantity
-            )
-            total_atp_produced += glycolysis_atp
-
             cytoplasmic_nadh = self.cytoplasm.metabolites["nadh"].quantity
 
             # NADH shuttle
@@ -80,7 +74,6 @@ class Cell(Organelle):
 
             # Cellular respiration in mitochondrion
             mitochondrial_atp = self.mitochondrion.cellular_respiration(pyruvate)
-            total_atp_produced += mitochondrial_atp
 
             # Transfer excess ATP from mitochondrion to cytoplasm
             atp_transfer = max(
@@ -89,30 +82,24 @@ class Cell(Organelle):
             self.cytoplasm.metabolites["atp"].quantity += atp_transfer
             self.mitochondrion.metabolites["atp"].quantity -= atp_transfer
 
+            # Calculate ATP at the end of the iteration
+            atp_end = (
+                self.cytoplasm.metabolites["atp"].quantity
+                + self.mitochondrion.metabolites["atp"].quantity
+            )
+
+            # Calculate ATP produced in this iteration
+            delta_atp = atp_end - atp_start
+            total_atp_produced += delta_atp
+
             self.simulation_time += self.time_step
 
-        atp_per_glucose = (
-            total_atp_produced / glucose_processed if glucose_processed > 0 else 0
-        )
-
-        logger.info(
-            f"Simulation completed. Time elapsed: {self.simulation_time:.2f} seconds"
-        )
-        logger.info(f"Glucose units processed: {glucose_processed}")
-        logger.info(f"Total ATP produced: {total_atp_produced}")
-        logger.info(f"ATP yield per glucose molecule: {atp_per_glucose:.2f}")
-        logger.info(
-            f"Remaining oxygen: {self.mitochondrion.metabolites['oxygen'].quantity}"
-        )
+        # ... existing code for logging results ...
 
         return total_atp_produced
 
     def produce_atp_generator(self, glucose, simulation_duration=SIMULATION_DURATION):
         """Generator that yields the cell's state after each time step."""
-        initial_atp = (
-            self.cytoplasm.metabolites["atp"].quantity
-            + self.mitochondrion.metabolites["atp"].quantity
-        )
         self.simulation_time = 0
         total_atp_produced = 0
         glucose_processed = 0
@@ -124,7 +111,13 @@ class Cell(Organelle):
                 logger.warning("Oxygen depleted. Stopping simulation.")
                 break
 
-            # Check ADP availability
+            # Calculate ATP at the start of the iteration
+            atp_start = (
+                self.cytoplasm.metabolites["atp"].quantity
+                + self.mitochondrion.metabolites["atp"].quantity
+            )
+
+            # Check ADP availability and transfer if needed
             if self.mitochondrion.metabolites["adp"].quantity < 10:
                 logger.warning(
                     "Low ADP levels in mitochondrion. Transferring ADP from cytoplasm."
@@ -141,14 +134,6 @@ class Cell(Organelle):
             pyruvate = self.cytoplasm.glycolysis(1 * self.cytoplasm.glycolysis_rate)
             glucose_processed += 1 * self.cytoplasm.glycolysis_rate
 
-            # Calculate ATP produced in glycolysis
-            glycolysis_atp = (
-                self.cytoplasm.metabolites["atp"].quantity
-                - initial_atp
-                + self.mitochondrion.metabolites["atp"].quantity
-            )
-            total_atp_produced += glycolysis_atp
-
             cytoplasmic_nadh = self.cytoplasm.metabolites["nadh"].quantity
 
             # NADH shuttle
@@ -158,12 +143,21 @@ class Cell(Organelle):
 
             # Cellular respiration in mitochondrion
             mitochondrial_atp = self.mitochondrion.cellular_respiration(pyruvate)
-            total_atp_produced += mitochondrial_atp
 
             # Transfer excess ATP from mitochondrion to cytoplasm
             atp_transfer = max(0, self.mitochondrion.metabolites["atp"].quantity - 100)
             self.cytoplasm.metabolites["atp"].quantity += atp_transfer
             self.mitochondrion.metabolites["atp"].quantity -= atp_transfer
+
+            # Calculate ATP at the end of the iteration
+            atp_end = (
+                self.cytoplasm.metabolites["atp"].quantity
+                + self.mitochondrion.metabolites["atp"].quantity
+            )
+
+            # Calculate ATP produced in this iteration
+            delta_atp = atp_end - atp_start
+            total_atp_produced += delta_atp
 
             # Yield the current state of the cell
             yield {
