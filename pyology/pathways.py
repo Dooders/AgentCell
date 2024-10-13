@@ -39,9 +39,21 @@ class GlycolysisPathway:
         try:
             self.organelle.change_metabolite_quantity("glucose", -glucose_units)
             for _ in range(glucose_units):
-                for step in GlycolysisSteps:
+                # Steps 1-4 occur once per glucose molecule
+                for step in list(GlycolysisSteps)[:4]:
                     if not getattr(self, step.value)():
                         raise GlycolysisError(f"Failed at step: {step.name}")
+
+                # Step 5 occurs once to convert DHAP to G3P
+                if not self.step5_triose_phosphate_isomerase():
+                    raise GlycolysisError("Failed at step: triose_phosphate_isomerase")
+
+                # Steps 6-10 occur twice per glucose molecule
+                for _ in range(2):
+                    for step in list(GlycolysisSteps)[5:]:
+                        if not getattr(self, step.value)():
+                            raise GlycolysisError(f"Failed at step: {step.name}")
+
             return self.organelle.get_metabolite_quantity("pyruvate")
         except ValueError as e:
             raise GlycolysisError(f"Glycolysis failed: {str(e)}")
@@ -212,7 +224,8 @@ class GlycolysisPathway:
         """
         Step 4 of glycolysis: Aldolase reaction.
 
-        This step consumes 1 fructose-1,6-bisphosphate and produces 1 glyceraldehyde-3-phosphate and 1 dihydroxyacetone phosphate.
+        This step splits fructose-1,6-bisphosphate into
+        glyceraldehyde-3-phosphate (G3P) and dihydroxyacetone phosphate (DHAP).
 
         Returns
         -------
@@ -230,7 +243,7 @@ class GlycolysisPathway:
         """
         Step 5 of glycolysis: Triose phosphate isomerase reaction.
 
-        This step converts dihydroxyacetone phosphate to glyceraldehyde-3-phosphate.
+        This step converts dihydroxyacetone phosphate (DHAP) to glyceraldehyde-3-phosphate (G3P).
 
         Returns
         -------
@@ -246,7 +259,8 @@ class GlycolysisPathway:
         """
         Step 6 of glycolysis: Glyceraldehyde-3-phosphate dehydrogenase reaction.
 
-        This step consumes 1 glyceraldehyde-3-phosphate and 1 NAD+, and produces 1 1,3-bisphosphoglycerate and 1 NADH.
+        This step consumes 1 glyceraldehyde-3-phosphate, 1 NAD+, and 1 Pi,
+        and produces 1 1,3-bisphosphoglycerate and 1 NADH.
 
         Returns
         -------
@@ -255,7 +269,8 @@ class GlycolysisPathway:
         """
         self.ensure_metabolite_availability("glyceraldehyde_3_phosphate", 1)
         self.ensure_metabolite_availability("nad", 1)
-        if self.consume_metabolites(glyceraldehyde_3_phosphate=1, nad=1):
+        self.ensure_metabolite_availability("pi", 1)
+        if self.consume_metabolites(glyceraldehyde_3_phosphate=1, nad=1, pi=1):
             return self.produce_metabolites(bisphosphoglycerate_1_3=1, nadh=1)
         return False
 

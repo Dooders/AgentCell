@@ -30,6 +30,7 @@ class Cytoplasm(Organelle):
         self.add_metabolite("phosphoglycerate_2", 0, 1000)
         self.add_metabolite("phosphoenolpyruvate", 0, 1000)
         self.add_metabolite("pyruvate", 0, 1000)
+        self.add_metabolite("pi", 1000, 10000)
         self.glycolysis_rate = glycolysis_rate
         self.glycolysis_pathway = GlycolysisPathway(self)
 
