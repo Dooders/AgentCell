@@ -19,17 +19,28 @@ class GlycolysisPathway:
     def define_enzymes(self):
         """Define enzymes for each step of glycolysis."""
         self.enzymes = {
-            "hexokinase": Enzyme("Hexokinase", vmax=10.0, km=0.1),
+            "hexokinase": Enzyme(
+                "Hexokinase", vmax=10.0, km=0.1, inhibitors={"glucose_6_phosphate": 0.5}
+            ),
             "phosphoglucose_isomerase": Enzyme(
                 "Phosphoglucose Isomerase", vmax=12.0, km=0.2
             ),
-            "phosphofructokinase": Enzyme("Phosphofructokinase", vmax=8.0, km=0.15),
+            "phosphofructokinase": Enzyme(
+                "Phosphofructokinase",
+                vmax=8.0,
+                km=0.15,
+                inhibitors={"atp": 1.0},
+                activators={"adp": 0.5, "amp": 0.1},
+            ),
             "aldolase": Enzyme("Aldolase", vmax=7.0, km=0.3),
             "triose_phosphate_isomerase": Enzyme(
                 "Triose Phosphate Isomerase", vmax=15.0, km=0.1
             ),
             "glyceraldehyde_3_phosphate_dehydrogenase": Enzyme(
-                "Glyceraldehyde 3-Phosphate Dehydrogenase", vmax=6.0, km=0.25
+                "Glyceraldehyde 3-Phosphate Dehydrogenase",
+                vmax=6.0,
+                km=0.25,
+                inhibitors={"nadh": 0.5},
             ),
             "phosphoglycerate_kinase": Enzyme(
                 "Phosphoglycerate Kinase", vmax=9.0, km=0.2
@@ -38,13 +49,23 @@ class GlycolysisPathway:
                 "Phosphoglycerate Mutase", vmax=11.0, km=0.15
             ),
             "enolase": Enzyme("Enolase", vmax=7.5, km=0.3),
-            "pyruvate_kinase": Enzyme("Pyruvate Kinase", vmax=10.0, km=0.2),
+            "pyruvate_kinase": Enzyme(
+                "Pyruvate Kinase",
+                vmax=10.0,
+                km=0.2,
+                inhibitors={"atp": 0.8},
+                activators={"fructose_1_6_bisphosphate": 0.3},
+            ),
         }
 
     def calculate_reaction_rate(self, enzyme_name: str, substrate_conc: float) -> float:
-        """Calculate the reaction rate based on enzyme kinetics."""
+        """Calculate the reaction rate based on enzyme kinetics and regulation."""
         enzyme = self.enzymes[enzyme_name]
-        return enzyme.calculate_rate(substrate_conc) * self.time_step
+        metabolite_levels = {
+            metabolite: self.organelle.get_metabolite_quantity(metabolite)
+            for metabolite in self.organelle.metabolites
+        }
+        return enzyme.calculate_rate(substrate_conc, metabolite_levels) * self.time_step
 
     def glycolysis(self, glucose_units: float) -> float:
         """

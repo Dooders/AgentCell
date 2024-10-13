@@ -18,6 +18,7 @@ class Cytoplasm(Organelle):
         self.add_metabolite("glucose", 100, 1000)
         self.add_metabolite("atp", 100, 1000)
         self.add_metabolite("adp", 100, 1000)
+        self.add_metabolite("amp", 10, 1000)  # Added AMP
         self.add_metabolite("nad", 100, 1000)
         self.add_metabolite("nadh", 0, 1000)
         self.add_metabolite("glucose_6_phosphate", 0, 1000)
@@ -32,8 +33,7 @@ class Cytoplasm(Organelle):
         self.add_metabolite("pyruvate", 0, 1000)
         self.add_metabolite("pi", 1000, 10000)
         self.add_metabolite("h_plus", 0, 1000)  # Add H+ (proton) metabolite
-        self.add_metabolite("h2o", 0, 1000)  # Add H2O (water) metabolite
-        self.add_metabolite("h2", 0, 1000)  # Add H2 (hydrogen gas) metabolite
+        self.add_metabolite("h2o", 1000, 10000)  # Add H2O (water) metabolite
         self.glycolysis_rate = glycolysis_rate
         self.glycolysis_pathway = GlycolysisPathway(self)
 
