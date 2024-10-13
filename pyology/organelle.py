@@ -2,10 +2,10 @@ from typing import Dict
 
 from .data import Metabolite
 from .exceptions import (
-    InsufficientMetaboliteError,
+    MetaboliteError,
     QuantityError,
     UnknownMetaboliteError,
-    MetaboliteError,
+    InsufficientMetaboliteError,
 )
 
 
@@ -46,13 +46,11 @@ class OrganelleMeta(type):
         namespace : dict
             The namespace of the organelle class.
         """
-        if "name" not in namespace:
+        # Check if 'name' is defined in this class or any of its base classes
+        if not any("name" in B.__dict__ for B in bases) and "name" not in namespace:
             raise AttributeError(
                 f"Class '{name}' must define a 'name' class attribute."
             )
-
-        # if "function" not in namespace or not callable(namespace["function"]):
-        #     raise NotImplementedError(f"Class '{name}' must implement a 'function' method.")
 
         cls = super().__new__(mcs, name, bases, namespace)
 
@@ -100,9 +98,9 @@ class Organelle(metaclass=OrganelleMeta):
         Changes the quantity of a metabolite in the organelle.
     is_metabolite_available(self, metabolite: str, amount: float) -> bool:
         Checks if a metabolite is available in the organelle.
-    consume_metabolites(self, **metabolites: Dict[str, float]) -> None:
+    consume_metabolites(self, **metabolites: float) -> None:
         Consumes metabolites from the organelle.
-    produce_metabolites(self, **metabolites: Dict[str, float]) -> None:
+    produce_metabolites(self, **metabolites: float) -> None:
         Produces metabolites in the organelle.
     """
 
@@ -120,28 +118,26 @@ class Organelle(metaclass=OrganelleMeta):
 
     def add_metabolite(self, name: str, quantity: int, max_quantity: int) -> None:
         """
-        Adds a metabolite to the organelle.
+        Add a metabolite to the organelle or increase its quantity if it already exists.
 
-        Parameters
-        ----------
-        name : str
-            The name of the metabolite.
-        quantity : int
-            The initial quantity of the metabolite.
-        max_quantity : int
-            The maximum quantity of the metabolite.
+        :param name: The name of the metabolite
+        :param quantity: The quantity to add (must be non-negative and not exceed max_quantity)
+        :param max_quantity: The maximum allowed quantity for this metabolite
+        :raises ValueError: If quantity is negative or exceeds max_quantity
         """
-        # Add type checking for parameters
-        if not isinstance(name, str):
-            raise TypeError("Metabolite name must be a string.")
-        if not isinstance(quantity, int) or not isinstance(max_quantity, int):
-            raise TypeError("Quantity and max_quantity must be integers.")
-        if quantity < 0 or max_quantity < 0:
-            raise ValueError("Quantity and max_quantity must be non-negative.")
-        if quantity > max_quantity:
-            raise ValueError("Quantity cannot exceed max_quantity.")
+        if quantity < 0:
+            raise ValueError("Quantity must be non-negative.")
 
-        self.metabolites[name] = Metabolite(name, quantity, max_quantity)
+        if quantity > max_quantity:
+            raise ValueError(
+                f"Initial quantity {quantity} exceeds max quantity {max_quantity}."
+            )
+
+        if name in self.metabolites:
+            new_quantity = min(self.metabolites[name].quantity + quantity, max_quantity)
+            self.metabolites[name].quantity = new_quantity
+        else:
+            self.metabolites[name] = Metabolite(name, quantity, max_quantity)
 
     def change_metabolite_quantity(self, metabolite_name: str, amount: float) -> None:
         """
@@ -195,12 +191,14 @@ class Organelle(metaclass=OrganelleMeta):
             raise UnknownMetaboliteError(f"Unknown metabolite: {metabolite}")
         return self.metabolites[metabolite].quantity >= amount
 
-    def consume_metabolites(self, **metabolites: Dict[str, float]) -> None:
+    def consume_metabolites(self, **metabolites: float) -> None:
         for metabolite, amount in metabolites.items():
             if not self.is_metabolite_available(metabolite, amount):
-                raise MetaboliteError(f"Insufficient {metabolite} for reaction")
+                raise InsufficientMetaboliteError(
+                    f"Insufficient {metabolite} for reaction"
+                )
             self.change_metabolite_quantity(metabolite, -amount)
 
-    def produce_metabolites(self, **metabolites: Dict[str, float]) -> None:
+    def produce_metabolites(self, **metabolites: float) -> None:
         for metabolite, amount in metabolites.items():
             self.change_metabolite_quantity(metabolite, amount)

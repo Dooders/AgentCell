@@ -15,7 +15,7 @@ class Cell(Organelle):
     def __init__(self):
         self.cytoplasm = Cytoplasm()
         # The Cytoplasm now initializes with some glucose, ATP, and ADP
-        self.cytoplasm.add_metabolite("glucose", 10, 1000)  # Increase initial glucose
+        self.cytoplasm.add_metabolite("glucose", 10, 1000)  # Updated: added max_quantity
         self.mitochondrion = Mitochondrion()
         self.krebs_cycle = KrebsCycle()
         self.simulation_time = 0
@@ -67,7 +67,7 @@ class Cell(Organelle):
                 1 * self.glycolysis_rate, self.cytoplasm.metabolites["glucose"].quantity
             )
             pyruvate = self.cytoplasm.glycolysis(glucose_consumed)
-            self.mitochondrion.add_metabolite("pyruvate", pyruvate)
+            self.mitochondrion.add_metabolite("pyruvate", pyruvate, max_quantity=1000)  # Updated: added max_quantity
             logger.info(f"Transferred {pyruvate} pyruvate to mitochondrion")
             glucose_processed += glucose_consumed
 
@@ -171,27 +171,16 @@ class Cell(Organelle):
             total_atp_produced += delta_atp
 
             # Yield the current state of the cell
-            yield {
-                "simulation_time": self.simulation_time,
-                "glucose_processed": glucose_processed,
-                "total_atp_produced": total_atp_produced,
-                "cytoplasm_atp": self.cytoplasm.metabolites["atp"].quantity,
-                "mitochondrion_atp": self.mitochondrion.metabolites["atp"].quantity,
-                "cytoplasm_nadh": self.cytoplasm.metabolites["nadh"].quantity,
-                "mitochondrion_nadh": self.mitochondrion.metabolites["nadh"].quantity,
-                "mitochondrion_fadh2": self.mitochondrion.metabolites["fadh2"].quantity,
-                "mitochondrial_calcium": self.mitochondrion.metabolites[
-                    "calcium"
-                ].quantity,
-                "cytoplasmic_calcium": self.cytoplasmic_calcium.quantity,
-                "proton_gradient": self.mitochondrion.proton_gradient,
-                "oxygen_remaining": self.mitochondrion.metabolites["oxygen"].quantity,
-            }
+            yield self.get_cell_state(glucose_processed, total_atp_produced)
 
             self.simulation_time += self.time_step
 
         # Final yield after the simulation completes
-        yield {
+        yield self.get_cell_state(glucose_processed, total_atp_produced)
+
+    def get_cell_state(self, glucose_processed, total_atp_produced):
+        """Helper method to get the current state of the cell."""
+        return {
             "simulation_time": self.simulation_time,
             "glucose_processed": glucose_processed,
             "total_atp_produced": total_atp_produced,
