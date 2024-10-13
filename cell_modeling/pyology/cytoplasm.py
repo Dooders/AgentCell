@@ -19,12 +19,20 @@ class Cytoplasm(Organelle):
 
     def __init__(self, glycolysis_rate: float = 1.0):
         super().__init__()
-        self.add_metabolite("glucose", 100, 1000)  # Start with some glucose
-        self.add_metabolite("atp", 100, 1000)  # Start with some ATP
-        self.add_metabolite("adp", 100, 1000)  # Start with some ADP
+        self.add_metabolite("glucose", 100, 1000)
+        self.add_metabolite("atp", 100, 1000)
+        self.add_metabolite("adp", 100, 1000)
         self.add_metabolite("nad", 100, 1000)
         self.add_metabolite("nadh", 0, 1000)
-        self.add_metabolite("pyruvate", 0, 1000)
+        self.add_metabolite("glucose_6_phosphate", 0, 1000)
+        self.add_metabolite("fructose_6_phosphate", 0, 1000)
+        self.add_metabolite("fructose_1_6_bisphosphate", 0, 1000)
+        self.add_metabolite("glyceraldehyde_3_phosphate", 0, 1000)
+        self.add_metabolite("dihydroxyacetone_phosphate", 0, 1000)
+        self.add_metabolite("bisphosphoglycerate_1_3", 0, 1000)
+        self.add_metabolite("phosphoglycerate_3", 0, 1000)
+        self.add_metabolite("phosphoglycerate_2", 0, 1000)
+        self.add_metabolite("phosphoenolpyruvate", 0, 1000)
         self.glycolysis_rate = glycolysis_rate
 
     def glycolysis(self, glucose_units: float) -> float:
@@ -44,22 +52,20 @@ class Cytoplasm(Organelle):
         float
             The amount of pyruvate produced.
         """
-        # Round down to nearest integer
         glucose_units = math.floor(glucose_units)
-
         if glucose_units < 0:
             raise ValueError("The number of glucose units cannot be negative.")
         if glucose_units == 0:
-            return 0  # No action needed for zero units
+            return 0
 
-        # Proceed with glycolysis steps
         try:
             self.change_metabolite_quantity("glucose", -glucose_units)
-            for step in GlycolysisSteps:
-                getattr(self, f"{step.name.lower()}")()
+            for _ in range(glucose_units):
+                for step in GlycolysisSteps:
+                    if not getattr(self, step.value)():
+                        raise GlycolysisError(f"Failed at step: {step.name}")
             return self.get_metabolite_quantity("pyruvate")
         except ValueError as e:
-            # Handle the exception or re-raise it
             raise GlycolysisError(f"Glycolysis failed: {str(e)}")
 
     def ensure_metabolite_availability(self, metabolite: str, amount: float) -> bool:
@@ -178,18 +184,18 @@ class Cytoplasm(Organelle):
         """
         Step 1 of glycolysis: Hexokinase reaction.
 
-        This step consumes 1 glucose and 1 ATP, and produces 1 ADP.
+        This step consumes 1 glucose and 1 ATP, and produces 1 glucose-6-phosphate and 1 ADP.
 
         Returns
         -------
         bool
             True if the reaction was successful, False otherwise.
         """
+        self.ensure_metabolite_availability("glucose", 1)
         self.ensure_metabolite_availability("atp", 1)
         if self.consume_metabolites(glucose=1, atp=1):
-            self.produce_metabolites(adp=1)
-        else:
-            raise ValueError("Insufficient glucose or ATP for hexokinase step")
+            return self.produce_metabolites(glucose_6_phosphate=1, adp=1)
+        return False
 
     def step2_phosphoglucose_isomerase(self) -> bool:
         """
@@ -202,7 +208,10 @@ class Cytoplasm(Organelle):
         bool
             True if the reaction was successful, False otherwise.
         """
-        pass
+        self.ensure_metabolite_availability("glucose_6_phosphate", 1)
+        if self.consume_metabolites(glucose_6_phosphate=1):
+            return self.produce_metabolites(fructose_6_phosphate=1)
+        return False
 
     def step3_phosphofructokinase(self) -> bool:
         """
@@ -215,24 +224,29 @@ class Cytoplasm(Organelle):
         bool
             True if the reaction was successful, False otherwise.
         """
+        self.ensure_metabolite_availability("fructose_6_phosphate", 1)
         self.ensure_metabolite_availability("atp", 1)
-        if self.consume_metabolites(atp=1):
-            self.produce_metabolites(adp=1)
+        if self.consume_metabolites(fructose_6_phosphate=1, atp=1):
+            return self.produce_metabolites(fructose_1_6_bisphosphate=1, adp=1)
+        return False
 
     def step4_aldolase(self) -> bool:
         """
         Step 4 of glycolysis: Aldolase reaction.
 
-        This step consumes 1 fructose-6-phosphate and produces 2 glyceraldehyde-3-phosphate.
+        This step consumes 1 fructose-1,6-bisphosphate and produces 2 glyceraldehyde-3-phosphate.
 
         Returns
         -------
         bool
             True if the reaction was successful, False otherwise.
         """
-        self.ensure_metabolite_availability("fructose_6_phosphate", 1)
-        if self.consume_metabolites(fructose_6_phosphate=1):
-            self.produce_metabolites(glyceraldehyde_3_phosphate=2)
+        self.ensure_metabolite_availability("fructose_1_6_bisphosphate", 1)
+        if self.consume_metabolites(fructose_1_6_bisphosphate=1):
+            return self.produce_metabolites(
+                glyceraldehyde_3_phosphate=1, dihydroxyacetone_phosphate=1
+            )
+        return False
 
     def step5_triose_phosphate_isomerase(self) -> bool:
         """
@@ -245,84 +259,93 @@ class Cytoplasm(Organelle):
         bool
             True if the reaction was successful, False otherwise.
         """
-        self.ensure_metabolite_availability("glyceraldehyde_3_phosphate", 2)
-        if self.consume_metabolites(glyceraldehyde_3_phosphate=2):
-            self.produce_metabolites(dihydroxyacetone_phosphate=2)
+        self.ensure_metabolite_availability("dihydroxyacetone_phosphate", 1)
+        if self.consume_metabolites(dihydroxyacetone_phosphate=1):
+            return self.produce_metabolites(glyceraldehyde_3_phosphate=1)
+        return False
 
     def step6_glyceraldehyde_3_phosphate_dehydrogenase(self) -> bool:
         """
         Step 6 of glycolysis: Glyceraldehyde-3-phosphate dehydrogenase reaction.
 
-        This step consumes 2 dihydroxyacetone phosphate and produces 2 3-phosphoglycerate.
+        This step consumes 1 glyceraldehyde-3-phosphate and 1 NAD+, and produces 1 1,3-bisphosphoglycerate and 1 NADH.
 
         Returns
         -------
         bool
             True if the reaction was successful, False otherwise.
         """
-        self.ensure_metabolite_availability("nad", 2)
-        if self.consume_metabolites(nad=2):
-            self.produce_metabolites(nadh=2)
+        self.ensure_metabolite_availability("glyceraldehyde_3_phosphate", 1)
+        self.ensure_metabolite_availability("nad", 1)
+        if self.consume_metabolites(glyceraldehyde_3_phosphate=1, nad=1):
+            return self.produce_metabolites(bisphosphoglycerate_1_3=1, nadh=1)
+        return False
 
     def step7_phosphoglycerate_kinase(self) -> bool:
         """
         Step 7 of glycolysis: Phosphoglycerate kinase reaction.
 
-        This step consumes 2 ADP, and produces 2 ATP.
+        This step consumes 1 1,3-bisphosphoglycerate and 1 ADP, and produces 1 3-phosphoglycerate and 1 ATP.
 
         Returns
         -------
         bool
             True if the reaction was successful, False otherwise.
         """
-        self.ensure_metabolite_availability("adp", 2)
-        if self.consume_metabolites(adp=2):
-            self.produce_metabolites(atp=2)
+        self.ensure_metabolite_availability("bisphosphoglycerate_1_3", 1)
+        self.ensure_metabolite_availability("adp", 1)
+        if self.consume_metabolites(bisphosphoglycerate_1_3=1, adp=1):
+            return self.produce_metabolites(phosphoglycerate_3=1, atp=1)
+        return False
 
     def step8_phosphoglycerate_mutase(self) -> bool:
         """
         Step 8 of glycolysis: Phosphoglycerate mutase reaction.
 
-        This step consumes 2 3-phosphoglycerate and produces 2 phosphoenolpyruvate.
+        This step consumes 1 phosphoglycerate-3 and produces 1 phosphoglycerate-2.
 
         Returns
         -------
         bool
             True if the reaction was successful, False otherwise.
         """
-        self.ensure_metabolite_availability("phosphoenolpyruvate", 2)
-        if self.consume_metabolites(phosphoenolpyruvate=2):
-            self.produce_metabolites(pyruvate=2)
+        self.ensure_metabolite_availability("phosphoglycerate_3", 1)
+        if self.consume_metabolites(phosphoglycerate_3=1):
+            return self.produce_metabolites(phosphoglycerate_2=1)
+        return False
 
     def step9_enolase(self) -> bool:
         """
         Step 9 of glycolysis: Enolase reaction.
 
-        This step consumes 2 phosphoenolpyruvate and produces 2 pyruvate.
+        This step consumes 1 phosphoglycerate-2 and produces 1 phosphoenolpyruvate.
 
         Returns
         -------
         bool
             True if the reaction was successful, False otherwise.
         """
-        self.ensure_metabolite_availability("adp", 2)
-        if self.consume_metabolites(adp=2):
-            self.produce_metabolites(atp=2, pyruvate=2)
+        self.ensure_metabolite_availability("phosphoglycerate_2", 1)
+        if self.consume_metabolites(phosphoglycerate_2=1):
+            return self.produce_metabolites(phosphoenolpyruvate=1)
+        return False
 
     def step10_pyruvate_kinase(self) -> bool:
         """
         Step 10 of glycolysis: Pyruvate kinase reaction.
 
-        This step consumes 2 ADP, and produces 2 ATP and 2 pyruvate.
+        This step consumes 1 phosphoenolpyruvate and 1 ADP, and produces 1 pyruvate and 1 ATP.
 
         Returns
         -------
         bool
             True if the reaction was successful, False otherwise.
         """
-        self.ensure_metabolite_availability("adp", 2)
-        if self.consume_metabolites(adp=2):
-            self.produce_metabolites(atp=2, pyruvate=2)
+        self.ensure_metabolite_availability("phosphoenolpyruvate", 1)
+        self.ensure_metabolite_availability("adp", 1)
+        if self.consume_metabolites(phosphoenolpyruvate=1, adp=1):
+            return self.produce_metabolites(pyruvate=1, atp=1)
+        return False
 
     def reset(self) -> None:
         self.__init__()

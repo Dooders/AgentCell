@@ -34,15 +34,15 @@ SIMULATION_DURATION = 5
 
 
 class GlycolysisSteps(Enum):
-    STEP1_HEXOKINASE = "Hexokinase"
-    STEP2_PHOSPHOGLUCOSE_ISOMERASE = "Phosphoglucose Isomerase"
-    STEP3_PHOSPHOFRUCTOKINASE = "Phosphofructokinase"
-    STEP4_ALDOLASE = "Aldolase"
-    STEP5_TRIOSE_PHOSPHATE_ISOMERASE = "Triose Phosphate Isomerase"
+    STEP1_HEXOKINASE = "step1_hexokinase"
+    STEP2_PHOSPHOGLUCOSE_ISOMERASE = "step2_phosphoglucose_isomerase"
+    STEP3_PHOSPHOFRUCTOKINASE = "step3_phosphofructokinase"
+    STEP4_ALDOLASE = "step4_aldolase"
+    STEP5_TRIOSE_PHOSPHATE_ISOMERASE = "step5_triose_phosphate_isomerase"
     STEP6_GLYCERALDEHYDE_3_PHOSPHATE_DEHYDROGENASE = (
-        "Glyceraldehyde 3-Phosphate Dehydrogenase"
+        "step6_glyceraldehyde_3_phosphate_dehydrogenase"
     )
-    STEP7_PHOSPHOGLYCERATE_KINASE = "Phosphoglycerate Kinase"
-    STEP8_PHOSPHOGLYCERATE_MUTASE = "Phosphoglycerate Mutase"
-    STEP9_ENOLASE = "Enolase"
-    STEP10_PYRUVATE_KINASE = "Pyruvate Kinase"
+    STEP7_PHOSPHOGLYCERATE_KINASE = "step7_phosphoglycerate_kinase"
+    STEP8_PHOSPHOGLYCERATE_MUTASE = "step8_phosphoglycerate_mutase"
+    STEP9_ENOLASE = "step9_enolase"
+    STEP10_PYRUVATE_KINASE = "step10_pyruvate_kinase"
