@@ -42,15 +42,14 @@ class Cell(Organelle):
             )
 
             # Check ADP availability
-            if (
-                self.mitochondrion.metabolites["adp"].quantity < 10
-            ):  # Arbitrary threshold
+            if self.mitochondrion.metabolites["adp"].quantity < 10:  # Arbitrary threshold
                 logger.warning(
                     "Low ADP levels in mitochondrion. Transferring ADP from cytoplasm."
                 )
                 adp_transfer = min(
-                    50, self.cytoplasm.metabolites["adp"].quantity
-                )  # Transfer up to 50 ADP
+                    50, 
+                    max(0, self.cytoplasm.metabolites["adp"].quantity)
+                )  # Transfer up to 50 ADP, but not less than 0
                 self.mitochondrion.metabolites["adp"].quantity += adp_transfer
                 self.cytoplasm.metabolites["adp"].quantity -= adp_transfer
 
@@ -61,10 +60,11 @@ class Cell(Organelle):
             current_glycolysis_rate = self.base_glycolysis_rate * adp_activation_factor
 
             # Glycolysis with updated rate
-            pyruvate = self.cytoplasm.glycolysis(1 * current_glycolysis_rate)
+            glucose_consumed = min(1 * current_glycolysis_rate, self.cytoplasm.metabolites["glucose"].quantity)
+            pyruvate = self.cytoplasm.glycolysis(glucose_consumed)
             self.mitochondrion.add_metabolite("pyruvate", pyruvate)
             logger.info(f"Transferred {pyruvate} pyruvate to mitochondrion")
-            glucose_processed += 1 * current_glycolysis_rate
+            glucose_processed += glucose_consumed
 
             cytoplasmic_nadh = self.cytoplasm.metabolites["nadh"].quantity
 
@@ -123,7 +123,10 @@ class Cell(Organelle):
                 logger.warning(
                     "Low ADP levels in mitochondrion. Transferring ADP from cytoplasm."
                 )
-                adp_transfer = min(50, self.cytoplasm.metabolites["adp"].quantity)
+                adp_transfer = min(
+                    50, 
+                    max(0, self.cytoplasm.metabolites["adp"].quantity)
+                )  # Transfer up to 50 ADP, but not less than 0
                 self.mitochondrion.metabolites["adp"].quantity += adp_transfer
                 self.cytoplasm.metabolites["adp"].quantity -= adp_transfer
 
@@ -132,8 +135,9 @@ class Cell(Organelle):
             current_glycolysis_rate = self.base_glycolysis_rate * adp_activation_factor
 
             # Glycolysis with updated rate
-            pyruvate = self.cytoplasm.glycolysis(1 * current_glycolysis_rate)
-            glucose_processed += 1 * current_glycolysis_rate
+            glucose_consumed = min(1 * current_glycolysis_rate, self.cytoplasm.metabolites["glucose"].quantity)
+            pyruvate = self.cytoplasm.glycolysis(glucose_consumed)
+            glucose_processed += glucose_consumed
 
             cytoplasmic_nadh = self.cytoplasm.metabolites["nadh"].quantity
 

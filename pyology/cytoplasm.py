@@ -1,5 +1,8 @@
+import logging
+
 from .organelle import Organelle
-from .pathways import GlycolysisPathway
+
+logger = logging.getLogger(__name__)
 
 
 class Cytoplasm(Organelle):
@@ -35,21 +38,35 @@ class Cytoplasm(Organelle):
         self.add_metabolite("h_plus", 0, 1000)  # Add H+ (proton) metabolite
         self.add_metabolite("h2o", 1000, 10000)  # Add H2O (water) metabolite
 
-    def glycolysis(self, glucose_amount):
+    def glycolysis(self, glucose_consumed):
         """
-        Perform glycolysis on the given amount of glucose.
+        Perform glycolysis on the specified amount of glucose.
         Returns the amount of pyruvate produced.
         """
-        if self.metabolites["glucose"].quantity < glucose_amount:
-            glucose_amount = self.metabolites["glucose"].quantity
+        # Ensure we don't consume more glucose than available
+        glucose_consumed = min(glucose_consumed, self.metabolites["glucose"].quantity)
 
-        self.metabolites["glucose"].quantity -= glucose_amount
-        pyruvate_produced = glucose_amount * 2  # Each glucose molecule produces 2 pyruvate molecules
+        # Glycolysis stoichiometry
+        # 1 Glucose -> 2 Pyruvate + 2 ATP + 2 NADH
+        pyruvate_produced = 2 * glucose_consumed
+        atp_produced = 2 * glucose_consumed
+        nadh_produced = 2 * glucose_consumed
 
-        # Update other metabolites involved in glycolysis
-        self.metabolites["atp"].quantity += glucose_amount * 2  # Net gain of 2 ATP per glucose
-        self.metabolites["nadh"].quantity += glucose_amount * 2  # 2 NADH produced per glucose
-        self.metabolites["adp"].quantity -= glucose_amount * 2  # 2 ADP consumed per glucose
+        # Update metabolite quantities
+        self.metabolites["glucose"].quantity -= glucose_consumed
+        self.metabolites["pyruvate"].quantity += pyruvate_produced
+        self.metabolites["atp"].quantity += atp_produced
+        self.metabolites["nadh"].quantity += nadh_produced
+
+        # ADP is consumed to produce ATP
+        adp_consumed = atp_produced
+        self.metabolites["adp"].quantity = max(
+            0, self.metabolites["adp"].quantity - adp_consumed
+        )
+
+        logger.info(
+            f"Glycolysis: {glucose_consumed} glucose -> {pyruvate_produced} pyruvate, {atp_produced} ATP, {nadh_produced} NADH"
+        )
 
         return pyruvate_produced
 
