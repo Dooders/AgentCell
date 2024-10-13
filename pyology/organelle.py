@@ -5,6 +5,7 @@ from .exceptions import (
     InsufficientMetaboliteError,
     QuantityError,
     UnknownMetaboliteError,
+    MetaboliteError,
 )
 
 
@@ -99,9 +100,9 @@ class Organelle(metaclass=OrganelleMeta):
         Changes the quantity of a metabolite in the organelle.
     is_metabolite_available(self, metabolite: str, amount: float) -> bool:
         Checks if a metabolite is available in the organelle.
-    consume_metabolites(self, **metabolites: Dict[str, float]) -> bool:
+    consume_metabolites(self, **metabolites: Dict[str, float]) -> None:
         Consumes metabolites from the organelle.
-    produce_metabolites(self, **metabolites: float) -> bool:
+    produce_metabolites(self, **metabolites: Dict[str, float]) -> None:
         Produces metabolites in the organelle.
     """
 
@@ -194,54 +195,12 @@ class Organelle(metaclass=OrganelleMeta):
             raise UnknownMetaboliteError(f"Unknown metabolite: {metabolite}")
         return self.metabolites[metabolite].quantity >= amount
 
-    def consume_metabolites(self, **metabolites: Dict[str, float]) -> bool:
+    def consume_metabolites(self, **metabolites: Dict[str, float]) -> None:
         for metabolite, amount in metabolites.items():
-            if metabolite not in self.metabolites:
-                raise ValueError(f"Unknown metabolite: {metabolite}")
-            if self.metabolites[metabolite].quantity < amount:
-                if metabolite == "h2o":
-                    # Water is abundant, so we'll assume it's always available
-                    continue
-                raise ValueError(f"Insufficient {metabolite} for reaction.")
+            if not self.is_metabolite_available(metabolite, amount):
+                raise MetaboliteError(f"Insufficient {metabolite} for reaction")
+            self.change_metabolite_quantity(metabolite, -amount)
 
-        # If all validations pass, proceed to consume
+    def produce_metabolites(self, **metabolites: Dict[str, float]) -> None:
         for metabolite, amount in metabolites.items():
-            if metabolite != "h2o":  # We don't track water consumption
-                self.metabolites[metabolite].quantity -= amount
-        return True
-
-    def produce_metabolites(self, **metabolites: float) -> bool:
-        """
-        Produces metabolites in the organelle.
-
-        Parameters
-        ----------
-        metabolites : dict
-            The metabolites to produce.
-
-        Returns
-        -------
-        bool
-            True if the metabolites were produced, False otherwise.
-        """
-        for metabolite, amount in metabolites.items():
-            if not isinstance(metabolite, str):
-                raise TypeError("Metabolite names must be strings.")
-            if not isinstance(amount, (int, float)):
-                raise TypeError("Amounts must be numbers.")
-            if amount < 0:
-                raise QuantityError(
-                    f"Cannot produce a negative amount of {metabolite}."
-                )
-            if metabolite not in self.metabolites:
-                raise UnknownMetaboliteError(f"Unknown metabolite: {metabolite}")
-            new_quantity = self.metabolites[metabolite].quantity + amount
-            if new_quantity > self.metabolites[metabolite].max_quantity:
-                raise QuantityError(
-                    f"Cannot exceed max quantity for {metabolite}. Attempted to set {metabolite} to {new_quantity}, but max is {self.metabolites[metabolite].max_quantity}."
-                )
-
-        # If all validations pass, proceed to produce
-        for metabolite, amount in metabolites.items():
-            self.metabolites[metabolite].quantity += amount
-        return True
+            self.change_metabolite_quantity(metabolite, amount)

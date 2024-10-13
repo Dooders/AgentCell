@@ -7,6 +7,7 @@ Signal Transduction Pathways
 """
 
 from typing import Dict
+from .data import Metabolite
 
 
 class Enzyme:
@@ -42,7 +43,7 @@ class Enzyme:
         self.activators = activators if activators else {}
 
     def calculate_rate(
-        self, substrate_concentration: float, metabolite_levels: Dict[str, float]
+        self, substrate_concentration: float, metabolite_levels: Dict[str, Metabolite]
     ) -> float:
         """
         Calculate the reaction rate, considering inhibitors and activators.
@@ -51,7 +52,7 @@ class Enzyme:
         ----------
         substrate_concentration : float
             The concentration of the substrate.
-        metabolite_levels : Dict[str, float]
+        metabolite_levels : Dict[str, Metabolite]
             Current levels of metabolites that may inhibit or activate the enzyme.
 
         Returns
@@ -62,14 +63,16 @@ class Enzyme:
         # Adjust km based on inhibitors
         km_effective = self.km
         for inhibitor, ki in self.inhibitors.items():
-            inhibitor_concentration = metabolite_levels.get(inhibitor, 0)
-            km_effective *= 1 + inhibitor_concentration / ki
+            if inhibitor in metabolite_levels:
+                inhibitor_concentration = metabolite_levels[inhibitor].quantity
+                km_effective *= 1 + inhibitor_concentration / ki
 
         # Adjust vmax based on activators
         vmax_effective = self.vmax
         for activator, ka in self.activators.items():
-            activator_concentration = metabolite_levels.get(activator, 0)
-            vmax_effective *= 1 + activator_concentration / ka
+            if activator in metabolite_levels:
+                activator_concentration = metabolite_levels[activator].quantity
+                vmax_effective *= 1 + activator_concentration / ka
 
         return (vmax_effective * substrate_concentration) / (
             km_effective + substrate_concentration
