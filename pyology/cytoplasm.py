@@ -1,5 +1,6 @@
 import logging
 
+from .glycolysis import GlycolysisPathway
 from .organelle import Organelle
 
 logger = logging.getLogger(__name__)
@@ -41,34 +42,13 @@ class Cytoplasm(Organelle):
     def glycolysis(self, glucose_consumed):
         """
         Perform glycolysis on the specified amount of glucose.
-        Returns the amount of pyruvate produced.
+
+        Returns
+        -------
+        float
+            The amount of pyruvate produced.
         """
-        # Ensure we don't consume more glucose than available
-        glucose_consumed = min(glucose_consumed, self.metabolites["glucose"].quantity)
-
-        # Glycolysis stoichiometry
-        # 1 Glucose -> 2 Pyruvate + 2 ATP + 2 NADH
-        pyruvate_produced = 2 * glucose_consumed
-        atp_produced = 2 * glucose_consumed
-        nadh_produced = 2 * glucose_consumed
-
-        # Update metabolite quantities
-        self.metabolites["glucose"].quantity -= glucose_consumed
-        self.metabolites["pyruvate"].quantity += pyruvate_produced
-        self.metabolites["atp"].quantity += atp_produced
-        self.metabolites["nadh"].quantity += nadh_produced
-
-        # ADP is consumed to produce ATP
-        adp_consumed = atp_produced
-        self.metabolites["adp"].quantity = max(
-            0, self.metabolites["adp"].quantity - adp_consumed
-        )
-
-        logger.info(
-            f"Glycolysis: {glucose_consumed} glucose -> {pyruvate_produced} pyruvate, {atp_produced} ATP, {nadh_produced} NADH"
-        )
-
-        return pyruvate_produced
+        return GlycolysisPathway.perform(self, glucose_consumed)
 
     def reset(self) -> None:
         self.__init__()
