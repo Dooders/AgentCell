@@ -12,19 +12,6 @@ from .reactions import KrebsCycle
 logger = logging.getLogger(__name__)
 
 
-class GlycolysisSteps(Enum):
-    HEXOKINASE = "hexokinase"
-    PHOSPHOGLUCOSE_ISOMERASE = "phosphoglucose_isomerase"
-    PHOSPHOFRUCTOKINASE = "phosphofructokinase"
-    ALDOLASE = "aldolase"
-    TRIOSE_PHOSPHATE_ISOMERASE = "triose_phosphate_isomerase"
-    GLYCERALDEHYDE_3_PHOSPHATE_DEHYDROGENASE = "glyceraldehyde_3_phosphate_dehydrogenase"
-    PHOSPHOGLYCERATE_KINASE = "phosphoglycerate_kinase"
-    PHOSPHOGLYCERATE_MUTASE = "phosphoglycerate_mutase"
-    ENOLASE = "enolase"
-    PYRUVATE_KINASE = "pyruvate_kinase"
-
-
 class Mitochondrion(Organelle):
     """
     Simulates the electron transport chain with individual complexes.

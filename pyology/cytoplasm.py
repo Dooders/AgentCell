@@ -22,21 +22,21 @@ class Cytoplasm(Organelle):
         self.add_metabolite("glucose", 100, 1000)
         self.add_metabolite("atp", 100, 1000)
         self.add_metabolite("adp", 100, 1000)
-        self.add_metabolite("amp", 10, 1000)  # Added AMP
+        self.add_metabolite("amp", 100, 1000)
         self.add_metabolite("nad", 100, 1000)
-        self.add_metabolite("nadh", 0, 1000)
-        self.add_metabolite("glucose_6_phosphate", 0, 1000)
-        self.add_metabolite("fructose_6_phosphate", 0, 1000)
-        self.add_metabolite("fructose_1_6_bisphosphate", 0, 1000)
-        self.add_metabolite("glyceraldehyde_3_phosphate", 0, 1000)
-        self.add_metabolite("dihydroxyacetone_phosphate", 0, 1000)
-        self.add_metabolite("bisphosphoglycerate_1_3", 0, 1000)
-        self.add_metabolite("phosphoglycerate_3", 0, 1000)
-        self.add_metabolite("phosphoglycerate_2", 0, 1000)
-        self.add_metabolite("phosphoenolpyruvate", 0, 1000)
-        self.add_metabolite("pyruvate", 0, 1000)
+        self.add_metabolite("nadh", 100, 1000)
+        self.add_metabolite("glucose_6_phosphate", 100, 1000)
+        self.add_metabolite("fructose_6_phosphate", 100, 1000)
+        self.add_metabolite("fructose_1_6_bisphosphate", 100, 1000)
+        self.add_metabolite("glyceraldehyde_3_phosphate", 100, 1000)
+        self.add_metabolite("dihydroxyacetone_phosphate", 100, 1000)
+        self.add_metabolite("bisphosphoglycerate_1_3", 100, 1000)
+        self.add_metabolite("phosphoglycerate_3", 100, 1000)
+        self.add_metabolite("phosphoglycerate_2", 100, 1000)
+        self.add_metabolite("phosphoenolpyruvate", 100, 1000)
+        self.add_metabolite("pyruvate", 100, 1000)
         self.add_metabolite("pi", 1000, 10000)
-        self.add_metabolite("h_plus", 0, 1000)  # Add H+ (proton) metabolite
+        self.add_metabolite("h_plus", 100, 1000)  # Add H+ (proton) metabolite
         self.add_metabolite("h2o", 1000, 10000)  # Add H2O (water) metabolite
 
     def glycolysis(self, glucose_consumed):
