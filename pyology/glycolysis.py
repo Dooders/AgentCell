@@ -78,7 +78,7 @@ class GlycolysisPathway:
             consume={"glucose": 1, "atp": 1},
             produce={"glucose_6_phosphate": 1, "adp": 1},
         ),
-        # Glucose-6-phosphate → Fructose-6-phosphate
+        # Glucose-6-phosphate ⇌ Fructose-6-phosphate
         "phosphoglucose_isomerase": Reaction(
             "Phosphoglucose Isomerase",
             enzymes["phosphoglucose_isomerase"],
@@ -109,28 +109,28 @@ class GlycolysisPathway:
             consume={"dihydroxyacetone_phosphate": 1},
             produce={"glyceraldehyde_3_phosphate": 1},
         ),
-        # Glyceraldehyde-3-phosphate + NAD+ + Pi → Bisphosphoglycerate + NADH + H+
+        # Glyceraldehyde-3-phosphate + NAD+ + Pi → 1,3-Bisphosphoglycerate + NADH + H+
         "glyceraldehyde_3_phosphate_dehydrogenase": Reaction(
             "Glyceraldehyde 3-Phosphate Dehydrogenase",
             enzymes["glyceraldehyde_3_phosphate_dehydrogenase"],
             consume={"glyceraldehyde_3_phosphate": 1, "nad": 1, "pi": 1},
             produce={"bisphosphoglycerate_1_3": 1, "nadh": 1, "h_plus": 1},
         ),
-        # Bisphosphoglycerate → Phosphoglycerate
+        # 1,3-Bisphosphoglycerate + ADP ⇌ 3-Phosphoglycerate + ATP
         "phosphoglycerate_kinase": Reaction(
             "Phosphoglycerate Kinase",
             enzymes["phosphoglycerate_kinase"],
             consume={"bisphosphoglycerate_1_3": 1, "adp": 1},
             produce={"phosphoglycerate_3": 1, "atp": 1},
         ),
-        # Phosphoglycerate → Phosphoglycerate
+        # 3-Phosphoglycerate ⇌ 2-Phosphoglycerate
         "phosphoglycerate_mutase": Reaction(
             "Phosphoglycerate Mutase",
             enzymes["phosphoglycerate_mutase"],
             consume={"phosphoglycerate_3": 1},
             produce={"phosphoglycerate_2": 1},
         ),
-        # Phosphoglycerate → Phosphoenolpyruvate + H2O
+        # 2-Phosphoglycerate ⇌ Phosphoenolpyruvate + H2O
         "enolase": Reaction(
             "Enolase",
             enzymes["enolase"],

@@ -23,7 +23,7 @@ class Reaction:
         substrate = list(self.consume.keys())[0]
         substrate_conc = organelle.get_metabolite_quantity(substrate)
 
-        # Calculate reaction rate
+        # Calculate reaction rate using the updated Enzyme.calculate_rate method
         reaction_rate = (
             self.enzyme.calculate_rate(substrate_conc, organelle.metabolites)
             * time_step

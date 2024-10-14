@@ -46,7 +46,7 @@ class Enzyme:
         self, substrate_concentration: float, metabolite_levels: Dict[str, Metabolite]
     ) -> float:
         """
-        Calculate the reaction rate, considering inhibitors and activators.
+        Calculate the reaction rate using Michaelis-Menten kinetics, considering inhibitors and activators.
 
         Parameters
         ----------
@@ -74,6 +74,5 @@ class Enzyme:
                 activator_concentration = metabolite_levels[activator].quantity
                 vmax_effective *= 1 + activator_concentration / ka
 
-        return (vmax_effective * substrate_concentration) / (
-            km_effective + substrate_concentration
-        )
+        # Michaelis-Menten equation
+        return (vmax_effective * substrate_concentration) / (km_effective + substrate_concentration)
