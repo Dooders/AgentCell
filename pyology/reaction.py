@@ -38,9 +38,9 @@ class Reaction:
         # Determine actual rate based on available metabolites
         actual_rate = min(
             reaction_rate,
-            substrate_conc,
+            substrate_conc / factor,
             *[
-                organelle.get_metabolite_quantity(met) / amount
+                organelle.get_metabolite_quantity(met) / (amount * factor)
                 for met, amount in self.consume.items()
             ],
         )
@@ -49,7 +49,7 @@ class Reaction:
         if actual_rate < reaction_rate:
             limiting_factor = (
                 "substrate concentration"
-                if actual_rate == substrate_conc
+                if actual_rate == substrate_conc / factor
                 else "other metabolite"
             )
             logger.debug(
@@ -58,17 +58,21 @@ class Reaction:
 
         # Consume metabolites
         for metabolite, amount in self.consume.items():
-            organelle.change_metabolite_quantity(metabolite, -amount * actual_rate)
+            organelle.change_metabolite_quantity(
+                metabolite, -amount * actual_rate * factor
+            )
 
         # Produce metabolites
         for metabolite, amount in self.produce.items():
-            organelle.change_metabolite_quantity(metabolite, amount * actual_rate)
+            organelle.change_metabolite_quantity(
+                metabolite, amount * actual_rate * factor
+            )
 
         # Add log entry
         logger.info(
-            f"Executed reaction '{self.name}' with rate {actual_rate:.4f}. "
-            f"Consumed: {', '.join([f'{m}: {a * actual_rate:.4f}' for m, a in self.consume.items()])}. "
-            f"Produced: {', '.join([f'{m}: {a * actual_rate:.4f}' for m, a in self.produce.items()])}"
+            f"Executed reaction '{self.name}' with rate {actual_rate:.4f} and factor {factor:.4f}. "
+            f"Consumed: {', '.join([f'{m}: {a * actual_rate * factor:.4f}' for m, a in self.consume.items()])}. "
+            f"Produced: {', '.join([f'{m}: {a * actual_rate * factor:.4f}' for m, a in self.produce.items()])}"
         )
 
         return actual_rate
