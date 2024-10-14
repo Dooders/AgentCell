@@ -22,7 +22,7 @@ class Reaction:
     def execute(self, organelle, time_step: float = 1.0) -> float:
         substrate = list(self.consume.keys())[0]
         substrate_conc = organelle.get_metabolite_quantity(substrate)
-        
+
         # Calculate reaction rate
         reaction_rate = (
             self.enzyme.calculate_rate(substrate_conc, organelle.metabolites)
@@ -30,7 +30,9 @@ class Reaction:
         )
 
         # Log intermediate values
-        logger.debug(f"Reaction '{self.name}': Initial reaction rate: {reaction_rate:.6f}")
+        logger.debug(
+            f"Reaction '{self.name}': Initial reaction rate: {reaction_rate:.6f}"
+        )
 
         # Determine actual rate based on available metabolites
         actual_rate = min(
@@ -44,8 +46,14 @@ class Reaction:
 
         # Log limiting factors
         if actual_rate < reaction_rate:
-            limiting_factor = "substrate concentration" if actual_rate == substrate_conc else "other metabolite"
-            logger.debug(f"Reaction '{self.name}': Rate limited by {limiting_factor}. Actual rate: {actual_rate:.6f}")
+            limiting_factor = (
+                "substrate concentration"
+                if actual_rate == substrate_conc
+                else "other metabolite"
+            )
+            logger.debug(
+                f"Reaction '{self.name}': Rate limited by {limiting_factor}. Actual rate: {actual_rate:.6f}"
+            )
 
         # Consume metabolites
         for metabolite, amount in self.consume.items():
@@ -63,4 +71,3 @@ class Reaction:
         )
 
         return actual_rate
-
