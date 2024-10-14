@@ -2,10 +2,9 @@ from typing import Dict
 
 from .data import Metabolite
 from .exceptions import (
-    MetaboliteError,
+    InsufficientMetaboliteError,
     QuantityError,
     UnknownMetaboliteError,
-    InsufficientMetaboliteError,
 )
 
 
@@ -33,7 +32,7 @@ class OrganelleMeta(type):
 
     _registry = {}  # Class variable to hold registered organelles
 
-    def __new__(mcs, name: str, bases: tuple, namespace: dict) -> type:
+    def __new__(cls, name: str, bases: tuple, namespace: dict) -> type:
         """
         Creates a new instance of the class.
 
@@ -52,20 +51,12 @@ class OrganelleMeta(type):
                 f"Class '{name}' must define a 'name' class attribute."
             )
 
-        cls = super().__new__(mcs, name, bases, namespace)
+        cls._registry[namespace["name"]] = namespace
 
-        # Automatic attribute initialization
-        if "structure" not in namespace:
-            setattr(cls, "structure", "Unknown")
-
-        # Register the class (excluding the base Organelle class)
-        if name != "Organelle":
-            mcs._registry[name] = cls
-
-        return cls
+        return super().__new__(cls, name, bases, namespace)
 
     @classmethod
-    def get_registry(mcs: type) -> dict:
+    def get_registry(cls: type) -> dict:
         """
         Returns the registry of organelle classes.
 
@@ -74,7 +65,7 @@ class OrganelleMeta(type):
         dict
             The registry of organelle classes.
         """
-        return dict(mcs._registry)
+        return dict(cls._registry)
 
 
 class Organelle(metaclass=OrganelleMeta):
@@ -92,8 +83,12 @@ class Organelle(metaclass=OrganelleMeta):
 
     Methods
     -------
+    validate_initial_state(self) -> None:
+        Validates the initial state of the organelle, including metabolite quantities and rates.
+    set_glycolysis_rate(self, rate: float) -> None:
+        Sets the glycolysis rate with validation.
     add_metabolite(self, name: str, quantity: int, max_quantity: int) -> None:
-        Adds a metabolite to the organelle.
+        Adds a metabolite to the organelle or increases its quantity if it already exists.
     change_metabolite_quantity(self, metabolite_name: str, amount: float) -> None:
         Changes the quantity of a metabolite in the organelle.
     is_metabolite_available(self, metabolite: str, amount: float) -> bool:
@@ -115,18 +110,59 @@ class Organelle(metaclass=OrganelleMeta):
         self.add_metabolite("nadh", 0, 1000)
         self.add_metabolite("pyruvate", 0, 1000)
         self.glycolysis_rate = 1.0
+        self.validate_initial_state()
+
+    def validate_initial_state(self) -> None:
+        """
+        Validates the initial state of the organelle, including metabolite quantities and rates.
+        """
+        for name, metabolite in self.metabolites.items():
+            if metabolite.quantity < 0 or metabolite.quantity > metabolite.max_quantity:
+                raise ValueError(
+                    f"Invalid initial quantity for {name}: {metabolite.quantity}"
+                )
+
+        if self.glycolysis_rate <= 0:
+            raise ValueError(f"Invalid glycolysis rate: {self.glycolysis_rate}")
+
+    def set_glycolysis_rate(self, rate: float) -> None:
+        """
+        Sets the glycolysis rate with validation.
+
+        Parameters
+        ----------
+        rate : float
+            The new glycolysis rate.
+
+        Raises
+        ------
+        ValueError
+            If the rate is not positive.
+        """
+        if rate <= 0:
+            raise ValueError(f"Glycolysis rate must be positive. Got: {rate}")
+        self.glycolysis_rate = rate
 
     def add_metabolite(self, name: str, quantity: int, max_quantity: int) -> None:
         """
         Add a metabolite to the organelle or increase its quantity if it already exists.
 
-        :param name: The name of the metabolite
-        :param quantity: The quantity to add (must be non-negative and not exceed max_quantity)
-        :param max_quantity: The maximum allowed quantity for this metabolite
-        :raises ValueError: If quantity is negative or exceeds max_quantity
+        Parameters
+        ----------
+        name : str
+            The name of the metabolite.
+        quantity : int
+            The quantity of the metabolite.
+        max_quantity : int
+            The maximum quantity of the metabolite.
+
+        Raises
+        ------
+        ValueError
+            If the quantity is negative or exceeds the maximum quantity.
         """
         if quantity < 0:
-            raise ValueError("Quantity must be non-negative.")
+            raise ValueError(f"Quantity must be non-negative. Got: {quantity}")
 
         if quantity > max_quantity:
             raise ValueError(
@@ -192,6 +228,14 @@ class Organelle(metaclass=OrganelleMeta):
         return self.metabolites[metabolite].quantity >= amount
 
     def consume_metabolites(self, **metabolites: float) -> None:
+        """
+        Consumes metabolites from the organelle.
+
+        Parameters
+        ----------
+        metabolites : dict
+            A dictionary of metabolites to consume.
+        """
         for metabolite, amount in metabolites.items():
             if not self.is_metabolite_available(metabolite, amount):
                 raise InsufficientMetaboliteError(
@@ -200,5 +244,13 @@ class Organelle(metaclass=OrganelleMeta):
             self.change_metabolite_quantity(metabolite, -amount)
 
     def produce_metabolites(self, **metabolites: float) -> None:
+        """
+        Produces metabolites in the organelle.
+
+        Parameters
+        ----------
+        metabolites : dict
+            A dictionary of metabolites to produce.
+        """
         for metabolite, amount in metabolites.items():
             self.change_metabolite_quantity(metabolite, amount)

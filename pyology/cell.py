@@ -13,9 +13,8 @@ class Cell(Organelle):
     name = "Cell"
 
     def __init__(self):
+        self.atp = 300  # Initial ATP value
         self.cytoplasm = Cytoplasm()
-        # The Cytoplasm now initializes with some glucose, ATP, and ADP
-        self.cytoplasm.add_metabolite("glucose", 10, 1000)  # Updated: added max_quantity
         self.mitochondrion = Mitochondrion()
         self.krebs_cycle = KrebsCycle()
         self.simulation_time = 0
@@ -197,6 +196,7 @@ class Cell(Organelle):
 
     def reset(self):
         """Reset the entire cell state."""
+        self.atp = 300  # Reset ATP to initial value
         self.cytoplasm.reset()
         self.mitochondrion.reset()
         self.simulation_time = 0
@@ -204,3 +204,7 @@ class Cell(Organelle):
             "Ca2+", 100, 1000
         )  # Reset cytoplasmic calcium
         logger.info("Cell state reset")
+
+    def process(self, time_step):
+        # Implement the simulation logic here
+        pass

@@ -1,7 +1,7 @@
 import logging
 
 from pyology.cell import Cell
-from pyology.simulation import Reporter, SimulationController
+from pyology.simulation import SimulationController, Reporter
 
 logging.basicConfig(
     level=logging.INFO,
@@ -16,8 +16,6 @@ glucose_amounts = [1, 2, 5, 10]
 for glucose in glucose_amounts:
     reporter.log_event(f"\nSimulating ATP production with {glucose} glucose units:")
     results = sim_controller.run_simulation(glucose)
-
-    # Reset the cell for the next simulation
-    cell.reset()
+    sim_controller.reset()
 
 reporter.log_event("Simulation complete.")

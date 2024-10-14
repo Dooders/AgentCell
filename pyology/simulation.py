@@ -275,3 +275,11 @@ class SimulationController:
             "proton_gradient": self.cell.mitochondrion.proton_gradient,
             "oxygen_remaining": self.cell.mitochondrion.metabolites["oxygen"].quantity,
         }
+
+    def reset(self):
+        self.cell.reset()  # Assuming Cell class has a reset method
+        # Reset any other state variables in SimulationController
+        # For example:
+        # self.time = 0
+        # self.total_atp_produced = 0
+        # etc.
