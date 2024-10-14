@@ -19,7 +19,7 @@ class Reaction:
         self.consume = consume
         self.produce = produce
 
-    def execute(self, organelle, time_step: float = 1.0) -> float:
+    def execute(self, organelle, time_step: float = 1.0, factor: float = 1.0) -> float:
         substrate = list(self.consume.keys())[0]
         substrate_conc = organelle.get_metabolite_quantity(substrate)
 
@@ -27,6 +27,7 @@ class Reaction:
         reaction_rate = (
             self.enzyme.calculate_rate(substrate_conc, organelle.metabolites)
             * time_step
+            * factor
         )
 
         # Log intermediate values

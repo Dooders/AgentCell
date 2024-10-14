@@ -208,11 +208,11 @@ class GlycolysisPathway:
         logger.info(f"Performing investment phase for {glucose_units} glucose units.")
         # Steps 1-4 occur once per glucose molecule
         for step in list(GlycolysisSteps)[:4]:
-            cls.reactions[step.value].execute(organelle, cls.time_step)
+            cls.reactions[step.value].execute(organelle, cls.time_step, factor=glucose_units)
 
         # Step 5 occurs once to convert DHAP to G3P
         cls.reactions[GlycolysisSteps.TRIOSE_PHOSPHATE_ISOMERASE.value].execute(
-            organelle, cls.time_step
+            organelle, cls.time_step, factor=glucose_units
         )
 
     @classmethod
@@ -222,4 +222,4 @@ class GlycolysisPathway:
         """
         logger.info(f"Performing yield phase for {g3p_units} G3P units.")
         for step in list(GlycolysisSteps)[5:]:
-            cls.reactions[step.value].execute(organelle, cls.time_step)
+            cls.reactions[step.value].execute(organelle, cls.time_step, factor=g3p_units)
