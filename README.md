@@ -1,2 +1,2 @@
-# PyCell
-A metaphorical model of a biological cell
+# Pyology
+Byology modeled in Python
