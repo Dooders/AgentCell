@@ -1,2 +1,2 @@
 # Pyology
-Byology modeled in Python
+Biology modeled in Python
