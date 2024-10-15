@@ -7,7 +7,7 @@ Signal Transduction Pathways
 """
 
 from typing import Dict
-from .data import Metabolite
+from .metabolite import Metabolite
 
 
 class Enzyme:

@@ -9,11 +9,11 @@ class Enzyme:
     km: float = field(default=0.1)
 
 
-@dataclass
-class Metabolite:
-    name: str = field(default="")
-    quantity: int = field(default=0)
-    max_quantity: int = field(default=1000)
+# @dataclass
+# class Metabolite:
+#     name: str = field(default="")
+#     quantity: int = field(default=0)
+#     max_quantity: int = field(default=1000)
 
 
 @dataclass

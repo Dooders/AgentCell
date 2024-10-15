@@ -22,7 +22,7 @@ class Reaction:
     def execute(self, organelle, time_step: float = 1.0, factor: float = 1.0) -> float:
         substrate = list(self.consume.keys())[0]
         substrate_conc = organelle.get_metabolite_quantity(substrate)
-
+        logger.info(f"organelle: {substrate}, metabolite: {substrate_conc}")
         # Calculate reaction rate using the updated Enzyme.calculate_rate method
         reaction_rate = (
             self.enzyme.calculate_rate(substrate_conc, organelle.metabolites)
