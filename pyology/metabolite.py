@@ -1,11 +1,8 @@
 from threading import Lock
 from typing import Dict
 
-from .exceptions import (
-    InsufficientMetaboliteError,
-    QuantityError,
-    UnknownMetaboliteError,
-)
+from .exceptions import (InsufficientMetaboliteError, QuantityError,
+                         UnknownMetaboliteError)
 
 
 class Metabolite:
@@ -119,17 +116,6 @@ class Metabolite:
             f"Metabolite(name='{self.name}', quantity={self.quantity}, "
             f"max_quantity={self.max_quantity}, unit='{self.unit}', type='{self.type}')"
         )
-
-
-GENERIC_METABOLITE = Metabolite(
-    name="absolutely_nothing",
-    type="absolutely_nothing",
-    quantity=0,
-    max_quantity=1000,
-    min_quantity=0,
-    unit="absolutely_nothing",
-    metadata={},
-)
 
 
 class Metabolites:

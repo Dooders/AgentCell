@@ -3,11 +3,8 @@ import os
 from dataclasses import dataclass, field
 from typing import Dict
 
-from .exceptions import (
-    InsufficientMetaboliteError,
-    QuantityError,
-    UnknownMetaboliteError,
-)
+from .exceptions import (InsufficientMetaboliteError, QuantityError,
+                         UnknownMetaboliteError)
 from .metabolite import Metabolite, Metabolites
 
 
@@ -287,3 +284,36 @@ class Organelle(metaclass=OrganelleMeta):
         """
         for metabolite, amount in metabolites.items():
             self.change_metabolite_quantity(metabolite, amount)
+
+    def get_metabolite_quantity(self, metabolite: str) -> float:
+        """
+        Returns the quantity of a metabolite in the organelle.
+
+        Parameters
+        ----------
+        metabolite : str
+            The name of the metabolite.
+
+        Returns
+        -------
+        float
+            The quantity of the metabolite.
+        """
+        if metabolite not in self.metabolites:
+            raise UnknownMetaboliteError(f"Unknown metabolite: {metabolite}")
+        return self.metabolites[metabolite].quantity
+    
+    def set_metabolite_quantity(self, metabolite: str, quantity: float) -> None:
+        """
+        Sets the quantity of a metabolite in the organelle.
+
+        Parameters
+        ----------
+        metabolite : str
+            The name of the metabolite.
+        quantity : float
+            The quantity of the metabolite.
+        """
+        if metabolite not in self.metabolites:
+            raise UnknownMetaboliteError(f"Unknown metabolite: {metabolite}")
+        self.metabolites[metabolite].quantity = quantity

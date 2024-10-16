@@ -31,47 +31,44 @@ class Cell(Organelle):
         while (
             glucose_processed < glucose and self.simulation_time < simulation_duration
         ):
-            if self.mitochondrion.metabolites["oxygen"].quantity <= 0:
+            if self.metabolites["oxygen"].quantity <= 0:
                 logger.warning("Oxygen depleted. Stopping simulation.")
                 break
 
             # Calculate ATP at the start of the iteration
             atp_start = (
-                self.cytoplasm.metabolites["atp"].quantity
-                + self.mitochondrion.metabolites["atp"].quantity
+                self.metabolites["atp"].quantity + self.metabolites["atp"].quantity
             )
 
             # Check ADP availability
-            if (
-                self.mitochondrion.metabolites["adp"].quantity < 10
-            ):  # Arbitrary threshold
+            if self.metabolites["adp"].quantity < 10:  # Arbitrary threshold
                 logger.warning(
                     "Low ADP levels in mitochondrion. Transferring ADP from cytoplasm."
                 )
                 adp_transfer = min(
-                    50, max(0, self.cytoplasm.metabolites["adp"].quantity)
+                    50, max(0, self.metabolites["adp"].quantity)
                 )  # Transfer up to 50 ADP, but not less than 0
-                self.mitochondrion.metabolites["adp"].quantity += adp_transfer
-                self.cytoplasm.metabolites["adp"].quantity -= adp_transfer
+                self.metabolites["adp"].quantity += adp_transfer
+                self.metabolites["adp"].quantity -= adp_transfer
 
             # Implement feedback activation
             adp_activation_factor = (
-                1 + self.cytoplasm.metabolites["adp"].quantity / 500
+                1 + self.metabolites["adp"].quantity / 500
             )  # Example threshold
             self.glycolysis_rate = self.base_glycolysis_rate * adp_activation_factor
 
             # Glycolysis with updated rate
             glucose_consumed = min(
-                1 * self.glycolysis_rate, self.cytoplasm.metabolites["glucose"].quantity
+                1 * self.glycolysis_rate, self.metabolites["glucose"].quantity
             )
             pyruvate = self.cytoplasm.glycolysis(glucose_consumed)
-            self.mitochondrion.add_metabolite(
+            self.metabolites.add(
                 "pyruvate", pyruvate, max_quantity=1000
             )  # Updated: added max_quantity
             logger.info(f"Transferred {pyruvate} pyruvate to mitochondrion")
             glucose_processed += glucose_consumed
 
-            cytoplasmic_nadh = self.cytoplasm.metabolites["nadh"].quantity
+            cytoplasmic_nadh = self.metabolites["nadh"].quantity
 
             # NADH shuttle
             mitochondrial_nadh = self.mitochondrion.transfer_cytoplasmic_nadh(
@@ -83,15 +80,14 @@ class Cell(Organelle):
 
             # Transfer excess ATP from mitochondrion to cytoplasm
             atp_transfer = max(
-                0, self.mitochondrion.metabolites["atp"].quantity - 100
+                0, self.metabolites["atp"].quantity - 100
             )  # Keep 100 ATP in mitochondrion
-            self.cytoplasm.metabolites["atp"].quantity += atp_transfer
-            self.mitochondrion.metabolites["atp"].quantity -= atp_transfer
+            self.metabolites["atp"].quantity += atp_transfer
+            self.metabolites["atp"].quantity -= atp_transfer
 
             # Calculate ATP at the end of the iteration
             atp_end = (
-                self.cytoplasm.metabolites["atp"].quantity
-                + self.mitochondrion.metabolites["atp"].quantity
+                self.metabolites["atp"].quantity + self.metabolites["atp"].quantity
             )
 
             # Calculate ATP produced in this iteration
@@ -113,26 +109,25 @@ class Cell(Organelle):
         while (
             glucose_processed < glucose and self.simulation_time < simulation_duration
         ):
-            if self.mitochondrion.metabolites["oxygen"].quantity <= 0:
+            if self.metabolites["oxygen"].quantity <= 0:
                 logger.warning("Oxygen depleted. Stopping simulation.")
                 break
 
             # Calculate ATP at the start of the iteration
             atp_start = (
-                self.cytoplasm.metabolites["atp"].quantity
-                + self.mitochondrion.metabolites["atp"].quantity
+                self.metabolites["atp"].quantity + self.metabolites["atp"].quantity
             )
 
             # Check ADP availability and transfer if needed
-            if self.mitochondrion.metabolites["adp"].quantity < 10:
+            if self.metabolites["adp"].quantity < 10:
                 logger.warning(
                     "Low ADP levels in mitochondrion. Transferring ADP from cytoplasm."
                 )
                 adp_transfer = min(
                     50, max(0, self.cytoplasm.metabolites["adp"].quantity)
                 )  # Transfer up to 50 ADP, but not less than 0
-                self.mitochondrion.metabolites["adp"].quantity += adp_transfer
-                self.cytoplasm.metabolites["adp"].quantity -= adp_transfer
+                self.metabolites["adp"].quantity += adp_transfer
+                self.metabolites["adp"].quantity -= adp_transfer
 
             # Implement feedback activation
             adp_activation_factor = 1 + self.cytoplasm.metabolites["adp"].quantity / 500
@@ -140,12 +135,12 @@ class Cell(Organelle):
 
             # Glycolysis with updated rate
             glucose_consumed = min(
-                1 * self.glycolysis_rate, self.cytoplasm.metabolites["glucose"].quantity
+                1 * self.glycolysis_rate, self.metabolites["glucose"].quantity
             )
             pyruvate = self.cytoplasm.glycolysis(glucose_consumed)
             glucose_processed += glucose_consumed
 
-            cytoplasmic_nadh = self.cytoplasm.metabolites["nadh"].quantity
+            cytoplasmic_nadh = self.metabolites["nadh"].quantity
 
             # NADH shuttle
             mitochondrial_nadh = self.mitochondrion.transfer_cytoplasmic_nadh(
@@ -156,14 +151,13 @@ class Cell(Organelle):
             mitochondrial_atp = self.mitochondrion.cellular_respiration(pyruvate)
 
             # Transfer excess ATP from mitochondrion to cytoplasm
-            atp_transfer = max(0, self.mitochondrion.metabolites["atp"].quantity - 100)
-            self.cytoplasm.metabolites["atp"].quantity += atp_transfer
-            self.mitochondrion.metabolites["atp"].quantity -= atp_transfer
+            atp_transfer = max(0, self.metabolites["atp"].quantity - 100)
+            self.metabolites["atp"].quantity += atp_transfer
+            self.metabolites["atp"].quantity -= atp_transfer
 
             # Calculate ATP at the end of the iteration
             atp_end = (
-                self.cytoplasm.metabolites["atp"].quantity
-                + self.mitochondrion.metabolites["atp"].quantity
+                self.metabolites["atp"].quantity + self.metabolites["atp"].quantity
             )
 
             # Calculate ATP produced in this iteration

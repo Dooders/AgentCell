@@ -1,7 +1,6 @@
 import logging
-import math
 
-from .constants import SIMULATION_DURATION, TIME_STEP
+from .constants import SIMULATION_DURATION
 from .exceptions import (
     GlycolysisError,
     InsufficientMetaboliteError,
@@ -53,7 +52,7 @@ class SimulationController:
         self.max_simulation_time = 20  # Increased max simulation time
 
     def run_simulation(self, glucose_amount):
-        self.cell.cytoplasm.metabolites["glucose"].quantity = round(glucose_amount, 2)
+        self.cell.metabolites["glucose"].quantity = round(glucose_amount, 2)
         self.reporter.log_event(
             f"Starting simulation with {glucose_amount:.2f} glucose units"
         )
@@ -67,9 +66,7 @@ class SimulationController:
                 and self.simulation_time < self.max_simulation_time
             ):
                 try:
-                    glucose_available = self.cell.cytoplasm.metabolites[
-                        "glucose"
-                    ].quantity
+                    glucose_available = self.cell.metabolites["glucose"].quantity
                     self.reporter.log_event(f"glucose_available: {glucose_available}")
                     if glucose_available < 1:
                         self.reporter.log_warning(
@@ -81,14 +78,13 @@ class SimulationController:
                     glucose_processed += glucose_available
 
                     # Decrement glucose quantity
-                    self.cell.cytoplasm.metabolites["glucose"].quantity = round(
-                        self.cell.cytoplasm.metabolites["glucose"].quantity
-                        - glucose_available,
+                    self.cell.metabolites["glucose"].quantity = round(
+                        self.cell.metabolites["glucose"].quantity - glucose_available,
                         2,
                     )
 
                     # Check if there is enough glucose
-                    if self.cell.cytoplasm.metabolites["glucose"].quantity <= 0:
+                    if self.cell.metabolites["glucose"].quantity <= 0:
                         self.reporter.log_warning(
                             "Glucose depleted. Stopping simulation."
                         )
@@ -102,8 +98,8 @@ class SimulationController:
 
                     # Store ATP levels before reactions
                     atp_before = (
-                        self.cell.cytoplasm.metabolites["atp"].quantity
-                        + self.cell.mitochondrion.metabolites["atp"].quantity
+                        self.cell.metabolites["atp"].quantity
+                        + self.cell.metabolites["atp"].quantity
                     )
 
                     # Handle NADH shuttle
@@ -116,13 +112,13 @@ class SimulationController:
 
                     # Calculate ATP produced in this iteration
                     atp_before = round(
-                        self.cell.cytoplasm.metabolites["atp"].quantity
-                        + self.cell.mitochondrion.metabolites["atp"].quantity,
+                        self.cell.metabolites["atp"].quantity
+                        + self.cell.metabolites["atp"].quantity,
                         2,
                     )
                     atp_after = round(
-                        self.cell.cytoplasm.metabolites["atp"].quantity
-                        + self.cell.mitochondrion.metabolites["atp"].quantity,
+                        self.cell.metabolites["atp"].quantity
+                        + self.cell.metabolites["atp"].quantity,
                         2,
                     )
                     atp_produced = round(atp_after - atp_before, 2)

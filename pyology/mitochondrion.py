@@ -1,12 +1,11 @@
 import logging
 import math
 from typing import Dict
-from enum import Enum
 
 from .constants import *
 from .exceptions import *
 from .organelle import Organelle
-from .reactions import KrebsCycle
+from .krebs_cycle import KrebsCycle
 from .metabolite import Metabolite
 
 logger = logging.getLogger(__name__)

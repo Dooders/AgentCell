@@ -1,13 +1,16 @@
 import logging
 import math
 from enum import Enum
-from typing import Dict
+from typing import TYPE_CHECKING
 
 from .enzymes import Enzyme
 from .exceptions import GlycolysisError, MetaboliteError
 from .reaction import Reaction
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from .organelle import Organelle
 
 
 class GlycolysisSteps(Enum):
@@ -147,7 +150,7 @@ class GlycolysisPathway:
     }
 
     @classmethod
-    def perform(cls, organelle, glucose_units: float) -> float:
+    def perform(cls, organelle: "Organelle", glucose_units: float) -> float:
         """
         Perform glycolysis on the given number of glucose units.
 
@@ -208,14 +211,10 @@ class GlycolysisPathway:
         logger.info(f"Performing investment phase for {glucose_units} glucose units.")
         # Steps 1-4 occur once per glucose molecule
         for step in list(GlycolysisSteps)[:4]:
-            cls.reactions[step.value].execute(
-                organelle, cls.time_step, factor=glucose_units
-            )
+            cls.reactions[step.value].execute(organelle=organelle)
 
         # Step 5 occurs once to convert DHAP to G3P
-        cls.reactions[GlycolysisSteps.TRIOSE_PHOSPHATE_ISOMERASE.value].execute(
-            organelle, cls.time_step, factor=glucose_units
-        )
+        cls.reactions[GlycolysisSteps.TRIOSE_PHOSPHATE_ISOMERASE.value].execute(organelle=organelle)
 
     @classmethod
     def yield_phase(cls, organelle, g3p_units):
@@ -224,6 +223,4 @@ class GlycolysisPathway:
         """
         logger.info(f"Performing yield phase for {g3p_units} G3P units.")
         for step in list(GlycolysisSteps)[5:]:
-            cls.reactions[step.value].execute(
-                organelle, cls.time_step, factor=g3p_units
-            )
+            cls.reactions[step.value].execute(organelle=organelle)
