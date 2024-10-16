@@ -56,17 +56,17 @@ class Enzyme:
                 return 0.0  # If a required substrate is missing, rate is 0
             conc = metabolite.quantity
             rate *= conc / (k_m + conc)
-        
+
         for substrate, inhibitor_constant in self.inhibitors.items():
             metabolite = metabolites.get(substrate)
             if metabolite:
                 conc = metabolite.quantity
                 rate *= 1 / (1 + conc / inhibitor_constant)
-        
+
         for substrate, activator_constant in self.activators.items():
             metabolite = metabolites.get(substrate)
             if metabolite:
                 conc = metabolite.quantity
                 rate *= 1 + conc / activator_constant
-        
+
         return rate

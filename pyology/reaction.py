@@ -34,10 +34,14 @@ class Reaction:
             raise ValueError("Time step cannot be negative")
 
         # Calculate reaction rate using the updated Enzyme.calculate_rate method
-        metabolites = {
-            met: organelle.get_metabolite(met)
-            for met in set(self.substrates) | set(self.enzyme.k_m.keys())
-        }
+        metabolites = {met: organelle.get_metabolite(met) for met in self.substrates}
+
+        # Check if k_m is a dictionary or a single value
+        if isinstance(self.enzyme.k_m, dict):
+            metabolites.update(
+                {met: organelle.get_metabolite(met) for met in self.enzyme.k_m.keys()}
+            )
+
         reaction_rate = self.enzyme.calculate_rate(metabolites)
 
         # Log intermediate values

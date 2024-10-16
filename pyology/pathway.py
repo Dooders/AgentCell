@@ -1,5 +1,7 @@
 from typing import Dict
 
+from pyology.enzymes import Enzyme
+
 from .reaction import Reaction
 
 
@@ -42,6 +44,9 @@ class Pathway:
 # # 1. Hexokinase
 # hexokinase = Reaction(
 #     name="Hexokinase",
+#     enzyme=Enzyme(
+#         name="Hexokinase", k_cat=10.0, k_m={"glucose": 0.1, "glucose_6_phosphate": 0.5}
+#     ),
 #     substrates={"Glucose": 1, "ATP": 1},
 #     products={"Glucose-6-Phosphate": 1, "ADP": 1},
 # )

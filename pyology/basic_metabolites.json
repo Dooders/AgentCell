@@ -28,6 +28,13 @@
     "unit": "mM"
   },
   {
+    "name": "phosphoglycerate",
+    "quantity": 200,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM"
+  },
+  {
     "name": "phosphoglycerate_3",
     "quantity": 200,
     "max_quantity": 3000,
@@ -292,5 +299,41 @@
     "max_quantity": 5000,
     "type": "other",
     "unit": "mM"
+  },
+  {
+    "name": "bisphosphoglycerate_1_3",
+    "quantity": 200,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM"
+  },
+  {
+    "name": "phosphoglycerate",
+    "quantity": 200,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM"
+  },
+  {
+    "name": "phosphoglycerate_3",
+    "quantity": 200,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM"
+  },
+  {
+    "name": "phosphoglycerate_2",
+    "quantity": 200,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM"
+  },
+  {
+    "name": "phosphoglycerate_1_3`",
+    "quantity": 200,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM"
   }
 ]
+

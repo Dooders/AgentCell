@@ -3,30 +3,15 @@ import math
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from .enzymes import Enzyme
+from pyology.common_reactions import GlycolysisReactions
+
 from .exceptions import GlycolysisError, MetaboliteError
 from .pathway import Pathway
-from .reaction import Reaction
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from .organelle import Organelle
-
-
-class GlycolysisSteps(Enum):
-    HEXOKINASE = "hexokinase"
-    PHOSPHOGLUCOSE_ISOMERASE = "phosphoglucose_isomerase"
-    PHOSPHOFRUCTOKINASE = "phosphofructokinase"
-    ALDOLASE = "aldolase"
-    TRIOSE_PHOSPHATE_ISOMERASE = "triose_phosphate_isomerase"
-    GLYCERALDEHYDE_3_PHOSPHATE_DEHYDROGENASE = (
-        "glyceraldehyde_3_phosphate_dehydrogenase"
-    )
-    PHOSPHOGLYCERATE_KINASE = "phosphoglycerate_kinase"
-    PHOSPHOGLYCERATE_MUTASE = "phosphoglycerate_mutase"
-    ENOLASE = "enolase"
-    PYRUVATE_KINASE = "pyruvate_kinase"
 
 
 class Glycolysis(Pathway):
@@ -36,124 +21,7 @@ class Glycolysis(Pathway):
 
     time_step = 0.1  # Default time step in seconds
 
-    enzymes = {
-        "hexokinase": Enzyme(
-            "Hexokinase", k_cat=10.0, k_m={"glucose": 0.1, "glucose_6_phosphate": 0.5}
-        ),
-        "phosphoglucose_isomerase": Enzyme(
-            "Phosphoglucose Isomerase", k_cat=12.0, k_m={"glucose_6_phosphate": 0.2}
-        ),
-        "phosphofructokinase": Enzyme(
-            "Phosphofructokinase",
-            k_cat=8.0,
-            k_m={"atp": 1.0},
-            inhibitors={"atp": 1.0},
-            activators={"adp": 0.5, "amp": 0.1},
-        ),
-        "aldolase": Enzyme(
-            "Aldolase", k_cat=7.0, k_m={"fructose_1_6_bisphosphate": 0.3}
-        ),
-        "triose_phosphate_isomerase": Enzyme(
-            "Triose Phosphate Isomerase",
-            k_cat=15.0,
-            k_m={"dihydroxyacetone_phosphate": 0.1},
-        ),
-        "glyceraldehyde_3_phosphate_dehydrogenase": Enzyme(
-            "Glyceraldehyde 3-Phosphate Dehydrogenase",
-            k_cat=6.0,
-            k_m={"nadh": 0.5},
-        ),
-        "phosphoglycerate_kinase": Enzyme(
-            "Phosphoglycerate Kinase", k_cat=9.0, k_m={"bisphosphoglycerate_1_3": 0.2}
-        ),
-        "phosphoglycerate_mutase": Enzyme(
-            "Phosphoglycerate Mutase", k_cat=11.0, k_m={"phosphoglycerate_3": 0.15}
-        ),
-        "enolase": Enzyme("Enolase", k_cat=7.5, k_m={"phosphoglycerate_2": 0.3}),
-        "pyruvate_kinase": Enzyme(
-            "Pyruvate Kinase",
-            k_cat=10.0,
-            k_m={"atp": 0.2},
-            inhibitors={"atp": 0.8},
-            activators={"fructose_1_6_bisphosphate": 0.3},
-        ),
-    }
-
-    reactions = {
-        # Glucose + ATP → Glucose-6-phosphate + ADP
-        "hexokinase": Reaction(
-            name="Hexokinase",
-            enzyme=enzymes["hexokinase"],
-            substrates={"glucose": 1, "atp": 1},
-            products={"glucose_6_phosphate": 1, "adp": 1},
-        ),
-        # Glucose-6-phosphate ⇌ Fructose-6-phosphate
-        "phosphoglucose_isomerase": Reaction(
-            name="Phosphoglucose Isomerase",
-            enzyme=enzymes["phosphoglucose_isomerase"],
-            substrates={"glucose_6_phosphate": 1},
-            products={"fructose_6_phosphate": 1},
-        ),
-        # Fructose-6-phosphate + ATP → Fructose-1,6-bisphosphate + ADP
-        "phosphofructokinase": Reaction(
-            name="Phosphofructokinase",
-            enzyme=enzymes["phosphofructokinase"],
-            substrates={"fructose_6_phosphate": 1, "atp": 1},
-            products={"fructose_1_6_bisphosphate": 1, "adp": 1},
-        ),
-        # Fructose-1,6-bisphosphate → Dihydroxyacetone phosphate + Glyceraldehyde-3-phosphate
-        "aldolase": Reaction(
-            name="Aldolase",
-            enzyme=enzymes["aldolase"],
-            substrates={"fructose_1_6_bisphosphate": 1},
-            products={
-                "glyceraldehyde_3_phosphate": 1,
-                "dihydroxyacetone_phosphate": 1,
-            },
-        ),
-        # Dihydroxyacetone phosphate → Glyceraldehyde-3-phosphate
-        "triose_phosphate_isomerase": Reaction(
-            name="Triose Phosphate Isomerase",
-            enzyme=enzymes["triose_phosphate_isomerase"],
-            substrates={"dihydroxyacetone_phosphate": 1},
-            products={"glyceraldehyde_3_phosphate": 1},
-        ),
-        # Glyceraldehyde-3-phosphate + NAD+ + Pi → 1,3-Bisphosphoglycerate + NADH + H+
-        "glyceraldehyde_3_phosphate_dehydrogenase": Reaction(
-            name="Glyceraldehyde 3-Phosphate Dehydrogenase",
-            enzyme=enzymes["glyceraldehyde_3_phosphate_dehydrogenase"],
-            substrates={"glyceraldehyde_3_phosphate": 1, "nad": 1, "pi": 1},
-            products={"bisphosphoglycerate_1_3": 1, "nadh": 1, "h_plus": 1},
-        ),
-        # 1,3-Bisphosphoglycerate + ADP ⇌ 3-Phosphoglycerate + ATP
-        "phosphoglycerate_kinase": Reaction(
-            name="Phosphoglycerate Kinase",
-            enzyme=enzymes["phosphoglycerate_kinase"],
-            substrates={"bisphosphoglycerate_1_3": 1, "adp": 1},
-            products={"phosphoglycerate_3": 1, "atp": 1},
-        ),
-        # 3-Phosphoglycerate ⇌ 2-Phosphoglycerate
-        "phosphoglycerate_mutase": Reaction(
-            name="Phosphoglycerate Mutase",
-            enzyme=enzymes["phosphoglycerate_mutase"],
-            substrates={"phosphoglycerate_3": 1},
-            products={"phosphoglycerate_2": 1},
-        ),
-        # 2-Phosphoglycerate ⇌ Phosphoenolpyruvate + H2O
-        "enolase": Reaction(
-            name="Enolase",
-            enzyme=enzymes["enolase"],
-            substrates={"phosphoglycerate_2": 1},
-            products={"phosphoenolpyruvate": 1, "h2o": 1},
-        ),
-        # Phosphoenolpyruvate + ADP → Pyruvate + ATP
-        "pyruvate_kinase": Reaction(
-            name="Pyruvate Kinase",
-            enzyme=enzymes["pyruvate_kinase"],
-            substrates={"phosphoenolpyruvate": 1, "adp": 1},
-            products={"pyruvate": 1, "atp": 1},
-        ),
-    }
+    reactions = GlycolysisReactions
 
     @classmethod
     def perform(cls, organelle: "Organelle", glucose_units: float) -> float:
@@ -216,13 +84,13 @@ class Glycolysis(Pathway):
         """
         logger.info(f"Performing investment phase for {glucose_units} glucose units.")
         # Steps 1-4 occur once per glucose molecule
-        for step in list(GlycolysisSteps)[:4]:
-            cls.reactions[step.value].execute(organelle=organelle)
+        cls.reactions.hexokinase.execute(organelle=organelle)
+        cls.reactions.phosphoglucose_isomerase.execute(organelle=organelle)
+        cls.reactions.phosphofructokinase.execute(organelle=organelle)
+        cls.reactions.aldolase.execute(organelle=organelle)
 
         # Step 5 occurs once to convert DHAP to G3P
-        cls.reactions[GlycolysisSteps.TRIOSE_PHOSPHATE_ISOMERASE.value].execute(
-            organelle=organelle
-        )
+        cls.reactions.triose_phosphate_isomerase.execute(organelle=organelle)
 
     @classmethod
     def yield_phase(cls, organelle, g3p_units):
@@ -230,5 +98,10 @@ class Glycolysis(Pathway):
         Perform the yield phase of glycolysis (steps 6-10) for multiple G3P units.
         """
         logger.info(f"Performing yield phase for {g3p_units} G3P units.")
-        for step in list(GlycolysisSteps)[5:]:
-            cls.reactions[step.value].execute(organelle=organelle)
+        cls.reactions.glyceraldehyde_3_phosphate_dehydrogenase.execute(
+            organelle=organelle
+        )
+        cls.reactions.phosphoglycerate_kinase.execute(organelle=organelle)
+        cls.reactions.phosphoglycerate_mutase.execute(organelle=organelle)
+        cls.reactions.enolase.execute(organelle=organelle)
+        cls.reactions.pyruvate_kinase.execute(organelle=organelle)
