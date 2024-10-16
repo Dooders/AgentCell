@@ -1,4 +1,4 @@
-from .glycolysis import GlycolysisPathway
+from .glycolysis import Glycolysis
 from .organelle import Organelle
 
 
@@ -38,7 +38,7 @@ class Cytoplasm(Organelle):
         float
             The amount of pyruvate produced.
         """
-        return GlycolysisPathway.perform(self, glucose_consumed)
+        return Glycolysis.perform(self, glucose_consumed)
 
     def reset(self) -> None:
         self.__init__()

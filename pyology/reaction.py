@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING, Dict
 
 if TYPE_CHECKING:
     from .enzymes import Enzyme
-    from .metabolite import Metabolite
 
 
 logger = logging.getLogger(__name__)
@@ -14,20 +13,31 @@ class Reaction:
         self,
         name: str,
         enzyme: "Enzyme",
-        consume: Dict[str, float],
-        produce: Dict[str, float],
+        substrates: Dict[str, float],
+        products: Dict[str, float],
+        reversible: bool = False,
     ):
         self.name = name
         self.enzyme = enzyme
-        self.consume = consume
-        self.produce = produce
+        self.substrates = substrates
+        self.products = products
+        self.reversible = reversible
+
+    def can_react(self, organelle) -> bool:
+        for substrate, amount in self.substrates.items():
+            if organelle.get_metabolite_quantity(substrate) < amount:
+                return False
+        return True
 
     def execute(self, organelle, time_step: float = 1.0) -> float:
         if time_step < 0:
             raise ValueError("Time step cannot be negative")
 
         # Calculate reaction rate using the updated Enzyme.calculate_rate method
-        metabolites = {met: organelle.get_metabolite(met) for met in set(self.consume) | set(self.enzyme.k_m.keys())}
+        metabolites = {
+            met: organelle.get_metabolite(met)
+            for met in set(self.substrates) | set(self.enzyme.k_m.keys())
+        }
         reaction_rate = self.enzyme.calculate_rate(metabolites)
 
         # Log intermediate values
@@ -37,7 +47,7 @@ class Reaction:
 
         # Calculate potential limiting factors
         limiting_factors = {"reaction_rate": reaction_rate * time_step}
-        for met, amount in self.consume.items():
+        for met, amount in self.substrates.items():
             if amount > 0:
                 limiting_factors[f"{met}_conc"] = (
                     organelle.get_metabolite_quantity(met) / amount
@@ -61,18 +71,32 @@ class Reaction:
         )
 
         # Consume metabolites
-        for metabolite, amount in self.consume.items():
+        for metabolite, amount in self.substrates.items():
             organelle.change_metabolite_quantity(metabolite, -amount * actual_rate)
 
         # Produce metabolites
-        for metabolite, amount in self.produce.items():
+        for metabolite, amount in self.products.items():
             organelle.change_metabolite_quantity(metabolite, amount * actual_rate)
 
         # Add log entry
         logger.info(
             f"Executed reaction '{self.name}' with rate {actual_rate:.4f}. "
-            f"Consumed: {', '.join([f'{m}: {a * actual_rate:.4f}' for m, a in self.consume.items()])}. "
-            f"Produced: {', '.join([f'{m}: {a * actual_rate:.4f}' for m, a in self.produce.items()])}"
+            f"Consumed: {', '.join([f'{m}: {a * actual_rate:.4f}' for m, a in self.substrates.items()])}. "
+            f"Produced: {', '.join([f'{m}: {a * actual_rate:.4f}' for m, a in self.products.items()])}"
         )
 
         return actual_rate
+
+
+def perform_reaction(metabolites: Dict[str, float], reaction: Reaction) -> bool:
+    """
+    Performs a specified reaction if possible.
+
+    Args:
+        metabolites (dict): Dictionary of metabolite concentrations.
+        reaction (Reaction): The reaction to perform.
+
+    Returns:
+        bool: Result of the reaction execution.
+    """
+    return reaction.execute(metabolites)

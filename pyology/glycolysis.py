@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from .enzymes import Enzyme
 from .exceptions import GlycolysisError, MetaboliteError
+from .pathway import Pathway
 from .reaction import Reaction
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ class GlycolysisSteps(Enum):
     PYRUVATE_KINASE = "pyruvate_kinase"
 
 
-class GlycolysisPathway:
+class Glycolysis(Pathway):
     """
     Class representing the glycolysis pathway.
     """
@@ -83,29 +84,29 @@ class GlycolysisPathway:
         "hexokinase": Reaction(
             name="Hexokinase",
             enzyme=enzymes["hexokinase"],
-            consume={"glucose": 1, "atp": 1},
-            produce={"glucose_6_phosphate": 1, "adp": 1},
+            substrates={"glucose": 1, "atp": 1},
+            products={"glucose_6_phosphate": 1, "adp": 1},
         ),
         # Glucose-6-phosphate ⇌ Fructose-6-phosphate
         "phosphoglucose_isomerase": Reaction(
             name="Phosphoglucose Isomerase",
             enzyme=enzymes["phosphoglucose_isomerase"],
-            consume={"glucose_6_phosphate": 1},
-            produce={"fructose_6_phosphate": 1},
+            substrates={"glucose_6_phosphate": 1},
+            products={"fructose_6_phosphate": 1},
         ),
         # Fructose-6-phosphate + ATP → Fructose-1,6-bisphosphate + ADP
         "phosphofructokinase": Reaction(
             name="Phosphofructokinase",
             enzyme=enzymes["phosphofructokinase"],
-            consume={"fructose_6_phosphate": 1, "atp": 1},
-            produce={"fructose_1_6_bisphosphate": 1, "adp": 1},
+            substrates={"fructose_6_phosphate": 1, "atp": 1},
+            products={"fructose_1_6_bisphosphate": 1, "adp": 1},
         ),
         # Fructose-1,6-bisphosphate → Dihydroxyacetone phosphate + Glyceraldehyde-3-phosphate
         "aldolase": Reaction(
             name="Aldolase",
             enzyme=enzymes["aldolase"],
-            consume={"fructose_1_6_bisphosphate": 1},
-            produce={
+            substrates={"fructose_1_6_bisphosphate": 1},
+            products={
                 "glyceraldehyde_3_phosphate": 1,
                 "dihydroxyacetone_phosphate": 1,
             },
@@ -114,43 +115,43 @@ class GlycolysisPathway:
         "triose_phosphate_isomerase": Reaction(
             name="Triose Phosphate Isomerase",
             enzyme=enzymes["triose_phosphate_isomerase"],
-            consume={"dihydroxyacetone_phosphate": 1},
-            produce={"glyceraldehyde_3_phosphate": 1},
+            substrates={"dihydroxyacetone_phosphate": 1},
+            products={"glyceraldehyde_3_phosphate": 1},
         ),
         # Glyceraldehyde-3-phosphate + NAD+ + Pi → 1,3-Bisphosphoglycerate + NADH + H+
         "glyceraldehyde_3_phosphate_dehydrogenase": Reaction(
             name="Glyceraldehyde 3-Phosphate Dehydrogenase",
             enzyme=enzymes["glyceraldehyde_3_phosphate_dehydrogenase"],
-            consume={"glyceraldehyde_3_phosphate": 1, "nad": 1, "pi": 1},
-            produce={"bisphosphoglycerate_1_3": 1, "nadh": 1, "h_plus": 1},
+            substrates={"glyceraldehyde_3_phosphate": 1, "nad": 1, "pi": 1},
+            products={"bisphosphoglycerate_1_3": 1, "nadh": 1, "h_plus": 1},
         ),
         # 1,3-Bisphosphoglycerate + ADP ⇌ 3-Phosphoglycerate + ATP
         "phosphoglycerate_kinase": Reaction(
             name="Phosphoglycerate Kinase",
             enzyme=enzymes["phosphoglycerate_kinase"],
-            consume={"bisphosphoglycerate_1_3": 1, "adp": 1},
-            produce={"phosphoglycerate_3": 1, "atp": 1},
+            substrates={"bisphosphoglycerate_1_3": 1, "adp": 1},
+            products={"phosphoglycerate_3": 1, "atp": 1},
         ),
         # 3-Phosphoglycerate ⇌ 2-Phosphoglycerate
         "phosphoglycerate_mutase": Reaction(
             name="Phosphoglycerate Mutase",
             enzyme=enzymes["phosphoglycerate_mutase"],
-            consume={"phosphoglycerate_3": 1},
-            produce={"phosphoglycerate_2": 1},
+            substrates={"phosphoglycerate_3": 1},
+            products={"phosphoglycerate_2": 1},
         ),
         # 2-Phosphoglycerate ⇌ Phosphoenolpyruvate + H2O
         "enolase": Reaction(
             name="Enolase",
             enzyme=enzymes["enolase"],
-            consume={"phosphoglycerate_2": 1},
-            produce={"phosphoenolpyruvate": 1, "h2o": 1},
+            substrates={"phosphoglycerate_2": 1},
+            products={"phosphoenolpyruvate": 1, "h2o": 1},
         ),
         # Phosphoenolpyruvate + ADP → Pyruvate + ATP
         "pyruvate_kinase": Reaction(
             name="Pyruvate Kinase",
             enzyme=enzymes["pyruvate_kinase"],
-            consume={"phosphoenolpyruvate": 1, "adp": 1},
-            produce={"pyruvate": 1, "atp": 1},
+            substrates={"phosphoenolpyruvate": 1, "adp": 1},
+            products={"pyruvate": 1, "atp": 1},
         ),
     }
 
