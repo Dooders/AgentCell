@@ -7,6 +7,8 @@ from .exceptions import (
     QuantityError,
     UnknownMetaboliteError,
 )
+from .enzymes import Enzyme
+from .reaction import Reaction
 
 
 class Reporter:
@@ -269,3 +271,23 @@ class SimulationController:
         # self.time = 0
         # self.total_atp_produced = 0
         # etc.
+
+
+class Simulation:
+    def setup_glycolysis(self):
+        hexokinase = Enzyme(
+            name="Hexokinase",
+            k_cat=200.0,
+            k_m={"glucose": 0.1, "ATP": 0.3}
+        )
+        
+        glucose_phosphorylation = Reaction(
+            name="Glucose Phosphorylation",
+            enzyme=hexokinase,
+            consume={"glucose": 1.0, "ATP": 1.0},
+            produce={"glucose-6-phosphate": 1.0, "ADP": 1.0}
+        )
+        
+        # ... other reactions and setup code ...
+
+    # ... rest of the Simulation class ...

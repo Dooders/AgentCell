@@ -3,8 +3,11 @@ import os
 from dataclasses import dataclass, field
 from typing import Dict
 
-from .exceptions import (InsufficientMetaboliteError, QuantityError,
-                         UnknownMetaboliteError)
+from .exceptions import (
+    InsufficientMetaboliteError,
+    QuantityError,
+    UnknownMetaboliteError,
+)
 from .metabolite import Metabolite, Metabolites
 
 
@@ -203,7 +206,9 @@ class Organelle(metaclass=OrganelleMeta):
             new_quantity = min(self.metabolites[name].quantity + quantity, max_quantity)
             self.metabolites[name].quantity = new_quantity
         else:
-            self.metabolites[name] = Metabolite(name, type, quantity, max_quantity)
+            metabolite = Metabolite(name, quantity, max_quantity)
+            metabolite.type = type  # Set the type after creation
+            self.metabolites[name] = metabolite
 
     def change_metabolite_quantity(self, metabolite_name: str, amount: float) -> None:
         """
@@ -302,7 +307,7 @@ class Organelle(metaclass=OrganelleMeta):
         if metabolite not in self.metabolites:
             raise UnknownMetaboliteError(f"Unknown metabolite: {metabolite}")
         return self.metabolites[metabolite].quantity
-    
+
     def set_metabolite_quantity(self, metabolite: str, quantity: float) -> None:
         """
         Sets the quantity of a metabolite in the organelle.
@@ -317,3 +322,24 @@ class Organelle(metaclass=OrganelleMeta):
         if metabolite not in self.metabolites:
             raise UnknownMetaboliteError(f"Unknown metabolite: {metabolite}")
         self.metabolites[metabolite].quantity = quantity
+
+    def get_metabolite(self, metabolite_name):
+        """
+        Get a metabolite from the cytoplasm.
+
+        Parameters:
+        -----------
+        metabolite_name : str
+            The name of the metabolite to retrieve.
+
+        Returns:
+        --------
+        Metabolite
+            The requested metabolite object.
+
+        Raises:
+        -------
+        KeyError
+            If the metabolite is not found in the cytoplasm.
+        """
+        return self.metabolites[metabolite_name]

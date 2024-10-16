@@ -1,8 +1,11 @@
 from threading import Lock
 from typing import Dict
 
-from .exceptions import (InsufficientMetaboliteError, QuantityError,
-                         UnknownMetaboliteError)
+from .exceptions import (
+    InsufficientMetaboliteError,
+    QuantityError,
+    UnknownMetaboliteError,
+)
 
 
 class Metabolite:
@@ -49,23 +52,31 @@ class Metabolite:
     def __init__(
         self,
         name: str,
-        type: str,
         quantity: float,
         max_quantity: float,
         min_quantity: float = 0,
         unit: str = "mM",
         metadata: dict = None,
         on_change=None,
+        type: str = "default",
     ) -> None:
         self.name = name.lower()
         self.type = type
-        self.quantity = quantity
-        self.max_quantity = max_quantity
-        self.min_quantity = min_quantity
+        self.quantity = float(quantity)
+        self.max_quantity = float(max_quantity)
+        self.min_quantity = float(min_quantity)
         self.unit = unit
         self.metadata = metadata or {}
         self.on_change = on_change
         self.lock = Lock()
+
+    @property
+    def quantity(self):
+        return self._quantity
+
+    @quantity.setter
+    def quantity(self, value):
+        self._quantity = float(value)
 
     def adjust_quantity(self, amount: float) -> None:
         with self.lock:
@@ -103,7 +114,6 @@ class Metabolite:
     def from_dict(cls, data: dict):
         return cls(
             data["name"],
-            data["type"],
             data["quantity"],
             data["max_quantity"],
             data.get("min_quantity", 0),
@@ -181,9 +191,7 @@ class Metabolites:
             new_quantity = min(metabolite.quantity + quantity, metabolite.max_quantity)
             metabolite.quantity = new_quantity
         else:
-            self.data[name.lower()] = Metabolite(
-                name, "default", quantity, max_quantity
-            )
+            self.data[name.lower()] = Metabolite(name, quantity, max_quantity)
 
     def register(
         self,

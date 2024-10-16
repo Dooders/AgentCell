@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Dict
 
 if TYPE_CHECKING:
     from .enzymes import Enzyme
+    from .metabolite import Metabolite
 
 
 logger = logging.getLogger(__name__)
@@ -22,13 +23,12 @@ class Reaction:
         self.produce = produce
 
     def execute(self, organelle, time_step: float = 1.0) -> float:
-        substrate = list(self.consume.keys())[0]
-        substrate_conc = organelle.get_metabolite_quantity(substrate)
+        if time_step < 0:
+            raise ValueError("Time step cannot be negative")
+
         # Calculate reaction rate using the updated Enzyme.calculate_rate method
-        reaction_rate = (
-            self.enzyme.calculate_rate(substrate_conc, organelle.metabolites)
-            * time_step
-        )
+        metabolites = {met: organelle.get_metabolite(met) for met in set(self.consume) | set(self.enzyme.k_m.keys())}
+        reaction_rate = self.enzyme.calculate_rate(metabolites)
 
         # Log intermediate values
         logger.debug(
@@ -36,14 +36,12 @@ class Reaction:
         )
 
         # Calculate potential limiting factors
-        limiting_factors = {
-            "reaction_rate": reaction_rate,
-            "substrate_conc": substrate_conc,
-        }
+        limiting_factors = {"reaction_rate": reaction_rate * time_step}
         for met, amount in self.consume.items():
-            limiting_factors[f"{met}_conc"] = (
-                organelle.get_metabolite_quantity(met) / amount
-            )
+            if amount > 0:
+                limiting_factors[f"{met}_conc"] = (
+                    organelle.get_metabolite_quantity(met) / amount
+                )
 
         # Determine actual rate based on available metabolites
         actual_rate = min(limiting_factors.values())
