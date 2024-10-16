@@ -1,11 +1,46 @@
+import json
+import os
+from dataclasses import dataclass, field
 from typing import Dict
 
-from .data import Metabolite
 from .exceptions import (
     InsufficientMetaboliteError,
     QuantityError,
     UnknownMetaboliteError,
 )
+from .metabolite import Metabolite, Metabolites
+
+
+@dataclass
+class CellMetabolites:
+    """
+    A data class that initializes a Metabolites instance with basic cell metabolites.
+
+    Attributes
+    ----------
+    metabolites : Metabolites
+        An instance of the Metabolites class containing all basic metabolites.
+    """
+
+    metabolites: Metabolites = field(default_factory=Metabolites)
+
+    def __post_init__(self):
+        """
+        Post-initialization to add basic metabolites to the Metabolites instance.
+        """
+        # Load metabolites from JSON file
+        json_path = os.path.join(os.path.dirname(__file__), "basic_metabolites.json")
+        with open(json_path, "r", encoding="utf-8") as f:
+            basic_metabolites = json.load(f)
+
+        # Add each metabolite to the Metabolites instance
+        for metabolite_info in basic_metabolites:
+            self.metabolites.register(
+                name=metabolite_info["name"],
+                quantity=metabolite_info["quantity"],
+                max_quantity=metabolite_info["max_quantity"],
+                type=metabolite_info["type"],
+            )
 
 
 class OrganelleMeta(type):
@@ -87,7 +122,7 @@ class Organelle(metaclass=OrganelleMeta):
         Validates the initial state of the organelle, including metabolite quantities and rates.
     set_glycolysis_rate(self, rate: float) -> None:
         Sets the glycolysis rate with validation.
-    add_metabolite(self, name: str, quantity: int, max_quantity: int) -> None:
+    add_metabolite(self, name: str, type: str, quantity: float, max_quantity: float) -> None:
         Adds a metabolite to the organelle or increases its quantity if it already exists.
     change_metabolite_quantity(self, metabolite_name: str, amount: float) -> None:
         Changes the quantity of a metabolite in the organelle.
@@ -102,13 +137,7 @@ class Organelle(metaclass=OrganelleMeta):
     name = "Organelle"
 
     def __init__(self):
-        self.metabolites: Dict[str, Metabolite] = {}
-        self.add_metabolite("glucose", 0, 1000)
-        self.add_metabolite("atp", 100, 1000)
-        self.add_metabolite("adp", 0, 1000)
-        self.add_metabolite("nad", 10, 1000)
-        self.add_metabolite("nadh", 0, 1000)
-        self.add_metabolite("pyruvate", 0, 1000)
+        self.metabolites = CellMetabolites().metabolites
         self.glycolysis_rate = 1.0
         self.validate_initial_state()
 
@@ -143,7 +172,9 @@ class Organelle(metaclass=OrganelleMeta):
             raise ValueError(f"Glycolysis rate must be positive. Got: {rate}")
         self.glycolysis_rate = rate
 
-    def add_metabolite(self, name: str, quantity: int, max_quantity: int) -> None:
+    def add_metabolite(
+        self, name: str, type: str, quantity: float, max_quantity: float
+    ) -> None:
         """
         Add a metabolite to the organelle or increase its quantity if it already exists.
 
@@ -151,9 +182,11 @@ class Organelle(metaclass=OrganelleMeta):
         ----------
         name : str
             The name of the metabolite.
-        quantity : int
+        type : str
+            The type of the metabolite.
+        quantity : float
             The quantity of the metabolite.
-        max_quantity : int
+        max_quantity : float
             The maximum quantity of the metabolite.
 
         Raises
@@ -173,7 +206,9 @@ class Organelle(metaclass=OrganelleMeta):
             new_quantity = min(self.metabolites[name].quantity + quantity, max_quantity)
             self.metabolites[name].quantity = new_quantity
         else:
-            self.metabolites[name] = Metabolite(name, quantity, max_quantity)
+            metabolite = Metabolite(name, quantity, max_quantity)
+            metabolite.type = type  # Set the type after creation
+            self.metabolites[name] = metabolite
 
     def change_metabolite_quantity(self, metabolite_name: str, amount: float) -> None:
         """
@@ -254,3 +289,57 @@ class Organelle(metaclass=OrganelleMeta):
         """
         for metabolite, amount in metabolites.items():
             self.change_metabolite_quantity(metabolite, amount)
+
+    def get_metabolite_quantity(self, metabolite: str) -> float:
+        """
+        Returns the quantity of a metabolite in the organelle.
+
+        Parameters
+        ----------
+        metabolite : str
+            The name of the metabolite.
+
+        Returns
+        -------
+        float
+            The quantity of the metabolite.
+        """
+        if metabolite not in self.metabolites:
+            raise UnknownMetaboliteError(f"Unknown metabolite: {metabolite}")
+        return self.metabolites[metabolite].quantity
+
+    def set_metabolite_quantity(self, metabolite: str, quantity: float) -> None:
+        """
+        Sets the quantity of a metabolite in the organelle.
+
+        Parameters
+        ----------
+        metabolite : str
+            The name of the metabolite.
+        quantity : float
+            The quantity of the metabolite.
+        """
+        if metabolite not in self.metabolites:
+            raise UnknownMetaboliteError(f"Unknown metabolite: {metabolite}")
+        self.metabolites[metabolite].quantity = quantity
+
+    def get_metabolite(self, metabolite_name):
+        """
+        Get a metabolite from the cytoplasm.
+
+        Parameters:
+        -----------
+        metabolite_name : str
+            The name of the metabolite to retrieve.
+
+        Returns:
+        --------
+        Metabolite
+            The requested metabolite object.
+
+        Raises:
+        -------
+        KeyError
+            If the metabolite is not found in the cytoplasm.
+        """
+        return self.metabolites[metabolite_name]

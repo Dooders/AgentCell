@@ -7,7 +7,8 @@ Signal Transduction Pathways
 """
 
 from typing import Dict
-from .data import Metabolite
+
+from .metabolite import Metabolite
 
 
 class Enzyme:
@@ -18,14 +19,14 @@ class Enzyme:
     ----------
     name : str
         The name of the enzyme.
-    vmax : float
-        The maximum rate of the enzyme.
-    km : float
-        The Michaelis-Menten constant.
+    k_cat : float
+        The catalytic constant (turnover number) of the enzyme.
+    k_m : Dict[str, float]
+        The Michaelis constants for multiple substrates.
     inhibitors : Dict[str, float], optional
-        Inhibitors and their inhibition constants (default is None).
+        The inhibition constants for multiple substrates. Defaults to None.
     activators : Dict[str, float], optional
-        Activators and their activation constants (default is None).
+        The activation constants for multiple substrates. Defaults to None.
 
     Methods
     -------
@@ -34,46 +35,38 @@ class Enzyme:
     """
 
     def __init__(
-        self, name: str, vmax: float, km: float, inhibitors=None, activators=None
+        self,
+        name: str,
+        k_cat: float,
+        k_m: Dict[str, float],
+        inhibitors: Dict[str, float] = None,
+        activators: Dict[str, float] = None,
     ):
         self.name = name
-        self.vmax = vmax
-        self.km = km
-        self.inhibitors = inhibitors if inhibitors else {}
-        self.activators = activators if activators else {}
+        self.k_cat = k_cat
+        self.k_m = k_m
+        self.inhibitors = inhibitors or {}
+        self.activators = activators or {}
 
-    def calculate_rate(
-        self, substrate_concentration: float, metabolite_levels: Dict[str, Metabolite]
-    ) -> float:
-        """
-        Calculate the reaction rate, considering inhibitors and activators.
+    def calculate_rate(self, metabolites: Dict[str, Metabolite]) -> float:
+        rate = self.k_cat
+        for substrate, k_m in self.k_m.items():
+            metabolite = metabolites.get(substrate)
+            if metabolite is None:
+                return 0.0  # If a required substrate is missing, rate is 0
+            conc = metabolite.quantity
+            rate *= conc / (k_m + conc)
 
-        Parameters
-        ----------
-        substrate_concentration : float
-            The concentration of the substrate.
-        metabolite_levels : Dict[str, Metabolite]
-            Current levels of metabolites that may inhibit or activate the enzyme.
+        for substrate, inhibitor_constant in self.inhibitors.items():
+            metabolite = metabolites.get(substrate)
+            if metabolite:
+                conc = metabolite.quantity
+                rate *= 1 / (1 + conc / inhibitor_constant)
 
-        Returns
-        -------
-        float
-            The reaction rate.
-        """
-        # Adjust km based on inhibitors
-        km_effective = self.km
-        for inhibitor, ki in self.inhibitors.items():
-            if inhibitor in metabolite_levels:
-                inhibitor_concentration = metabolite_levels[inhibitor].quantity
-                km_effective *= 1 + inhibitor_concentration / ki
+        for substrate, activator_constant in self.activators.items():
+            metabolite = metabolites.get(substrate)
+            if metabolite:
+                conc = metabolite.quantity
+                rate *= 1 + conc / activator_constant
 
-        # Adjust vmax based on activators
-        vmax_effective = self.vmax
-        for activator, ka in self.activators.items():
-            if activator in metabolite_levels:
-                activator_concentration = metabolite_levels[activator].quantity
-                vmax_effective *= 1 + activator_concentration / ka
-
-        return (vmax_effective * substrate_concentration) / (
-            km_effective + substrate_concentration
-        )
+        return rate

@@ -11,7 +11,7 @@ logging.basicConfig(
 cell = Cell()
 reporter = Reporter()
 sim_controller = SimulationController(cell, reporter)
-glucose_amounts = [1, 2, 5, 10]
+glucose_amounts = [4]
 
 for glucose in glucose_amounts:
     reporter.log_event(f"\nSimulating ATP production with {glucose} glucose units:")

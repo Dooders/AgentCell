@@ -1,13 +1,12 @@
 import logging
 import math
 from typing import Dict
-from enum import Enum
 
 from .constants import *
-from .data import Metabolite
 from .exceptions import *
 from .organelle import Organelle
-from .reactions import KrebsCycle
+from .krebs_cycle import KrebsCycle
+from .metabolite import Metabolite
 
 logger = logging.getLogger(__name__)
 
@@ -57,18 +56,6 @@ class Mitochondrion(Organelle):
 
     def __init__(self) -> None:
         super().__init__()
-        self.add_metabolite("nadh", 0, 1000)
-        self.add_metabolite("fadh2", 0, 1000)
-        self.add_metabolite("atp", 0, 1000)
-        self.add_metabolite("adp", 100, 1000)
-        self.add_metabolite("oxygen", 1000, 1000)
-        self.add_metabolite("ubiquinone", 100, 1000)
-        self.add_metabolite("ubiquinol", 0, 1000)
-        self.add_metabolite("cytochrome_c_oxidized", 100, 1000)
-        self.add_metabolite("cytochrome_c_reduced", 0, 1000)
-        self.add_metabolite("co2", 0, 1000000)
-        self.add_metabolite("calcium", 0, 1000)
-        self.add_metabolite("oxaloacetate", 0, 1000)
 
         self.proton_gradient = 0
         self.atp_per_nadh = 2.5

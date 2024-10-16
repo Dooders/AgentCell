@@ -25,15 +25,6 @@ class KrebsCycle(Organelle):
 
     def __init__(self):
         super().__init__()
-        self.add_metabolite("Acetyl-CoA", 0, 1000)
-        self.add_metabolite("Oxaloacetate", 0, 1000)
-        self.add_metabolite("Citrate", 0, 1000)
-        self.add_metabolite("Isocitrate", 0, 1000)
-        self.add_metabolite("α-Ketoglutarate", 0, 1000)
-        self.add_metabolite("Succinyl-CoA", 0, 1000)
-        self.add_metabolite("Succinate", 0, 1000)
-        self.add_metabolite("Fumarate", 0, 1000)
-        self.add_metabolite("Malate", 0, 1000)
 
         self.cofactors = {
             "NAD": INITIAL_NAD,
