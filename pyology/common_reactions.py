@@ -9,16 +9,18 @@ from pyology.common_enzymes import (
     phosphoglycerate_mutase,
     pyruvate_kinase,
     triose_phosphate_isomerase,
+    phosphoglycerate_mutate,
 )
 from pyology.reaction import Reaction
+from pyology.enzymes import Enzyme
 
 
 class GlycolysisReactions:
     hexokinase = Reaction(
         name="Hexokinase",
-        enzyme=hexokinase,
+        enzyme=Enzyme(name="Hexokinase", k_cat=1.0, k_m={"glucose": 0.1, "ATP": 0.1}),
         substrates={"glucose": 1, "ATP": 1},
-        products={"glucose_6_phosphate": 1, "ADP": 1, "AMP": 1},
+        products={"glucose_6_phosphate": 1, "ADP": 1},
         reversible=False,
     )
 
@@ -64,7 +66,7 @@ class GlycolysisReactions:
 
     phosphoglycerate_mutase = Reaction(
         name="Phosphoglycerate Mutase",
-        enzyme=phosphoglycerate_mutase,
+        enzyme=phosphoglycerate_mutate,
         substrates={"phosphoglycerate": 1},
         products={"dihydroxyacetone_phosphate": 1},
         reversible=False,
