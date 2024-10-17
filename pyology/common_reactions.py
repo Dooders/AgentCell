@@ -6,19 +6,17 @@ from pyology.common_enzymes import (
     phosphofructokinase,
     phosphoglucose_isomerase,
     phosphoglycerate_kinase,
-    phosphoglycerate_mutase,
+    phosphoglycerate_mutate,
     pyruvate_kinase,
     triose_phosphate_isomerase,
-    phosphoglycerate_mutate,
 )
 from pyology.reaction import Reaction
-from pyology.enzymes import Enzyme
 
 
 class GlycolysisReactions:
     hexokinase = Reaction(
         name="Hexokinase",
-        enzyme=Enzyme(name="Hexokinase", k_cat=1.0, k_m={"glucose": 0.1, "ATP": 0.1}),
+        enzyme=hexokinase,
         substrates={"glucose": 1, "ATP": 1},
         products={"glucose_6_phosphate": 1, "ADP": 1},
         reversible=False,
@@ -51,20 +49,28 @@ class GlycolysisReactions:
     triose_phosphate_isomerase = Reaction(
         name="Triose Phosphate Isomerase",
         enzyme=triose_phosphate_isomerase,
-        substrates={"glyceraldehyde_3_phosphate": 1},
-        products={"dihydroxyacetone_phosphate": 1},
+        substrates={"dihydroxyacetone_phosphate": 1},
+        products={"glyceraldehyde_3_phosphate": 1},
+        reversible=False,
+    )
+
+    glyceraldehyde_3_phosphate_dehydrogenase = Reaction(
+        name="Glyceraldehyde 3-Phosphate Dehydrogenase",
+        enzyme=glyceraldehyde_3_phosphate_dehydrogenase,
+        substrates={"glyceraldehyde_3_phosphate": 1, "NAD": 1, "Pi": 1},
+        products={"bisphosphoglycerate_1_3": 1, "NADH": 1},
         reversible=False,
     )
 
     phosphoglycerate_kinase = Reaction(
         name="Phosphoglycerate Kinase",
         enzyme=phosphoglycerate_kinase,
-        substrates={"glyceraldehyde_3_phosphate": 1, "ADP": 1},
-        products={"phosphoglycerate": 1, "ATP": 1},
+        substrates={"bisphosphoglycerate_1_3": 1, "ADP": 1},
+        products={"phosphoglycerate_3": 1, "ATP": 1},
         reversible=False,
     )
 
-    phosphoglycerate_mutase = Reaction(
+    phosphoglycerate_mutate = Reaction(
         name="Phosphoglycerate Mutase",
         enzyme=phosphoglycerate_mutate,
         substrates={"phosphoglycerate": 1},
@@ -88,10 +94,10 @@ class GlycolysisReactions:
         reversible=False,
     )
 
-    glyceraldehyde_3_phosphate_dehydrogenase = Reaction(
-        name="Glyceraldehyde 3-Phosphate Dehydrogenase",
-        enzyme=glyceraldehyde_3_phosphate_dehydrogenase,
-        substrates={"glyceraldehyde_3_phosphate": 1, "NAD": 1},
-        products={"bisphosphoglycerate_1_3": 1, "NADH": 1},
+    phosphoglycerate_mutase = Reaction(
+        name="Phosphoglycerate Mutase",
+        enzyme=phosphoglycerate_mutate,
+        substrates={"phosphoglycerate_3": 1},
+        products={"phosphoglycerate_2": 1},
         reversible=False,
     )

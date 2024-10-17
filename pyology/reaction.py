@@ -100,19 +100,22 @@ class Reaction:
         return actual_rate
 
     def _execute_without_rates(self, organelle, time_step: float) -> float:
-        # Check if all substrates are available
+        # Check if all substrates are available in sufficient quantities
         for metabolite, amount in self.substrates.items():
             if organelle.get_metabolite_quantity(metabolite) < amount:
-                logger.debug(f"Reaction '{self.name}': Insufficient {metabolite}")
+                logger.debug(f"Reaction '{self.name}': Insufficient {metabolite}. "
+                             f"Required: {amount}, Available: {organelle.get_metabolite_quantity(metabolite)}")
                 return 0.0
 
-        # Consume metabolites
+        # Consume substrates
         for metabolite, amount in self.substrates.items():
             organelle.change_metabolite_quantity(metabolite, -amount)
+            logger.debug(f"Reaction '{self.name}': Consumed {amount} {metabolite}")
 
-        # Produce metabolites
+        # Produce products
         for metabolite, amount in self.products.items():
             organelle.change_metabolite_quantity(metabolite, amount)
+            logger.debug(f"Reaction '{self.name}': Produced {amount} {metabolite}")
 
         # Add log entry
         logger.info(

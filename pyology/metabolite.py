@@ -357,6 +357,12 @@ class Metabolites:
                     f"Invalid quantity for {metabolite.name}: {metabolite.quantity}"
                 )
 
+    @property
+    def quantities(self) -> Dict[str, float]:
+        return {
+            metabolite.name: metabolite.quantity for metabolite in self.data.values()
+        }
+
     def get(self, key: str, default: Metabolite = None) -> Metabolite:
         return self.data.get(key.lower(), default)
 
