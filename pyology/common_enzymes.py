@@ -51,7 +51,7 @@ phosphoglycerate_mutase = Enzyme(
 enolase = Enzyme(
     name="Enolase",
     k_cat=100,
-    k_m={"phosphoglycerate": 10},
+    k_m={"phosphoglycerate_2": 10},
 )
 
 pyruvate_kinase = Enzyme(

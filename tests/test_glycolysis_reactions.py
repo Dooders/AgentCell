@@ -185,18 +185,18 @@ def test_phosphoglycerate_mutase(organelle):
 
 def test_enolase(organelle):
     reaction = GlycolysisReactions.enolase
-    initial_dihydroxyacetone_phosphate = organelle.get_metabolite_quantity(
-        "dihydroxyacetone_phosphate"
-    )
-    initial_phosphoenolpyruvate = organelle.get_metabolite_quantity(
-        "phosphoenolpyruvate"
-    )
+    initial_phosphoglycerate_2 = organelle.get_metabolite_quantity("phosphoglycerate_2")
+    initial_phosphoenolpyruvate = organelle.get_metabolite_quantity("phosphoenolpyruvate")
+    initial_h2o = organelle.get_metabolite_quantity("H2O")
+    
     reaction.execute(organelle)
-    assert organelle.get_metabolite_quantity(
-        "dihydroxyacetone_phosphate"
-    ) == pytest.approx(0, abs=1e-6)
+    
+    assert organelle.get_metabolite_quantity("phosphoglycerate_2") == pytest.approx(0, abs=1e-6)
     assert organelle.get_metabolite_quantity("phosphoenolpyruvate") == pytest.approx(
-        initial_phosphoenolpyruvate + initial_dihydroxyacetone_phosphate, abs=1e-6
+        initial_phosphoenolpyruvate + initial_phosphoglycerate_2, abs=1e-6
+    )
+    assert organelle.get_metabolite_quantity("H2O") == pytest.approx(
+        initial_h2o + initial_phosphoglycerate_2, abs=1e-6
     )
 
 
@@ -275,3 +275,4 @@ def test_insufficient_metabolite(organelle):
         f"Glucose-6-phosphate: {organelle.get_metabolite_quantity('glucose_6_phosphate')}"
     )
     print(f"ADP: {organelle.get_metabolite_quantity('ADP')}")
+

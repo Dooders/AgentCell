@@ -78,12 +78,20 @@ class GlycolysisReactions:
         reversible=False,
     )
 
+    phosphoglycerate_mutase = Reaction(
+        name="Phosphoglycerate Mutase",
+        enzyme=phosphoglycerate_mutate,
+        substrates={"phosphoglycerate_3": 1},
+        products={"phosphoglycerate_2": 1},
+        reversible=False,
+    )
+
     enolase = Reaction(
         name="Enolase",
         enzyme=enolase,
-        substrates={"dihydroxyacetone_phosphate": 1},
-        products={"phosphoenolpyruvate": 1},
-        reversible=False,
+        substrates={"phosphoglycerate_2": 1},
+        products={"phosphoenolpyruvate": 1, "H2O": 1},
+        reversible=True
     )
 
     pyruvate_kinase = Reaction(
@@ -91,13 +99,5 @@ class GlycolysisReactions:
         enzyme=pyruvate_kinase,
         substrates={"phosphoenolpyruvate": 1, "ADP": 1},
         products={"pyruvate": 1, "ATP": 1},
-        reversible=False,
-    )
-
-    phosphoglycerate_mutase = Reaction(
-        name="Phosphoglycerate Mutase",
-        enzyme=phosphoglycerate_mutate,
-        substrates={"phosphoglycerate_3": 1},
-        products={"phosphoglycerate_2": 1},
         reversible=False,
     )

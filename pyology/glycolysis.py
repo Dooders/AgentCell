@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from pyology.common_reactions import GlycolysisReactions
 
-from .exceptions import GlycolysisError, MetaboliteError
+from .exceptions import GlycolysisError, MetaboliteError, ReactionError
 from .pathway import Pathway
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,8 @@ class Glycolysis(Pathway):
         GlycolysisError
             If glycolysis fails at any step or if the stoichiometry is incorrect.
         """
-        logger.info(f"Performing glycolysis with {glucose_units} glucose units.")
+        logger.info(f"Starting glycolysis with {glucose_units} glucose units")
+        logger.info(f"Initial metabolite levels: {organelle.metabolites.quantities}")
         glucose_units = math.floor(glucose_units)
         if glucose_units <= 0:
             raise GlycolysisError("The number of glucose units must be positive.")
@@ -56,12 +57,17 @@ class Glycolysis(Pathway):
             logger.info(
                 f"Metabolites before glycolysis: {organelle.metabolites.quantities}"
             )
-            # Check and consume glucose
-            if not organelle.is_metabolite_available("glucose", glucose_units):
-                raise MetaboliteError(
-                    f"Insufficient glucose. Required: {glucose_units}, Available: {organelle.get_metabolite_quantity('glucose')}"
+            # Check glucose availability
+            glucose_available = organelle.get_metabolite_quantity("glucose")
+            atp_available = organelle.get_metabolite_quantity("ATP")
+
+            if glucose_available < glucose_units or atp_available < glucose_units:
+                logger.error(
+                    f"Insufficient metabolites for glycolysis. Glucose: {glucose_available}, ATP: {atp_available}"
                 )
-            organelle.consume_metabolites(glucose=glucose_units)
+                raise MetaboliteError(
+                    f"Insufficient metabolites for glycolysis. Required: {glucose_units} glucose and ATP, Available: {glucose_available} glucose, {atp_available} ATP"
+                )
 
             # Investment phase
             initial_g3p = organelle.get_metabolite_quantity(
@@ -84,6 +90,9 @@ class Glycolysis(Pathway):
                     f"Incorrect G3P production. Expected: {expected_g3p_units}, Actual: {actual_g3p_units}"
                 )
 
+            # Add this after the investment phase and before the pay-off phase
+            cls.enolase_reaction(organelle)
+
             # Yield phase
             cls.yield_phase(organelle, expected_g3p_units)
 
@@ -91,7 +100,7 @@ class Glycolysis(Pathway):
             pyruvate_produced = 2 * glucose_units
             actual_pyruvate = organelle.get_metabolite_quantity("pyruvate")
 
-            # Adjust pyruvate production
+            # Adjust pyruvate production (accounting for any pre-existing pyruvate)
             organelle.change_metabolite_quantity(
                 "pyruvate", pyruvate_produced - actual_pyruvate
             )
@@ -100,8 +109,6 @@ class Glycolysis(Pathway):
                 raise GlycolysisError(
                     f"Incorrect pyruvate production. Expected: {pyruvate_produced}, Actual: {organelle.get_metabolite_quantity('pyruvate')}"
                 )
-
-            organelle.produce_metabolites(pyruvate=pyruvate_produced)
 
             # Adjust net ATP gain
             organelle.produce_metabolites(atp=2 * glucose_units)
@@ -119,17 +126,32 @@ class Glycolysis(Pathway):
         """
         Perform the investment phase of glycolysis (steps 1-5) for multiple glucose units.
         """
-        logger.info(f"Performing investment phase for {glucose_units} glucose units.")
-        initial_g3p = organelle.get_metabolite_quantity("glyceraldehyde_3_phosphate")
-        for _ in range(glucose_units):
-            # Steps 1-4 occur once per glucose molecule
-            cls.reactions.hexokinase.execute(organelle=organelle)
-            cls.reactions.phosphoglucose_isomerase.execute(organelle=organelle)
-            cls.reactions.phosphofructokinase.execute(organelle=organelle)
-            cls.reactions.aldolase.execute(organelle=organelle)
+        logger.info(f"Starting investment phase with {glucose_units} glucose units")
+        logger.info(
+            f"Metabolite levels before investment phase: {organelle.metabolites.quantities}"
+        )
 
-            # Step 5 occurs once to convert DHAP to G3P
-            cls.reactions.triose_phosphate_isomerase.execute(organelle=organelle)
+        initial_g3p = organelle.get_metabolite_quantity("glyceraldehyde_3_phosphate")
+
+        for i in range(glucose_units):
+            logger.info(
+                f"🔄🔄🔄 Processing glucose unit {i+1} of {glucose_units} 🔄🔄🔄"
+            )
+            try:
+                # Steps 1-4 occur once per glucose molecule
+                cls.reactions.hexokinase.execute(organelle=organelle)
+                cls.reactions.phosphoglucose_isomerase.execute(organelle=organelle)
+                cls.reactions.phosphofructokinase.execute(organelle=organelle)
+                cls.reactions.aldolase.execute(organelle=organelle)
+
+                # Step 5 occurs once to convert DHAP to G3P
+                cls.reactions.triose_phosphate_isomerase.execute(organelle=organelle)
+
+            except ReactionError as e:
+                logger.error(f"Investment phase failed at glucose unit {i+1}: {str(e)}")
+                raise GlycolysisError(
+                    f"Investment phase failed at glucose unit {i+1}: {str(e)}"
+                )
 
         final_g3p = organelle.get_metabolite_quantity("glyceraldehyde_3_phosphate")
         produced_g3p = final_g3p - initial_g3p
@@ -146,14 +168,18 @@ class Glycolysis(Pathway):
         initial_pyruvate = organelle.get_metabolite_quantity("pyruvate")
         logger.debug(f"Initial pyruvate: {initial_pyruvate}")
 
-        for _ in range(g3p_units):
-            cls.reactions.glyceraldehyde_3_phosphate_dehydrogenase.execute(
-                organelle=organelle
-            )
-            cls.reactions.phosphoglycerate_kinase.execute(organelle=organelle)
-            cls.reactions.phosphoglycerate_mutase.execute(organelle=organelle)
-            cls.reactions.enolase.execute(organelle=organelle)
-            cls.reactions.pyruvate_kinase.execute(organelle=organelle)
+        for i in range(g3p_units):
+            logger.info(f"🍀🍀🍀 Processing G3P unit {i+1} of {g3p_units} 🍀🍀🍀")
+            try:
+                cls.reactions.glyceraldehyde_3_phosphate_dehydrogenase.execute(
+                    organelle=organelle
+                )
+                cls.reactions.phosphoglycerate_kinase.execute(organelle=organelle)
+                cls.reactions.phosphoglycerate_mutase.execute(organelle=organelle)
+                cls.reactions.enolase.execute(organelle=organelle)
+                cls.reactions.pyruvate_kinase.execute(organelle=organelle)
+            except ReactionError as e:
+                raise GlycolysisError(f"Yield phase failed at G3P unit {i+1}: {str(e)}")
 
             current_pyruvate = organelle.get_metabolite_quantity("pyruvate")
             logger.debug(f"Current pyruvate: {current_pyruvate}")
@@ -162,3 +188,16 @@ class Glycolysis(Pathway):
         logger.info(
             f"Pyruvate produced in yield phase: {final_pyruvate - initial_pyruvate}"
         )
+
+    @classmethod
+    def enolase_reaction(cls, organelle: "Organelle"):
+        enolase = GlycolysisReactions.enolase
+        phosphoglycerate_2 = organelle.get_metabolite_quantity("phosphoglycerate_2")
+        
+        while phosphoglycerate_2 > 0:
+            reaction_result = enolase.execute(organelle)
+            if reaction_result == 0:
+                break
+            phosphoglycerate_2 = organelle.get_metabolite_quantity("phosphoglycerate_2")
+
+        logger.info(f"Enolase reaction completed. Remaining 2-phosphoglycerate: {phosphoglycerate_2}")

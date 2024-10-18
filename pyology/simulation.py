@@ -1,5 +1,7 @@
 import logging
 
+from pyology.glycolysis import Glycolysis
+
 from .constants import SIMULATION_DURATION
 from .exceptions import (
     GlycolysisError,
@@ -53,10 +55,10 @@ class SimulationController:
         self.max_cytoplasmic_nadh = 100
         self.max_simulation_time = 20  # Increased max simulation time
 
-    def run_simulation(self, glucose_amount):
-        self.cell.metabolites["glucose"].quantity = round(glucose_amount, 2)
+    def run_simulation(self, glucose):
+        self.cell.metabolites["glucose"].quantity = round(glucose, 2)
         self.reporter.log_event(
-            f"Starting simulation with {glucose_amount:.2f} glucose units"
+            f"Starting simulation with {glucose:.2f} glucose units"
         )
         try:
             glucose_processed = 0
@@ -64,7 +66,7 @@ class SimulationController:
             next_log_time = 10  # Initialize next_log_time here
 
             while (
-                glucose_processed < glucose_amount
+                glucose_processed < glucose
                 and self.simulation_time < self.max_simulation_time
             ):
                 try:
@@ -76,7 +78,7 @@ class SimulationController:
                         )
                         break
 
-                    pyruvate = self.cell.cytoplasm.glycolysis(glucose_available)
+                    pyruvate_produced = Glycolysis.perform(self.cell.cytoplasm, glucose_available)
                     glucose_processed += glucose_available
 
                     # Decrement glucose quantity
@@ -109,7 +111,7 @@ class SimulationController:
 
                     # Perform cellular respiration
                     mitochondrial_atp = self.cell.mitochondrion.cellular_respiration(
-                        pyruvate
+                        pyruvate_produced
                     )
 
                     # Calculate ATP produced in this iteration
@@ -271,23 +273,3 @@ class SimulationController:
         # self.time = 0
         # self.total_atp_produced = 0
         # etc.
-
-
-class Simulation:
-    def setup_glycolysis(self):
-        hexokinase = Enzyme(
-            name="Hexokinase",
-            k_cat=200.0,
-            k_m={"glucose": 0.1, "ATP": 0.3}
-        )
-        
-        glucose_phosphorylation = Reaction(
-            name="Glucose Phosphorylation",
-            enzyme=hexokinase,
-            consume={"glucose": 1.0, "ATP": 1.0},
-            produce={"glucose-6-phosphate": 1.0, "ADP": 1.0}
-        )
-        
-        # ... other reactions and setup code ...
-
-    # ... rest of the Simulation class ...

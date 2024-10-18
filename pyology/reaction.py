@@ -1,5 +1,6 @@
 import logging
 from typing import TYPE_CHECKING, Dict
+from .exceptions import ReactionError  # Add this import
 
 if TYPE_CHECKING:
     from .enzymes import Enzyme
@@ -32,13 +33,27 @@ class Reaction:
     def execute(
         self, organelle, time_step: float = 1.0, use_rates: bool = False
     ) -> float:
+        logger.info(f"Executing {self.name} reaction")
+        logger.info(f"Substrates: {self.substrates}")
+        logger.info(f"Products: {self.products}")
+        for substrate, amount in self.substrates.items():
+            available = organelle.get_metabolite_quantity(substrate)
+            logger.info(f"{substrate} - Required: {amount}, Available: {available}")
+
         if time_step < 0:
             raise ValueError("Time step cannot be negative")
 
         if use_rates:
-            return self._execute_with_rates(organelle, time_step)
+            result = self._execute_with_rates(organelle, time_step)
         else:
-            return self._execute_without_rates(organelle, time_step)
+            result = self._execute_without_rates(organelle, time_step)
+
+        if result == 0.0:
+            logger.error(f"Reaction '{self.name}' failed to execute")
+            raise ReactionError(f"Reaction '{self.name}' failed to execute")
+
+        logger.info(f"Reaction '{self.name}' executed successfully")
+        return result
 
     def _execute_with_rates(self, organelle, time_step: float) -> float:
         # Calculate reaction rate using the updated Enzyme.calculate_rate method
@@ -102,9 +117,10 @@ class Reaction:
     def _execute_without_rates(self, organelle, time_step: float) -> float:
         # Check if all substrates are available in sufficient quantities
         for metabolite, amount in self.substrates.items():
-            if organelle.get_metabolite_quantity(metabolite) < amount:
-                logger.debug(f"Reaction '{self.name}': Insufficient {metabolite}. "
-                             f"Required: {amount}, Available: {organelle.get_metabolite_quantity(metabolite)}")
+            available = organelle.get_metabolite_quantity(metabolite)
+            if available < amount:
+                logger.error(f"Reaction '{self.name}': Insufficient {metabolite}. "
+                             f"Required: {amount}, Available: {available}")
                 return 0.0
 
         # Consume substrates
