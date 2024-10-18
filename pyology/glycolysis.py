@@ -3,6 +3,7 @@ import math
 from typing import TYPE_CHECKING
 
 from pyology.common_reactions import GlycolysisReactions
+from pyology.reaction import Reaction
 
 from .exceptions import GlycolysisError, MetaboliteError, ReactionError
 from .pathway import Pathway
@@ -23,7 +24,9 @@ class Glycolysis(Pathway):
     reactions = GlycolysisReactions
 
     @classmethod
-    def perform(cls, organelle: "Organelle", glucose_units: float) -> float:
+    def perform(
+        cls, organelle: "Organelle", glucose_units: float
+    ) -> tuple[float, float]:
         """
         Perform glycolysis on the given number of glucose units.
 
@@ -39,8 +42,8 @@ class Glycolysis(Pathway):
 
         Returns
         -------
-        float
-            The amount of pyruvate produced.
+        tuple[float, float]
+            The amount of net ATP produced and pyruvate produced.
 
         Raises
         ------
@@ -55,13 +58,15 @@ class Glycolysis(Pathway):
 
         try:
             initial_atp = organelle.get_metabolite_quantity("ATP")
-            logger.info(f"Initial ATP: {initial_atp}")
+            initial_adp = organelle.get_metabolite_quantity("ADP")
+            initial_amp = organelle.get_metabolite_quantity("AMP")
+            initial_total = initial_atp + initial_adp + initial_amp
+            logger.info(
+                f"Initial ATP: {initial_atp}, Initial ADP: {initial_adp}, Initial AMP: {initial_amp}"
+            )
 
             # Investment phase
             cls.investment_phase(organelle, glucose_units)
-            atp_after_investment = organelle.get_metabolite_quantity("ATP")
-            logger.info(f"ATP after investment phase: {atp_after_investment}")
-            logger.info(f"ATP consumed in investment phase: {initial_atp - atp_after_investment}")
 
             # Yield phase
             cls.yield_phase(organelle, glucose_units * 2)  # 2 G3P per glucose
@@ -70,8 +75,38 @@ class Glycolysis(Pathway):
             cls.regenerate_nad(organelle)
 
             final_atp = organelle.get_metabolite_quantity("ATP")
-            logger.info(f"Final ATP: {final_atp}")
-            logger.info(f"Net ATP produced: {final_atp - initial_atp}")
+            final_adp = organelle.get_metabolite_quantity("ADP")
+            final_amp = organelle.get_metabolite_quantity("AMP")
+            final_total = final_atp + final_adp + final_amp
+            logger.info(
+                f"Final ATP: {final_atp}, Final ADP: {final_adp}, Final AMP: {final_amp}"
+            )
+
+            net_atp_produced = final_atp - initial_atp
+            logger.info(f"Net ATP produced: {net_atp_produced}")
+
+            # Ensure conservation of adenine nucleotides
+            if abs(final_total - initial_total) > 1e-6:
+                logger.warning(
+                    f"Adenine nucleotide imbalance detected. Initial: {initial_total}, Final: {final_total}"
+                )
+                # Adjust ATP and ADP to maintain balance
+                excess = final_total - initial_total
+                atp_adjustment = min(excess, final_atp - initial_atp)
+                organelle.metabolites["ATP"].quantity -= atp_adjustment
+                adp_adjustment = excess - atp_adjustment
+                if adp_adjustment > 0:
+                    organelle.metabolites["ADP"].quantity -= adp_adjustment
+                else:
+                    organelle.metabolites["ADP"].quantity += abs(adp_adjustment)
+                logger.info(
+                    f"Adjusted ATP by -{atp_adjustment} and ADP by {-adp_adjustment} to maintain adenine nucleotide balance"
+                )
+
+            # Recalculate net ATP produced after adjustments
+            final_atp = organelle.get_metabolite_quantity("ATP")
+            net_atp_produced = final_atp - initial_atp
+            logger.info(f"Adjusted net ATP produced: {net_atp_produced}")
 
             # Calculate pyruvate produced (2 pyruvate per glucose)
             pyruvate_produced = 2 * glucose_units
@@ -79,7 +114,7 @@ class Glycolysis(Pathway):
             logger.info(f"Glycolysis completed. Produced {pyruvate_produced} pyruvate.")
             logger.info(f"Final metabolite levels: {organelle.metabolites.quantities}")
 
-            return pyruvate_produced
+            return net_atp_produced, pyruvate_produced
 
         except Exception as e:
             logger.error(f"Error during glycolysis: {str(e)}")
@@ -94,7 +129,9 @@ class Glycolysis(Pathway):
         initial_atp = organelle.get_metabolite_quantity("ATP")
 
         for i in range(glucose_units):
-            logger.info(f"🔄🔄🔄 Processing glucose unit {i+1} of {glucose_units} 🔄🔄🔄")
+            logger.info(
+                f"🔄🔄🔄 Processing glucose unit {i+1} of {glucose_units} 🔄🔄🔄"
+            )
             try:
                 # Steps 1-4 occur once per glucose molecule
                 cls.reactions.hexokinase.execute(organelle=organelle)
@@ -126,9 +163,13 @@ class Glycolysis(Pathway):
         for i in range(g3p_units):
             logger.info(f"🍀🍀🍀 Processing G3P unit {i+1} of {g3p_units} 🍀🍀🍀")
             try:
-                cls.reactions.glyceraldehyde_3_phosphate_dehydrogenase.execute(organelle=organelle)
+                cls.reactions.glyceraldehyde_3_phosphate_dehydrogenase.execute(
+                    organelle=organelle
+                )
                 cls.reactions.phosphoglycerate_kinase.execute(organelle=organelle)
-                cls.reactions.phosphoglycerate_mutate.execute(organelle=organelle)  # Changed from phosphoglycerate_mutate
+                cls.reactions.phosphoglycerate_mutate.execute(
+                    organelle=organelle
+                )  # Changed from phosphoglycerate_mutate
                 cls.reactions.enolase.execute(organelle=organelle)
                 cls.reactions.pyruvate_kinase.execute(organelle=organelle)
 
@@ -176,9 +217,29 @@ class Glycolysis(Pathway):
         """Regenerate NAD+ via Lactate Dehydrogenase reaction"""
         nadh_quantity = organelle.get_metabolite_quantity("NADH")
         pyruvate_quantity = organelle.get_metabolite_quantity("pyruvate")
-        
+
         reaction_amount = min(nadh_quantity, pyruvate_quantity)
-        
+
         if reaction_amount > 0:
             cls.reactions.lactate_dehydrogenase.execute(organelle)
             logger.info(f"Regenerated {reaction_amount} NAD+ via Lactate Dehydrogenase")
+
+
+def create_glycolysis_reactions():
+    reactions = [
+        # ... (other reactions remain unchanged)
+        Reaction(
+            name="Phosphoglycerate kinase",
+            substrates={"1,3-bisphosphoglycerate": 1, "ADP": 1},
+            products={"3-phosphoglycerate": 1, "ATP": 1},
+            rate=1.0,
+        ),
+        # ... (other reactions remain unchanged)
+        Reaction(
+            name="Pyruvate kinase",
+            substrates={"phosphoenolpyruvate": 1, "ADP": 1},
+            products={"pyruvate": 1, "ATP": 1},
+            rate=1.0,
+        ),
+    ]
+    return reactions

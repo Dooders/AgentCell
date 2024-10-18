@@ -90,3 +90,15 @@ class GlycolysisReactions:
         products={"lactate": 1, "NAD+": 1},
         enzyme="Lactate dehydrogenase",
     )
+
+
+def create_oxidative_phosphorylation_reactions():
+    return [
+        Reaction(
+            name="ATP Synthase",
+            substrates={"ADP": 1, "Pi": 1},
+            products={"ATP": 1},
+            rate=1.0,
+            compartment="mitochondrion",
+        ),
+    ]
