@@ -21,6 +21,7 @@ class Cell(Organelle):
         self.time_step = TIME_STEP
         self.base_glycolysis_rate = 1.0  # This is now in the Cell class
         self.glycolysis_rate = self.base_glycolysis_rate  # Initialize glycolysis_rate
+        self.initial_adenine_nucleotides = None
 
     def produce_atp(self, glucose, simulation_duration=SIMULATION_DURATION):
         """Simulates ATP production in the entire cell over a specified duration."""
@@ -200,3 +201,31 @@ class Cell(Organelle):
     def process(self, time_step):
         # Implement the simulation logic here
         pass
+
+    def check_adenine_nucleotide_balance(self):
+        """Check and log the balance of adenine nucleotides."""
+        atp = self.metabolites["ATP"].quantity
+        adp = self.metabolites["ADP"].quantity
+        amp = self.metabolites["AMP"].quantity
+        total = atp + adp + amp
+
+        logger.info(f"Adenine Nucleotide Balance: ATP: {atp}, ADP: {adp}, AMP: {amp}")
+        logger.info(f"Total Adenine Nucleotides: {total}")
+
+        if (
+            abs(total - self.initial_adenine_nucleotides) > 0.001
+        ):  # Allow for small floating-point errors
+            logger.warning(
+                f"Adenine nucleotide imbalance detected. Initial: {self.initial_adenine_nucleotides}, Current: {total}"
+            )
+
+    def initialize_simulation(self):
+        """Initialize the simulation and record initial adenine nucleotide levels."""
+        self.initial_adenine_nucleotides = (
+            self.metabolites["ATP"].quantity
+            + self.metabolites["ADP"].quantity
+            + self.metabolites["AMP"].quantity
+        )
+        logger.info(
+            f"Initial total adenine nucleotides: {self.initial_adenine_nucleotides}"
+        )

@@ -3,13 +3,13 @@ import logging
 from pyology.glycolysis import Glycolysis
 
 from .constants import SIMULATION_DURATION
+from .enzymes import Enzyme
 from .exceptions import (
     GlycolysisError,
     InsufficientMetaboliteError,
     QuantityError,
     UnknownMetaboliteError,
 )
-from .enzymes import Enzyme
 from .reaction import Reaction
 
 
@@ -67,6 +67,12 @@ class SimulationController:
         self.max_simulation_time = 20  # Increased max simulation time
 
     def run_simulation(self, glucose):
+        self.cell.initialize_simulation()
+        self.initial_adenine_nucleotides = (
+            self.cell.metabolites["ATP"].quantity
+            + self.cell.metabolites["ADP"].quantity
+            + self.cell.metabolites["AMP"].quantity
+        )
         self.cell.metabolites["glucose"].quantity = round(glucose, 2)
         self.reporter.log_event(f"Starting simulation with {glucose:.2f} glucose units")
         try:
@@ -161,6 +167,11 @@ class SimulationController:
                     self.reporter.log_event(
                         f"Simulation time: {self.simulation_time:.3f}"
                     )
+
+                    self._check_adenine_nucleotide_balance()
+
+                    # Add this at the end of each simulation step
+                    self.cell.check_adenine_nucleotide_balance()
 
                 except UnknownMetaboliteError as e:
                     self.reporter.log_error(f"Unknown metabolite error: {str(e)}")
@@ -287,3 +298,16 @@ class SimulationController:
         # self.time = 0
         # self.total_atp_produced = 0
         # etc.
+
+    def _check_adenine_nucleotide_balance(self):
+        total_adenine_nucleotides = (
+            self.cell.metabolites["ATP"].quantity
+            + self.cell.metabolites["ADP"].quantity
+            + self.cell.metabolites["AMP"].quantity
+        )
+        if abs(total_adenine_nucleotides - self.initial_adenine_nucleotides) > 1e-6:
+            self.reporter.log_warning(
+                f"Adenine nucleotide imbalance detected. "
+                f"Expected: {self.initial_adenine_nucleotides}, "
+                f"Actual: {total_adenine_nucleotides}"
+            )
