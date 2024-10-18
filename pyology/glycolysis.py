@@ -54,29 +54,14 @@ class Glycolysis(Pathway):
             raise GlycolysisError("The number of glucose units must be positive.")
 
         try:
-            logger.info(
-                f"Metabolites before glycolysis: {organelle.metabolites.quantities}"
-            )
-            # Check glucose availability
-            glucose_available = organelle.get_metabolite_quantity("glucose")
             initial_atp = organelle.get_metabolite_quantity("ATP")
-
-            if glucose_available < glucose_units or initial_atp < glucose_units:
-                logger.error(
-                    f"Insufficient metabolites for glycolysis. Glucose: {glucose_available}, ATP: {initial_atp}"
-                )
-                raise MetaboliteError(
-                    f"Insufficient metabolites for glycolysis. Required: {glucose_units} glucose and ATP, Available: {glucose_available} glucose, {initial_atp} ATP"
-                )
+            logger.info(f"Initial ATP: {initial_atp}")
 
             # Investment phase
             cls.investment_phase(organelle, glucose_units)
-
             atp_after_investment = organelle.get_metabolite_quantity("ATP")
             logger.info(f"ATP after investment phase: {atp_after_investment}")
-            logger.info(
-                f"ATP consumed in investment phase: {initial_atp - atp_after_investment}"
-            )
+            logger.info(f"ATP consumed in investment phase: {initial_atp - atp_after_investment}")
 
             # Yield phase
             cls.yield_phase(organelle, glucose_units * 2)  # 2 G3P per glucose
@@ -89,11 +74,12 @@ class Glycolysis(Pathway):
             pyruvate_produced = 2 * glucose_units
 
             logger.info(f"Glycolysis completed. Produced {pyruvate_produced} pyruvate.")
-            logger.info(
-                f"Metabolites after glycolysis: {organelle.metabolites.quantities}"
-            )
+            logger.info(f"Final metabolite levels: {organelle.metabolites.quantities}")
+
             return pyruvate_produced
-        except MetaboliteError as e:
+
+        except Exception as e:
+            logger.error(f"Error during glycolysis: {str(e)}")
             raise GlycolysisError(f"Glycolysis failed: {str(e)}")
 
     @classmethod
@@ -104,16 +90,8 @@ class Glycolysis(Pathway):
         logger.info(f"Starting investment phase with {glucose_units} glucose units")
         initial_atp = organelle.get_metabolite_quantity("ATP")
 
-        logger.info(
-            f"Metabolite levels before investment phase: {organelle.metabolites.quantities}"
-        )
-
-        initial_g3p = organelle.get_metabolite_quantity("glyceraldehyde_3_phosphate")
-
         for i in range(glucose_units):
-            logger.info(
-                f"🔄🔄🔄 Processing glucose unit {i+1} of {glucose_units} 🔄🔄🔄"
-            )
+            logger.info(f"🔄🔄🔄 Processing glucose unit {i+1} of {glucose_units} 🔄🔄🔄")
             try:
                 # Steps 1-4 occur once per glucose molecule
                 cls.reactions.hexokinase.execute(organelle=organelle)
@@ -124,17 +102,13 @@ class Glycolysis(Pathway):
                 # Step 5 occurs once to convert DHAP to G3P
                 cls.reactions.triose_phosphate_isomerase.execute(organelle=organelle)
 
+                current_atp = organelle.get_metabolite_quantity("ATP")
+                logger.info(f"ATP after processing glucose unit {i+1}: {current_atp}")
+
             except ReactionError as e:
                 logger.error(f"Investment phase failed at glucose unit {i+1}: {str(e)}")
-                raise GlycolysisError(
-                    f"Investment phase failed at glucose unit {i+1}: {str(e)}"
-                )
+                raise GlycolysisError(f"Investment phase failed: {str(e)}")
 
-        final_g3p = organelle.get_metabolite_quantity("glyceraldehyde_3_phosphate")
-        produced_g3p = final_g3p - initial_g3p
-        logger.info(f"G3P before investment phase: {initial_g3p}")
-        logger.info(f"G3P after investment phase: {final_g3p}")
-        logger.info(f"G3P produced in investment phase: {produced_g3p}")
         final_atp = organelle.get_metabolite_quantity("ATP")
         logger.info(f"ATP consumed in investment phase: {initial_atp - final_atp}")
 
@@ -146,30 +120,21 @@ class Glycolysis(Pathway):
         logger.info(f"Starting yield phase with {g3p_units} G3P units")
         initial_atp = organelle.get_metabolite_quantity("ATP")
 
-        logger.info(f"Performing yield phase for {g3p_units} G3P units.")
-        initial_pyruvate = organelle.get_metabolite_quantity("pyruvate")
-        logger.debug(f"Initial pyruvate: {initial_pyruvate}")
-
         for i in range(g3p_units):
             logger.info(f"🍀🍀🍀 Processing G3P unit {i+1} of {g3p_units} 🍀🍀🍀")
             try:
-                cls.reactions.glyceraldehyde_3_phosphate_dehydrogenase.execute(
-                    organelle=organelle
-                )
+                cls.reactions.glyceraldehyde_3_phosphate_dehydrogenase.execute(organelle=organelle)
                 cls.reactions.phosphoglycerate_kinase.execute(organelle=organelle)
-                cls.reactions.phosphoglycerate_mutase.execute(organelle=organelle)
+                cls.reactions.phosphoglycerate_mutate.execute(organelle=organelle)  # Changed from phosphoglycerate_mutate
                 cls.reactions.enolase.execute(organelle=organelle)
                 cls.reactions.pyruvate_kinase.execute(organelle=organelle)
+
+                current_atp = organelle.get_metabolite_quantity("ATP")
+                logger.info(f"ATP after processing G3P unit {i+1}: {current_atp}")
+
             except ReactionError as e:
                 raise GlycolysisError(f"Yield phase failed at G3P unit {i+1}: {str(e)}")
 
-            current_pyruvate = organelle.get_metabolite_quantity("pyruvate")
-            logger.debug(f"Current pyruvate: {current_pyruvate}")
-
-        final_pyruvate = organelle.get_metabolite_quantity("pyruvate")
-        logger.info(
-            f"Pyruvate produced in yield phase: {final_pyruvate - initial_pyruvate}"
-        )
         final_atp = organelle.get_metabolite_quantity("ATP")
         logger.info(f"ATP produced in yield phase: {final_atp - initial_atp}")
 

@@ -96,6 +96,7 @@ class SimulationController:
                 self.cell.cytoplasm.metabolites["atp"].quantity
                 + self.cell.mitochondrion.metabolites["atp"].quantity
             )
+            self.reporter.log_event(f"Initial ATP: {initial_atp}")
 
             next_log_time = 0  # Initialize next_log_time here
             while (
@@ -130,6 +131,9 @@ class SimulationController:
                     )
                     atp_produced = round(atp_after - atp_before, 2)
                     total_atp_produced = round(total_atp_produced + atp_produced, 2)
+
+                    self.reporter.log_event(f"ATP produced in this iteration: {atp_produced}")
+                    self.reporter.log_event(f"Total ATP produced so far: {total_atp_produced}")
 
                     self.reporter.log_atp_production("Glycolysis", atp_produced)
 
@@ -351,3 +355,4 @@ class SimulationController:
                 f"Expected: {self.initial_adenine_nucleotides}, "
                 f"Actual: {total_adenine_nucleotides}"
             )
+

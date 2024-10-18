@@ -63,7 +63,7 @@ class GlycolysisReactions:
         enzyme="Phosphoglycerate kinase",
     )
 
-    phosphoglycerate_mutase = Reaction(
+    phosphoglycerate_mutate = Reaction(
         name="Phosphoglycerate Mutase",
         substrates={"phosphoglycerate_3": 1},
         products={"phosphoglycerate_2": 1},
