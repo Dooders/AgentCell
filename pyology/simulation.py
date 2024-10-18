@@ -317,6 +317,8 @@ class SimulationController:
         self.reporter.log_event(f"Mitochondrion ATP: {state['mitochondrion_atp']:.2f}")
         self.reporter.log_event(f"Proton Gradient: {state['proton_gradient']:.2f}")
         self.reporter.log_event(f"Oxygen Remaining: {state['oxygen_remaining']:.2f}")
+        self.reporter.log_event(f"NAD+: {state['nad']:.2f}")
+        self.reporter.log_event(f"NADH: {state['nadh']:.2f}")
 
     def get_current_state(self):
         state = {
@@ -332,6 +334,8 @@ class SimulationController:
             - self.initial_atp,
             "proton_gradient": self.cell.mitochondrion.proton_gradient,
             "oxygen_remaining": self.cell.metabolites["oxygen"].quantity,
+            "nad": self.cell.metabolites["NAD+"].quantity,
+            "nadh": self.cell.metabolites["NADH"].quantity,
         }
         return state
 
