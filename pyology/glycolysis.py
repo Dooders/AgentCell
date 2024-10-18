@@ -186,3 +186,15 @@ class Glycolysis(Pathway):
         final_atp = organelle.get_metabolite_quantity("ATP")
         logger.info(f"ATP change in enolase reaction: {final_atp - initial_atp}")
         logger.info(f"Enolase reaction completed. Remaining 2-phosphoglycerate: {phosphoglycerate_2}")
+
+    @classmethod
+    def phosphoglycerate_kinase(cls, organelle):
+        """1,3-Bisphosphoglycerate to 3-Phosphoglycerate"""
+        reaction = cls.reactions.phosphoglycerate_kinase
+        reaction.execute(organelle)
+
+    @classmethod
+    def pyruvate_kinase(cls, organelle):
+        """Phosphoenolpyruvate to Pyruvate"""
+        reaction = cls.reactions.pyruvate_kinase
+        reaction.execute(organelle)

@@ -67,6 +67,7 @@ class SimulationController:
         self.max_mitochondrial_nadh = 50
         self.max_cytoplasmic_nadh = 100
         self.max_simulation_time = 20  # Increased max simulation time
+        self.initial_adenine_nucleotides = 0
 
     def run_simulation(self, glucose):
         self.initial_adenine_nucleotides = (

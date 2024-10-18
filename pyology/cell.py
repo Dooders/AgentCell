@@ -203,21 +203,19 @@ class Cell(Organelle):
         pass
 
     def check_adenine_nucleotide_balance(self):
-        """Check and log the balance of adenine nucleotides."""
-        atp = self.metabolites["ATP"].quantity
-        adp = self.metabolites["ADP"].quantity
-        amp = self.metabolites["AMP"].quantity
-        total = atp + adp + amp
-
-        logger.info(f"Adenine Nucleotide Balance: ATP: {atp}, ADP: {adp}, AMP: {amp}")
-        logger.info(f"Total Adenine Nucleotides: {total}")
-
-        if (
-            abs(total - self.initial_adenine_nucleotides) > 0.001
-        ):  # Allow for small floating-point errors
+        """Check if the total adenine nucleotides have changed."""
+        current_total = (
+            self.metabolites["ATP"].quantity
+            + self.metabolites["ADP"].quantity
+            + self.metabolites["AMP"].quantity
+        )
+        if abs(current_total - self.initial_adenine_nucleotides) > 1e-6:
             logger.warning(
-                f"Adenine nucleotide imbalance detected. Initial: {self.initial_adenine_nucleotides}, Current: {total}"
+                f"Adenine nucleotide imbalance detected. "
+                f"Initial: {self.initial_adenine_nucleotides}, "
+                f"Current: {current_total}"
             )
+        return current_total
 
     def initialize_simulation(self):
         """Initialize the simulation and record initial adenine nucleotide levels."""
