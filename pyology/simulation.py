@@ -1,5 +1,6 @@
 import logging
 
+from pyology.cell import Cell
 from pyology.glycolysis import Glycolysis
 
 from .constants import SIMULATION_DURATION
@@ -9,29 +10,59 @@ from .exceptions import (
     QuantityError,
     UnknownMetaboliteError,
 )
-from .enzymes import Enzyme
-from .reaction import Reaction
 
 
 class Reporter:
+    """
+    A class to report events and log messages during the simulation.
+
+    Methods
+    -------
+    log_event(message: str) -> None:
+        Log an event message.
+    log_warning(message: str) -> None:
+        Log a warning message.
+    log_error(message: str) -> None:
+        Log an error message.
+    log_atp_production(step: str, atp_produced: float) -> None:
+        Log the ATP production for a specific step.
+    report_simulation_results(results: dict) -> None:
+        Report the simulation results.
+    """
+
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.atp_production_log = []
 
-    def log_event(self, message):
+    def log_event(self, message: str) -> None:
+        """
+        Log an event message.
+        """
         self.logger.info(message)
 
-    def log_warning(self, message):
+    def log_warning(self, message: str) -> None:
+        """
+        Log a warning message.
+        """
         self.logger.warning(message)
 
-    def log_error(self, message):
+    def log_error(self, message: str) -> None:
+        """
+        Log an error message.
+        """
         self.logger.error(message)
 
-    def log_atp_production(self, step, atp_produced):
+    def log_atp_production(self, step: str, atp_produced: float) -> None:
+        """
+        Log the ATP production for a specific step.
+        """
         self.atp_production_log.append((step, atp_produced))
         self.log_event(f"ATP produced in {step}: {atp_produced}")
 
-    def report_simulation_results(self, results):
+    def report_simulation_results(self, results: dict) -> None:
+        """
+        Report the simulation results.
+        """
         self.log_event(
             f"Simulation completed in {results['simulation_time']:.2f} seconds"
         )
@@ -59,7 +90,23 @@ class Reporter:
 
 
 class SimulationController:
-    def __init__(self, cell, reporter):
+    """
+    A class to control the simulation process.
+
+    Parameters
+    ----------
+    cell: Cell
+        The cell to be simulated.
+    reporter: Reporter
+        The reporter to log events and results.
+
+    Methods
+    -------
+    run_simulation(glucose: float) -> dict:
+        Run the simulation with the specified glucose amount.
+    """
+
+    def __init__(self, cell: Cell, reporter: Reporter):
         self.cell = cell
         self.reporter = reporter
         self.simulation_duration = SIMULATION_DURATION
@@ -78,8 +125,22 @@ class SimulationController:
             self.cell.cytoplasm.metabolites["ATP"].quantity
             + self.cell.mitochondrion.metabolites["ATP"].quantity
         )
+        self.initial_glucose = self.cell.cytoplasm.metabolites["glucose"].quantity
 
-    def run_simulation(self, glucose):
+    def run_simulation(self, glucose: float) -> dict:
+        """
+        Run the simulation with the specified glucose amount.
+
+        Parameters
+        ----------
+        glucose: float
+            The amount of glucose to be processed during the simulation.
+
+        Returns
+        -------
+        dict:
+            The results of the simulation.
+        """
         self.initial_adenine_nucleotides = (
             self.cell.metabolites["ATP"].quantity
             + self.cell.metabolites["ADP"].quantity
@@ -92,10 +153,7 @@ class SimulationController:
             total_atp_produced = 0
             initial_glucose = self.cell.metabolites["glucose"].quantity
             initial_pyruvate = self.cell.metabolites["pyruvate"].quantity
-            initial_atp = (
-                self.cell.cytoplasm.metabolites["atp"].quantity
-                + self.cell.mitochondrion.metabolites["atp"].quantity
-            )
+            initial_atp = self.cell.cytoplasm.metabolites["ATP"].quantity
             self.reporter.log_event(f"Initial ATP: {initial_atp}")
 
             next_log_time = 0  # Initialize next_log_time here
@@ -132,8 +190,12 @@ class SimulationController:
                     atp_produced = round(atp_after - atp_before, 2)
                     total_atp_produced = round(total_atp_produced + atp_produced, 2)
 
-                    self.reporter.log_event(f"ATP produced in this iteration: {atp_produced}")
-                    self.reporter.log_event(f"Total ATP produced so far: {total_atp_produced}")
+                    self.reporter.log_event(
+                        f"ATP produced in this iteration: {atp_produced}"
+                    )
+                    self.reporter.log_event(
+                        f"Total ATP produced so far: {total_atp_produced}"
+                    )
 
                     self.reporter.log_atp_production("Glycolysis", atp_produced)
 
@@ -245,7 +307,10 @@ class SimulationController:
             self.reporter.log_error(f"Simulation error: {str(e)}")
             raise
 
-    def _handle_adp_availability(self):
+    def _handle_adp_availability(self) -> None:
+        """
+        Handle the availability of ADP in the mitochondrion.
+        """
         if self.cell.mitochondrion.metabolites["adp"].quantity < 10:
             self.reporter.log_warning(
                 "Low ADP levels in mitochondrion. Transferring ADP from cytoplasm."
@@ -254,13 +319,19 @@ class SimulationController:
             self.cell.metabolites["adp"].quantity += adp_transfer
             self.cell.metabolites["adp"].quantity -= adp_transfer
 
-    def _apply_feedback_activation(self):
+    def _apply_feedback_activation(self) -> None:
+        """
+        Apply feedback activation based on ADP levels.
+        """
         adp_activation_factor = 1 + self.cell.metabolites["adp"].quantity / 500
         self.cell.cytoplasm.glycolysis_rate = (
             self.base_glycolysis_rate * adp_activation_factor
         )
 
-    def _handle_nadh_shuttle(self):
+    def _handle_nadh_shuttle(self) -> None:
+        """
+        Handle the NADH shuttle between the cytoplasm and mitochondrion.
+        """
         transfer_rate = 5  # Define a realistic transfer rate per time step
         cytoplasmic_nadh = round(self.cell.metabolites["nadh"].quantity, 2)
         nadh_to_transfer = round(min(transfer_rate, cytoplasmic_nadh), 2)
@@ -269,7 +340,10 @@ class SimulationController:
             self.cell.metabolites["nadh"].quantity - nadh_to_transfer, 2
         )
 
-    def _transfer_excess_atp(self):
+    def _transfer_excess_atp(self) -> None:
+        """
+        Transfer excess ATP from the mitochondrion to the cytoplasm.
+        """
         atp_excess = max(
             0,
             self.cell.metabolites["atp"].quantity - self.max_mitochondrial_atp,
@@ -282,7 +356,10 @@ class SimulationController:
         self.cell.metabolites["atp"].quantity += transfer_amount
         self.cell.metabolites["atp"].quantity -= transfer_amount
 
-    def _enforce_metabolite_limits(self):
+    def _enforce_metabolite_limits(self) -> None:
+        """
+        Enforce the limits for mitochondrial and cytoplasmic metabolites.
+        """
         # Limit mitochondrial metabolites
         self.cell.metabolites["atp"].quantity = min(
             self.cell.metabolites["atp"].quantity,
@@ -301,7 +378,10 @@ class SimulationController:
             self.cell.metabolites["nadh"].quantity, self.max_cytoplasmic_nadh
         )
 
-    def _log_intermediate_state(self):
+    def _log_intermediate_state(self) -> None:
+        """
+        Log the intermediate state of the simulation.
+        """
         state = self.get_current_state()
         self.reporter.log_event(f"Time: {state['simulation_time']:.2f} s")
         if "glucose_processed" in state:
@@ -320,18 +400,21 @@ class SimulationController:
         self.reporter.log_event(f"NAD+: {state['nad']:.2f}")
         self.reporter.log_event(f"NADH: {state['nadh']:.2f}")
 
-    def get_current_state(self):
+    def get_current_state(self) -> dict:
+        """
+        Get the current state of the simulation.
+        """
         state = {
             "simulation_time": self.simulation_time,
-            "glucose_processed": self.cell.cytoplasm.metabolites[
-                "glucose"
-            ].initial_quantity
+            "glucose_processed": self.initial_glucose
             - self.cell.cytoplasm.metabolites["glucose"].quantity,
             "cytoplasm_atp": self.cell.cytoplasm.metabolites["ATP"].quantity,
             "mitochondrion_atp": self.cell.mitochondrion.metabolites["ATP"].quantity,
-            "total_atp_produced": self.cell.cytoplasm.metabolites["ATP"].quantity
-            + self.cell.mitochondrion.metabolites["ATP"].quantity
-            - self.initial_atp,
+            "total_atp_produced": (
+                self.cell.cytoplasm.metabolites["ATP"].quantity
+                + self.cell.mitochondrion.metabolites["ATP"].quantity
+                - self.initial_atp
+            ),
             "proton_gradient": self.cell.mitochondrion.proton_gradient,
             "oxygen_remaining": self.cell.metabolites["oxygen"].quantity,
             "nad": self.cell.metabolites["NAD+"].quantity,
@@ -339,15 +422,16 @@ class SimulationController:
         }
         return state
 
-    def reset(self):
-        self.cell.reset()  # Assuming Cell class has a reset method
-        # Reset any other state variables in SimulationController
-        # For example:
-        # self.time = 0
-        # self.total_atp_produced = 0
-        # etc.
+    def reset(self) -> None:
+        """
+        Reset the simulation state.
+        """
+        self.cell.reset()
 
-    def _check_adenine_nucleotide_balance(self):
+    def _check_adenine_nucleotide_balance(self) -> None:
+        """
+        Check the adenine nucleotide balance.
+        """
         total_adenine_nucleotides = (
             self.cell.metabolites["ATP"].quantity
             + self.cell.metabolites["ADP"].quantity
@@ -359,4 +443,3 @@ class SimulationController:
                 f"Expected: {self.initial_adenine_nucleotides}, "
                 f"Actual: {total_adenine_nucleotides}"
             )
-
