@@ -83,3 +83,10 @@ class GlycolysisReactions:
         products={"pyruvate": 1, "ATP": 1},
         enzyme="Pyruvate kinase",
     )
+
+    lactate_dehydrogenase = Reaction(
+        name="Lactate Dehydrogenase",
+        substrates={"pyruvate": 1, "NADH": 1},
+        products={"lactate": 1, "NAD+": 1},
+        enzyme="Lactate dehydrogenase",
+    )

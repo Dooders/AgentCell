@@ -66,6 +66,9 @@ class Glycolysis(Pathway):
             # Yield phase
             cls.yield_phase(organelle, glucose_units * 2)  # 2 G3P per glucose
 
+            # Add NAD+ regeneration step
+            cls.regenerate_nad(organelle)
+
             final_atp = organelle.get_metabolite_quantity("ATP")
             logger.info(f"Final ATP: {final_atp}")
             logger.info(f"Net ATP produced: {final_atp - initial_atp}")
@@ -167,3 +170,15 @@ class Glycolysis(Pathway):
         """Phosphoenolpyruvate to Pyruvate"""
         reaction = cls.reactions.pyruvate_kinase
         reaction.execute(organelle)
+
+    @classmethod
+    def regenerate_nad(cls, organelle):
+        """Regenerate NAD+ via Lactate Dehydrogenase reaction"""
+        nadh_quantity = organelle.get_metabolite_quantity("NADH")
+        pyruvate_quantity = organelle.get_metabolite_quantity("pyruvate")
+        
+        reaction_amount = min(nadh_quantity, pyruvate_quantity)
+        
+        if reaction_amount > 0:
+            cls.reactions.lactate_dehydrogenase.execute(organelle)
+            logger.info(f"Regenerated {reaction_amount} NAD+ via Lactate Dehydrogenase")
