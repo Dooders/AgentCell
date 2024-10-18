@@ -74,7 +74,9 @@ class Glycolysis(Pathway):
 
             atp_after_investment = organelle.get_metabolite_quantity("ATP")
             logger.info(f"ATP after investment phase: {atp_after_investment}")
-            logger.info(f"ATP consumed in investment phase: {initial_atp - atp_after_investment}")
+            logger.info(
+                f"ATP consumed in investment phase: {initial_atp - atp_after_investment}"
+            )
 
             # Yield phase
             cls.yield_phase(organelle, glucose_units * 2)  # 2 G3P per glucose
@@ -176,7 +178,7 @@ class Glycolysis(Pathway):
         initial_atp = organelle.get_metabolite_quantity("ATP")
         enolase = GlycolysisReactions.enolase
         phosphoglycerate_2 = organelle.get_metabolite_quantity("phosphoglycerate_2")
-        
+
         while phosphoglycerate_2 > 0:
             reaction_result = enolase.execute(organelle)
             if reaction_result == 0:
@@ -185,7 +187,9 @@ class Glycolysis(Pathway):
 
         final_atp = organelle.get_metabolite_quantity("ATP")
         logger.info(f"ATP change in enolase reaction: {final_atp - initial_atp}")
-        logger.info(f"Enolase reaction completed. Remaining 2-phosphoglycerate: {phosphoglycerate_2}")
+        logger.info(
+            f"Enolase reaction completed. Remaining 2-phosphoglycerate: {phosphoglycerate_2}"
+        )
 
     @classmethod
     def phosphoglycerate_kinase(cls, organelle):

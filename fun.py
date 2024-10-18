@@ -15,6 +15,7 @@ glucose_amounts = [4]
 
 for glucose in glucose_amounts:
     cell.cytoplasm.metabolites["glucose"].quantity = glucose
+    cell.cytoplasm.metabolites["glucose"].initial_quantity = glucose  # Add this line
     reporter.log_event(f"\nSimulating ATP production with {glucose} glucose units:")
     initial_glucose = cell.metabolites["glucose"].quantity
     initial_atp = cell.metabolites["ATP"].quantity
@@ -32,11 +33,15 @@ for glucose in glucose_amounts:
         f"ADP: {cell.metabolites['ADP'].quantity:.2f}, "
         f"AMP: {cell.metabolites['AMP'].quantity:.2f}"
     )
-    
+
     total_initial = initial_atp + initial_adp + initial_amp
-    total_final = (results['final_cytoplasm_atp'] + results['final_mitochondrion_atp'] +
-                   cell.metabolites['ADP'].quantity + cell.metabolites['AMP'].quantity)
-    
+    total_final = (
+        results["final_cytoplasm_atp"]
+        + results["final_mitochondrion_atp"]
+        + cell.metabolites["ADP"].quantity
+        + cell.metabolites["AMP"].quantity
+    )
+
     reporter.log_event(f"Total Initial Adenine Nucleotides: {total_initial:.2f}")
     reporter.log_event(f"Total Final Adenine Nucleotides: {total_final:.2f}")
     reporter.log_event(f"Difference: {total_final - total_initial:.2f}")
