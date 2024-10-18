@@ -21,6 +21,7 @@ class Cell(Organelle):
         self.time_step = TIME_STEP
         self.base_glycolysis_rate = 1.0  # This is now in the Cell class
         self.glycolysis_rate = self.base_glycolysis_rate  # Initialize glycolysis_rate
+        self.initial_adenine_nucleotides = None
 
     def produce_atp(self, glucose, simulation_duration=SIMULATION_DURATION):
         """Simulates ATP production in the entire cell over a specified duration."""
@@ -76,7 +77,8 @@ class Cell(Organelle):
             )
 
             # Cellular respiration in mitochondrion
-            mitochondrial_atp = self.mitochondrion.cellular_respiration(pyruvate)
+            #! Pausing for now
+            # mitochondrial_atp = self.mitochondrion.cellular_respiration(pyruvate)
 
             # Transfer excess ATP from mitochondrion to cytoplasm
             atp_transfer = max(
@@ -148,7 +150,8 @@ class Cell(Organelle):
             )
 
             # Cellular respiration in mitochondrion
-            mitochondrial_atp = self.mitochondrion.cellular_respiration(pyruvate)
+            #! Pausing for now
+            # mitochondrial_atp = self.mitochondrion.cellular_respiration(pyruvate)
 
             # Transfer excess ATP from mitochondrion to cytoplasm
             atp_transfer = max(0, self.metabolites["atp"].quantity - 100)
@@ -198,3 +201,29 @@ class Cell(Organelle):
     def process(self, time_step):
         # Implement the simulation logic here
         pass
+
+    def check_adenine_nucleotide_balance(self):
+        """Check if the total adenine nucleotides have changed."""
+        current_total = (
+            self.metabolites["ATP"].quantity
+            + self.metabolites["ADP"].quantity
+            + self.metabolites["AMP"].quantity
+        )
+        if abs(current_total - self.initial_adenine_nucleotides) > 1e-6:
+            logger.warning(
+                f"Adenine nucleotide imbalance detected. "
+                f"Initial: {self.initial_adenine_nucleotides}, "
+                f"Current: {current_total}"
+            )
+        return current_total
+
+    def initialize_simulation(self):
+        """Initialize the simulation and record initial adenine nucleotide levels."""
+        self.initial_adenine_nucleotides = (
+            self.metabolites["ATP"].quantity
+            + self.metabolites["ADP"].quantity
+            + self.metabolites["AMP"].quantity
+        )
+        logger.info(
+            f"Initial total adenine nucleotides: {self.initial_adenine_nucleotides}"
+        )

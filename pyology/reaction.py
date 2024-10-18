@@ -1,5 +1,6 @@
 import logging
 from typing import TYPE_CHECKING, Dict
+from .exceptions import ReactionError  # Add this import
 
 if TYPE_CHECKING:
     from .enzymes import Enzyme
@@ -29,10 +30,32 @@ class Reaction:
                 return False
         return True
 
-    def execute(self, organelle, time_step: float = 1.0) -> float:
+    def execute(
+        self, organelle, time_step: float = 1.0, use_rates: bool = False
+    ) -> float:
+        logger.info(f"Executing {self.name} reaction")
+        logger.info(f"Substrates: {self.substrates}")
+        logger.info(f"Products: {self.products}")
+        for substrate, amount in self.substrates.items():
+            available = organelle.get_metabolite_quantity(substrate)
+            logger.info(f"{substrate} - Required: {amount}, Available: {available}")
+
         if time_step < 0:
             raise ValueError("Time step cannot be negative")
 
+        if use_rates:
+            result = self._execute_with_rates(organelle, time_step)
+        else:
+            result = self._execute_without_rates(organelle, time_step)
+
+        if result == 0.0:
+            logger.error(f"Reaction '{self.name}' failed to execute")
+            raise ReactionError(f"Reaction '{self.name}' failed to execute")
+
+        logger.info(f"Reaction '{self.name}' executed successfully")
+        return result
+
+    def _execute_with_rates(self, organelle, time_step: float) -> float:
         # Calculate reaction rate using the updated Enzyme.calculate_rate method
         metabolites = {met: organelle.get_metabolite(met) for met in self.substrates}
 
@@ -90,6 +113,34 @@ class Reaction:
         )
 
         return actual_rate
+
+    def _execute_without_rates(self, organelle, time_step: float) -> float:
+        # Check if all substrates are available in sufficient quantities
+        for metabolite, amount in self.substrates.items():
+            available = organelle.get_metabolite_quantity(metabolite)
+            if available < amount:
+                logger.error(f"Reaction '{self.name}': Insufficient {metabolite}. "
+                             f"Required: {amount}, Available: {available}")
+                return 0.0
+
+        # Consume substrates
+        for metabolite, amount in self.substrates.items():
+            organelle.change_metabolite_quantity(metabolite, -amount)
+            logger.debug(f"Reaction '{self.name}': Consumed {amount} {metabolite}")
+
+        # Produce products
+        for metabolite, amount in self.products.items():
+            organelle.change_metabolite_quantity(metabolite, amount)
+            logger.debug(f"Reaction '{self.name}': Produced {amount} {metabolite}")
+
+        # Add log entry
+        logger.info(
+            f"Executed reaction '{self.name}' without rates. "
+            f"Consumed: {', '.join([f'{m}: {a:.4f}' for m, a in self.substrates.items()])}. "
+            f"Produced: {', '.join([f'{m}: {a:.4f}' for m, a in self.products.items()])}"
+        )
+
+        return 1.0  # Return 1.0 to indicate the reaction occurred once
 
 
 def perform_reaction(metabolites: Dict[str, float], reaction: Reaction) -> bool:

@@ -1,6 +1,5 @@
 from pyology.enzymes import Enzyme
 
-
 hexokinase = Enzyme(
     name="Hexokinase",
     k_cat=1.0,
@@ -52,7 +51,7 @@ phosphoglycerate_mutase = Enzyme(
 enolase = Enzyme(
     name="Enolase",
     k_cat=100,
-    k_m={"phosphoglycerate": 10},
+    k_m={"phosphoglycerate_2": 10},
 )
 
 pyruvate_kinase = Enzyme(
@@ -71,4 +70,10 @@ pyruvate_carboxylase = Enzyme(
     name="Pyruvate Carboxylase",
     k_cat=100,
     k_m={"pyruvate": 10},
+)
+
+phosphoglycerate_mutate = Enzyme(
+    name="Phosphoglycerate Mutase",
+    k_cat=100,
+    k_m={"phosphoglycerate_3": 10},
 )

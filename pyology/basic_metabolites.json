@@ -1,273 +1,273 @@
 [
   {
     "name": "ATP",
-    "quantity": 1,
-    "max_quantity": 10,
+    "quantity": 10,
+    "max_quantity": 100,
     "type": "energy_carrier",
     "unit": "mM"
   },
   {
     "name": "ADP",
-    "quantity": 0.5,
-    "max_quantity": 10,
+    "quantity": 10,
+    "max_quantity": 100,
     "type": "energy_carrier",
     "unit": "mM"
   },
   {
     "name": "bisphosphoglycerate_1_3",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "bisphosphoglycerate_3",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "phosphoglycerate",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "phosphoglycerate_3",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "phosphoglycerate_2",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "phosphoenolpyruvate",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "AMP",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 5000,
     "type": "energy_carrier",
     "unit": "mM"
   },
   {
-    "name": "NAD",
-    "quantity": 500,
+    "name": "NAD+",
+    "quantity": 10,
     "max_quantity": 5000,
     "type": "energy_carrier",
     "unit": "mM"
   },
   {
     "name": "NADH",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 5000,
     "type": "energy_carrier",
     "unit": "mM"
   },
   {
     "name": "FAD",
-    "quantity": 300,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "energy_carrier",
     "unit": "mM"
   },
   {
     "name": "FADH2",
-    "quantity": 100,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "energy_carrier",
     "unit": "mM"
   },
   {
     "name": "Glucose",
-    "quantity": 5,
-    "max_quantity": 10,
+    "quantity": 10,
+    "max_quantity": 100,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "Fructose",
-    "quantity": 400,
+    "quantity": 0,
     "max_quantity": 5000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "Glucose_6_Phosphate",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "Fructose_6_Phosphate",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "Fructose_1_6_Bisphosphate",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "Glyceraldehyde_3_Phosphate",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "dihydroxyacetone_phosphate",
-    "quantity": 200,
+    "quantity": 10,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "Pyruvate",
-    "quantity": 300,
+    "quantity": 0,
     "max_quantity": 5000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "Lactate",
-    "quantity": 100,
+    "quantity": 0,
     "max_quantity": 5000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "Glycogen",
-    "quantity": 100,
+    "quantity": 0,
     "max_quantity": 500,
     "type": "carbohydrate",
     "unit": "µg/mL"
   },
   {
     "name": "Alanine",
-    "quantity": 100,
+    "quantity": 0,
     "max_quantity": 2000,
     "type": "amino_acid",
     "unit": "mM"
   },
   {
     "name": "Glutamate",
-    "quantity": 100,
+    "quantity": 0,
     "max_quantity": 2000,
     "type": "amino_acid",
     "unit": "mM"
   },
   {
     "name": "Aspartate",
-    "quantity": 100,
+    "quantity": 0,
     "max_quantity": 2000,
     "type": "amino_acid",
     "unit": "mM"
   },
   {
     "name": "Glycine",
-    "quantity": 100,
+    "quantity": 0,
     "max_quantity": 2000,
     "type": "amino_acid",
     "unit": "mM"
   },
   {
     "name": "Acetyl_CoA",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 5000,
     "type": "lipid",
     "unit": "mM"
   },
   {
     "name": "Malonyl_CoA",
-    "quantity": 100,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "lipid",
     "unit": "mM"
   },
   {
     "name": "Palmitic_Acid",
-    "quantity": 50,
+    "quantity": 0,
     "max_quantity": 1000,
     "type": "lipid",
     "unit": "mM"
   },
   {
     "name": "Glycerol",
-    "quantity": 100,
+    "quantity": 0,
     "max_quantity": 2000,
     "type": "lipid",
     "unit": "mM"
   },
   {
     "name": "GTP",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "nucleotide",
     "unit": "mM"
   },
   {
     "name": "CTP",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "nucleotide",
     "unit": "mM"
   },
   {
     "name": "UTP",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "nucleotide",
     "unit": "mM"
   },
   {
     "name": "dATP",
-    "quantity": 50,
+    "quantity": 0,
     "max_quantity": 1000,
     "type": "nucleotide",
     "unit": "µM"
   },
   {
     "name": "dGTP",
-    "quantity": 50,
+    "quantity": 0,
     "max_quantity": 1000,
     "type": "nucleotide",
     "unit": "mM"
   },
   {
     "name": "dCTP",
-    "quantity": 50,
+    "quantity": 0,
     "max_quantity": 1000,
     "type": "nucleotide",
     "unit": "mM"
   },
   {
     "name": "dTTP",
-    "quantity": 50,
+    "quantity": 0,
     "max_quantity": 1000,
     "type": "nucleotide",
     "unit": "mM"
   },
   {
     "name": "CO2",
-    "quantity": 500,
+    "quantity": 0,
     "max_quantity": 10000,
     "type": "other",
     "unit": "mM"
@@ -281,59 +281,58 @@
   },
   {
     "name": "H2O",
-    "quantity": 55,
-    "max_quantity": 55,
+    "quantity": 1000,
+    "max_quantity": 10000,
     "type": "other",
     "unit": "M"
   },
   {
     "name": "H_plus",
-    "quantity": 100,
+    "quantity": 0,
     "max_quantity": 1000,
     "type": "other",
     "unit": "mM"
   },
   {
     "name": "Pi",
-    "quantity": 500,
+    "quantity": 10,
     "max_quantity": 5000,
     "type": "other",
     "unit": "mM"
   },
   {
     "name": "bisphosphoglycerate_1_3",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "phosphoglycerate",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "phosphoglycerate_3",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "phosphoglycerate_2",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "phosphoglycerate_1_3`",
-    "quantity": 200,
+    "quantity": 0,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   }
 ]
-

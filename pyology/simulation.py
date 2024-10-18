@@ -1,5 +1,7 @@
 import logging
 
+from pyology.glycolysis import Glycolysis
+
 from .constants import SIMULATION_DURATION
 from .exceptions import (
     GlycolysisError,
@@ -14,6 +16,7 @@ from .reaction import Reaction
 class Reporter:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self.atp_production_log = []
 
     def log_event(self, message):
         self.logger.info(message)
@@ -24,17 +27,35 @@ class Reporter:
     def log_error(self, message):
         self.logger.error(message)
 
+    def log_atp_production(self, step, atp_produced):
+        self.atp_production_log.append((step, atp_produced))
+        self.log_event(f"ATP produced in {step}: {atp_produced}")
+
     def report_simulation_results(self, results):
         self.log_event(
             f"Simulation completed in {results['simulation_time']:.2f} seconds"
         )
         self.log_event(f"Total ATP produced: {results['total_atp_produced']:.2f}")
         self.log_event(f"Glucose processed: {results['glucose_processed']:.2f}")
+        self.log_event(f"Glucose consumed: {results['glucose_consumed']:.2f}")
+        self.log_event(f"Pyruvate produced: {results['pyruvate_produced']:.2f}")
         self.log_event(f"Oxygen remaining: {results['oxygen_remaining']:.2f}")
         self.log_event(f"Final cytoplasm ATP: {results['final_cytoplasm_atp']:.2f}")
         self.log_event(
             f"Final mitochondrion ATP: {results['final_mitochondrion_atp']:.2f}"
         )
+        self.log_event(
+            f"2-Phosphoglycerate remaining: {results['final_phosphoglycerate_2']:.2f}"
+        )
+        self.log_event(
+            f"Phosphoenolpyruvate produced: {results['final_phosphoenolpyruvate']:.2f}"
+        )
+
+        self.log_event("\nATP Production Breakdown:")
+        for step, atp in self.atp_production_log:
+            self.log_event(f"  {step}: {atp:.2f}")
+
+        self.atp_production_log.clear()  # Clear the log for the next simulation
 
 
 class SimulationController:
@@ -52,19 +73,34 @@ class SimulationController:
         self.max_mitochondrial_nadh = 50
         self.max_cytoplasmic_nadh = 100
         self.max_simulation_time = 20  # Increased max simulation time
-
-    def run_simulation(self, glucose_amount):
-        self.cell.metabolites["glucose"].quantity = round(glucose_amount, 2)
-        self.reporter.log_event(
-            f"Starting simulation with {glucose_amount:.2f} glucose units"
+        self.initial_adenine_nucleotides = 0
+        self.initial_atp = (
+            self.cell.cytoplasm.metabolites["ATP"].quantity
+            + self.cell.mitochondrion.metabolites["ATP"].quantity
         )
+
+    def run_simulation(self, glucose):
+        self.initial_adenine_nucleotides = (
+            self.cell.metabolites["ATP"].quantity
+            + self.cell.metabolites["ADP"].quantity
+            + self.cell.metabolites["AMP"].quantity
+        )
+        self.cell.metabolites["glucose"].quantity = round(glucose, 2)
+        self.reporter.log_event(f"Starting simulation with {glucose:.2f} glucose units")
         try:
             glucose_processed = 0
             total_atp_produced = 0
-            next_log_time = 10  # Initialize next_log_time here
+            initial_glucose = self.cell.metabolites["glucose"].quantity
+            initial_pyruvate = self.cell.metabolites["pyruvate"].quantity
+            initial_atp = (
+                self.cell.cytoplasm.metabolites["atp"].quantity
+                + self.cell.mitochondrion.metabolites["atp"].quantity
+            )
+            self.reporter.log_event(f"Initial ATP: {initial_atp}")
 
+            next_log_time = 0  # Initialize next_log_time here
             while (
-                glucose_processed < glucose_amount
+                glucose_processed < glucose
                 and self.simulation_time < self.max_simulation_time
             ):
                 try:
@@ -76,14 +112,30 @@ class SimulationController:
                         )
                         break
 
-                    pyruvate = self.cell.cytoplasm.glycolysis(glucose_available)
+                    # Store ATP levels before reactions
+                    atp_before = (
+                        self.cell.cytoplasm.metabolites["atp"].quantity
+                        + self.cell.mitochondrion.metabolites["atp"].quantity
+                    )
+
+                    # Perform glycolysis
+                    pyruvate_produced = Glycolysis.perform(
+                        self.cell.cytoplasm, glucose_available
+                    )
                     glucose_processed += glucose_available
 
-                    # Decrement glucose quantity
-                    self.cell.metabolites["glucose"].quantity = round(
-                        self.cell.metabolites["glucose"].quantity - glucose_available,
-                        2,
+                    # Calculate ATP produced in this iteration
+                    atp_after = (
+                        self.cell.cytoplasm.metabolites["atp"].quantity
+                        + self.cell.mitochondrion.metabolites["atp"].quantity
                     )
+                    atp_produced = round(atp_after - atp_before, 2)
+                    total_atp_produced = round(total_atp_produced + atp_produced, 2)
+
+                    self.reporter.log_event(f"ATP produced in this iteration: {atp_produced}")
+                    self.reporter.log_event(f"Total ATP produced so far: {total_atp_produced}")
+
+                    self.reporter.log_atp_production("Glycolysis", atp_produced)
 
                     # Check if there is enough glucose
                     if self.cell.metabolites["glucose"].quantity <= 0:
@@ -98,33 +150,25 @@ class SimulationController:
                     # Implement feedback activation
                     self._apply_feedback_activation()
 
-                    # Store ATP levels before reactions
-                    atp_before = (
-                        self.cell.metabolites["atp"].quantity
-                        + self.cell.metabolites["atp"].quantity
-                    )
-
                     # Handle NADH shuttle
                     self._handle_nadh_shuttle()
 
                     # Perform cellular respiration
-                    mitochondrial_atp = self.cell.mitochondrion.cellular_respiration(
-                        pyruvate
+                    mitochondrial_atp_before = self.cell.mitochondrion.metabolites[
+                        "atp"
+                    ].quantity
+                    #! Pausing for now
+                    # mitochondrial_atp = self.cell.mitochondrion.cellular_respiration(pyruvate_produced)
+
+                    mitochondrial_atp_produced = round(
+                        self.cell.mitochondrion.metabolites["atp"].quantity
+                        - mitochondrial_atp_before,
+                        2,
                     )
 
-                    # Calculate ATP produced in this iteration
-                    atp_before = round(
-                        self.cell.metabolites["atp"].quantity
-                        + self.cell.metabolites["atp"].quantity,
-                        2,
+                    self.reporter.log_atp_production(
+                        "Cellular Respiration", mitochondrial_atp_produced
                     )
-                    atp_after = round(
-                        self.cell.metabolites["atp"].quantity
-                        + self.cell.metabolites["atp"].quantity,
-                        2,
-                    )
-                    atp_produced = round(atp_after - atp_before, 2)
-                    total_atp_produced = round(total_atp_produced + atp_produced, 2)
 
                     # Transfer excess ATP from mitochondrion to cytoplasm
                     self._transfer_excess_atp()
@@ -146,6 +190,8 @@ class SimulationController:
                         f"Simulation time: {self.simulation_time:.3f}"
                     )
 
+                    self._check_adenine_nucleotide_balance()
+
                 except UnknownMetaboliteError as e:
                     self.reporter.log_error(f"Unknown metabolite error: {str(e)}")
                     self.reporter.log_warning("Skipping current simulation step.")
@@ -166,20 +212,37 @@ class SimulationController:
                     self.reporter.log_warning(f"Glycolysis error: {str(e)}")
                     break
             # print(f"metabolites: {self.cell.metabolites}")
-            # Return simulation results
+            # After the simulation loop, update the results dictionary
+            final_glucose = self.cell.metabolites["glucose"].quantity
+            final_pyruvate = self.cell.metabolites["pyruvate"].quantity
+            final_atp = (
+                self.cell.cytoplasm.metabolites["atp"].quantity
+                + self.cell.mitochondrion.metabolites["atp"].quantity
+            )
+
             results = {
-                "total_atp_produced": total_atp_produced,
+                "total_atp_produced": final_atp - initial_atp,
                 "glucose_processed": glucose_processed,
+                "glucose_consumed": initial_glucose - final_glucose,
+                "pyruvate_produced": final_pyruvate - initial_pyruvate,
                 "simulation_time": self.simulation_time,
-                "oxygen_remaining": self.cell.metabolites.get("oxygen", 0).quantity,
-                "final_cytoplasm_atp": self.cell.metabolites["atp"].quantity,
-                "final_mitochondrion_atp": self.cell.metabolites["atp"].quantity,
+                "oxygen_remaining": self.cell.metabolites["oxygen"].quantity,
+                "final_cytoplasm_atp": self.cell.cytoplasm.metabolites["atp"].quantity,
+                "final_mitochondrion_atp": self.cell.mitochondrion.metabolites[
+                    "atp"
+                ].quantity,
+                "final_phosphoglycerate_2": self.cell.metabolites[
+                    "phosphoglycerate_2"
+                ].quantity,
+                "final_phosphoenolpyruvate": self.cell.metabolites[
+                    "phosphoenolpyruvate"
+                ].quantity,
             }
             self.reporter.report_simulation_results(results)
             return results
 
         except Exception as e:
-            self.reporter.log_error(f"Unhandled simulation error: {str(e)}")
+            self.reporter.log_error(f"Simulation error: {str(e)}")
             raise
 
     def _handle_adp_availability(self):
@@ -241,7 +304,12 @@ class SimulationController:
     def _log_intermediate_state(self):
         state = self.get_current_state()
         self.reporter.log_event(f"Time: {state['simulation_time']:.2f} s")
-        self.reporter.log_event(f"Glucose Processed: {state['glucose_processed']:.2f}")
+        if "glucose_processed" in state:
+            self.reporter.log_event(
+                f"Glucose Processed: {state['glucose_processed']:.2f}"
+            )
+        else:
+            self.reporter.log_event("Glucose Processed: Not available")
         self.reporter.log_event(
             f"Total ATP Produced: {state['total_atp_produced']:.2f}"
         )
@@ -251,18 +319,21 @@ class SimulationController:
         self.reporter.log_event(f"Oxygen Remaining: {state['oxygen_remaining']:.2f}")
 
     def get_current_state(self):
-        return {
+        state = {
             "simulation_time": self.simulation_time,
-            "cytoplasm_atp": self.cell.metabolites["atp"].quantity,
-            "mitochondrion_atp": self.cell.metabolites["atp"].quantity,
-            "cytoplasm_nadh": self.cell.metabolites["nadh"].quantity,
-            "mitochondrion_nadh": self.cell.metabolites["nadh"].quantity,
-            "mitochondrion_fadh2": self.cell.metabolites["fadh2"].quantity,
-            "mitochondrial_calcium": self.cell.metabolites["calcium"].quantity,
-            "cytoplasmic_calcium": self.cell.cytoplasmic_calcium.quantity,
+            "glucose_processed": self.cell.cytoplasm.metabolites[
+                "glucose"
+            ].initial_quantity
+            - self.cell.cytoplasm.metabolites["glucose"].quantity,
+            "cytoplasm_atp": self.cell.cytoplasm.metabolites["ATP"].quantity,
+            "mitochondrion_atp": self.cell.mitochondrion.metabolites["ATP"].quantity,
+            "total_atp_produced": self.cell.cytoplasm.metabolites["ATP"].quantity
+            + self.cell.mitochondrion.metabolites["ATP"].quantity
+            - self.initial_atp,
             "proton_gradient": self.cell.mitochondrion.proton_gradient,
             "oxygen_remaining": self.cell.metabolites["oxygen"].quantity,
         }
+        return state
 
     def reset(self):
         self.cell.reset()  # Assuming Cell class has a reset method
@@ -272,22 +343,16 @@ class SimulationController:
         # self.total_atp_produced = 0
         # etc.
 
-
-class Simulation:
-    def setup_glycolysis(self):
-        hexokinase = Enzyme(
-            name="Hexokinase",
-            k_cat=200.0,
-            k_m={"glucose": 0.1, "ATP": 0.3}
+    def _check_adenine_nucleotide_balance(self):
+        total_adenine_nucleotides = (
+            self.cell.metabolites["ATP"].quantity
+            + self.cell.metabolites["ADP"].quantity
+            + self.cell.metabolites["AMP"].quantity
         )
-        
-        glucose_phosphorylation = Reaction(
-            name="Glucose Phosphorylation",
-            enzyme=hexokinase,
-            consume={"glucose": 1.0, "ATP": 1.0},
-            produce={"glucose-6-phosphate": 1.0, "ADP": 1.0}
-        )
-        
-        # ... other reactions and setup code ...
+        if abs(total_adenine_nucleotides - self.initial_adenine_nucleotides) > 1e-6:
+            self.reporter.log_warning(
+                f"Adenine nucleotide imbalance detected. "
+                f"Expected: {self.initial_adenine_nucleotides}, "
+                f"Actual: {total_adenine_nucleotides}"
+            )
 
-    # ... rest of the Simulation class ...

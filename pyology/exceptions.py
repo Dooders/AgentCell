@@ -1,26 +1,27 @@
-class MetaboliteError(Exception):
-    """Base class for exceptions in this module."""
-
+class PyologyError(Exception):
+    """Base exception class for Pyology errors."""
     pass
 
-
-class UnknownMetaboliteError(MetaboliteError):
-    """Exception raised when trying to access an unknown metabolite."""
-
+class MetaboliteError(PyologyError):
+    """Exception raised for errors related to metabolites."""
     pass
-
-
-class InsufficientMetaboliteError(MetaboliteError):
-    """Exception raised when there is insufficient quantity of a metabolite for a reaction."""
-
-    pass
-
 
 class QuantityError(MetaboliteError):
-    """Exception raised for errors in the quantity of metabolites."""
-
+    """Exception raised when a metabolite quantity is invalid."""
     pass
 
+class UnknownMetaboliteError(MetaboliteError):
+    """Exception raised when an unknown metabolite is referenced."""
+    pass
 
-class GlycolysisError(Exception):
+class InsufficientMetaboliteError(MetaboliteError):
+    """Exception raised when there's not enough of a metabolite for a reaction."""
+    pass
+
+class GlycolysisError(PyologyError):
+    """Exception raised for errors during glycolysis."""
+    pass
+
+class ReactionError(PyologyError):
+    """Exception raised when a reaction fails to execute."""
     pass

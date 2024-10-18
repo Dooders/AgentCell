@@ -357,6 +357,12 @@ class Metabolites:
                     f"Invalid quantity for {metabolite.name}: {metabolite.quantity}"
                 )
 
+    @property
+    def quantities(self) -> Dict[str, float]:
+        return {
+            metabolite.name: metabolite.quantity for metabolite in self.data.values()
+        }
+
     def get(self, key: str, default: Metabolite = None) -> Metabolite:
         return self.data.get(key.lower(), default)
 
@@ -364,8 +370,17 @@ class Metabolites:
         for metabolite in self.data.values():
             metabolite.reset()
 
-    def __getitem__(self, key: str) -> Metabolite:
-        return self.data[key.lower()]
+    def __getitem__(self, key):
+        normalized_key = key.lower().replace("-", "_")
+        if normalized_key not in self.data:
+            # If the metabolite doesn't exist, create it with default values
+            self._register(
+                normalized_key, 0, 100
+            )  # You may want to adjust these default values
+            print(
+                f"Warning: Metabolite '{key}' was not found. Created with default values."
+            )
+        return self.data[normalized_key]
 
     def __setitem__(self, key: str, value: Metabolite) -> None:
         self.data[key.lower()] = value
@@ -393,3 +408,20 @@ class Metabolites:
 
     def values(self):
         return self.data.values()
+
+    def exists(self, key: str) -> bool:
+        """
+        Check if a metabolite exists in the collection.
+
+        Parameters
+        ----------
+        key : str
+            The name of the metabolite to check.
+
+        Returns
+        -------
+        bool
+            True if the metabolite exists, False otherwise.
+        """
+        normalized_key = key.lower().replace("-", "_")
+        return normalized_key in self.data
