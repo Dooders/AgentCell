@@ -15,12 +15,17 @@ glucose_amounts = [4]
 
 for glucose in glucose_amounts:
     cell.cytoplasm.metabolites["glucose"].quantity = glucose
-    cell.cytoplasm.metabolites["glucose"].initial_quantity = glucose  # Add this line
+    cell.cytoplasm.metabolites["glucose"].initial_quantity = glucose
     reporter.log_event(f"\nSimulating ATP production with {glucose} glucose units:")
     initial_glucose = cell.metabolites["glucose"].quantity
-    initial_atp = cell.metabolites["ATP"].quantity
+    initial_atp = cell.cytoplasm.metabolites["ATP"].quantity
     initial_adp = cell.metabolites["ADP"].quantity
     initial_amp = cell.metabolites["AMP"].quantity
+
+    reporter.log_event("Initial Metabolite Levels:")
+    reporter.log_event(f"ATP: {initial_atp:.2f}")
+    reporter.log_event(f"ADP: {initial_adp:.2f}")
+    reporter.log_event(f"AMP: {initial_amp:.2f}")
 
     results = sim_controller.run_simulation(glucose)
 
