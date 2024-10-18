@@ -1,6 +1,6 @@
 # Pyology
 
-Pyology is a metaphorical model of a biological cell, implemented as a Python library. It provides a framework for simulating cellular processes and metabolic pathways.
+Pyology is a object-oriented model of a biological cell, implemented as a Python library. It provides a framework for simulating cellular processes and metabolic pathways.
 
 ## Features
 
