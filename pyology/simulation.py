@@ -16,6 +16,7 @@ from .reaction import Reaction
 class Reporter:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self.atp_production_log = []
 
     def log_event(self, message):
         self.logger.info(message)
@@ -25,6 +26,10 @@ class Reporter:
 
     def log_error(self, message):
         self.logger.error(message)
+
+    def log_atp_production(self, step, atp_produced):
+        self.atp_production_log.append((step, atp_produced))
+        self.log_event(f"ATP produced in {step}: {atp_produced}")
 
     def report_simulation_results(self, results):
         self.log_event(
@@ -37,6 +42,12 @@ class Reporter:
         self.log_event(
             f"Final mitochondrion ATP: {results['final_mitochondrion_atp']:.2f}"
         )
+
+        self.log_event("\nATP Production Breakdown:")
+        for step, atp in self.atp_production_log:
+            self.log_event(f"  {step}: {atp:.2f}")
+
+        self.atp_production_log.clear()  # Clear the log for the next simulation
 
 
 class SimulationController:
@@ -57,9 +68,7 @@ class SimulationController:
 
     def run_simulation(self, glucose):
         self.cell.metabolites["glucose"].quantity = round(glucose, 2)
-        self.reporter.log_event(
-            f"Starting simulation with {glucose:.2f} glucose units"
-        )
+        self.reporter.log_event(f"Starting simulation with {glucose:.2f} glucose units")
         try:
             glucose_processed = 0
             total_atp_produced = 0
@@ -78,14 +87,27 @@ class SimulationController:
                         )
                         break
 
-                    pyruvate_produced = Glycolysis.perform(self.cell.cytoplasm, glucose_available)
+                    # Store ATP levels before reactions
+                    atp_before = (
+                        self.cell.cytoplasm.metabolites["atp"].quantity
+                        + self.cell.mitochondrion.metabolites["atp"].quantity
+                    )
+
+                    # Perform glycolysis
+                    pyruvate_produced = Glycolysis.perform(
+                        self.cell.cytoplasm, glucose_available
+                    )
                     glucose_processed += glucose_available
 
-                    # Decrement glucose quantity
-                    self.cell.metabolites["glucose"].quantity = round(
-                        self.cell.metabolites["glucose"].quantity - glucose_available,
-                        2,
+                    # Calculate ATP produced in this iteration
+                    atp_after = (
+                        self.cell.cytoplasm.metabolites["atp"].quantity
+                        + self.cell.mitochondrion.metabolites["atp"].quantity
                     )
+                    atp_produced = round(atp_after - atp_before, 2)
+                    total_atp_produced = round(total_atp_produced + atp_produced, 2)
+
+                    self.reporter.log_atp_production("Glycolysis", atp_produced)
 
                     # Check if there is enough glucose
                     if self.cell.metabolites["glucose"].quantity <= 0:
@@ -100,33 +122,25 @@ class SimulationController:
                     # Implement feedback activation
                     self._apply_feedback_activation()
 
-                    # Store ATP levels before reactions
-                    atp_before = (
-                        self.cell.metabolites["atp"].quantity
-                        + self.cell.metabolites["atp"].quantity
-                    )
-
                     # Handle NADH shuttle
                     self._handle_nadh_shuttle()
 
                     # Perform cellular respiration
-                    mitochondrial_atp = self.cell.mitochondrion.cellular_respiration(
-                        pyruvate_produced
+                    mitochondrial_atp_before = self.cell.mitochondrion.metabolites[
+                        "atp"
+                    ].quantity
+                    #! Pausing for now
+                    # mitochondrial_atp = self.cell.mitochondrion.cellular_respiration(pyruvate_produced)
+
+                    mitochondrial_atp_produced = round(
+                        self.cell.mitochondrion.metabolites["atp"].quantity
+                        - mitochondrial_atp_before,
+                        2,
                     )
 
-                    # Calculate ATP produced in this iteration
-                    atp_before = round(
-                        self.cell.metabolites["atp"].quantity
-                        + self.cell.metabolites["atp"].quantity,
-                        2,
+                    self.reporter.log_atp_production(
+                        "Cellular Respiration", mitochondrial_atp_produced
                     )
-                    atp_after = round(
-                        self.cell.metabolites["atp"].quantity
-                        + self.cell.metabolites["atp"].quantity,
-                        2,
-                    )
-                    atp_produced = round(atp_after - atp_before, 2)
-                    total_atp_produced = round(total_atp_produced + atp_produced, 2)
 
                     # Transfer excess ATP from mitochondrion to cytoplasm
                     self._transfer_excess_atp()

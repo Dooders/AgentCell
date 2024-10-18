@@ -1,11 +1,10 @@
 import logging
 from typing import Dict
 
-from pyology.organelle import Organelle
-
 from .constants import INITIAL_NAD
 from .data import Effector, Enzyme
-from .utils import michaelis_menten, allosteric_regulation, hill_equation
+from .organelle import Organelle
+from .utils import allosteric_regulation, hill_equation, michaelis_menten
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +50,19 @@ class KrebsCycle(Organelle):
             "malate_dehydrogenase": Enzyme("Malate Dehydrogenase"),
         }
 
+        # Register all necessary metabolites
+        self.metabolites.register(
+            acetyl_coa=(0, 100),
+            oxaloacetate=(0, 100),
+            citrate=(0, 100),
+            isocitrate=(0, 100),
+            alpha_ketoglutarate=(0, 100),
+            succinyl_coa=(0, 100),
+            succinate=(0, 100),
+            fumarate=(0, 100),
+            malate=(0, 100),
+        )
+
     def is_metabolite_available(self, metabolite: str, amount: float) -> bool:
         """Check if a metabolite is available in sufficient quantity."""
         if metabolite in self.metabolites:
@@ -70,15 +82,20 @@ class KrebsCycle(Organelle):
                 raise TypeError("Amounts must be numbers.")
             if amount < 0:
                 raise ValueError(f"Cannot consume a negative amount of {metabolite}.")
-            if metabolite not in self.metabolites and metabolite not in self.cofactors:
-                raise ValueError(f"Unknown metabolite: {metabolite}")
-            if self.is_metabolite_available(metabolite, amount):
-                if metabolite in self.metabolites:
-                    self.metabolites[metabolite].quantity -= amount
-                elif metabolite in self.cofactors:
-                    self.cofactors[metabolite] -= amount
+
+            normalized_metabolite = metabolite.lower().replace("-", "_")
+            if normalized_metabolite in self.metabolites:
+                if self.metabolites[normalized_metabolite].quantity >= amount:
+                    self.metabolites[normalized_metabolite].quantity -= amount
+                else:
+                    raise ValueError(f"Insufficient {metabolite} for reaction")
+            elif normalized_metabolite in self.cofactors:
+                if self.cofactors[normalized_metabolite] >= amount:
+                    self.cofactors[normalized_metabolite] -= amount
+                else:
+                    raise ValueError(f"Insufficient {metabolite} for reaction")
             else:
-                raise ValueError(f"Insufficient {metabolite} for reaction")
+                raise ValueError(f"Unknown metabolite: {metabolite}")
         return True
 
     def produce_metabolites(self, **metabolites: Dict[str, float]):
@@ -107,8 +124,8 @@ class KrebsCycle(Organelle):
         """Acetyl-CoA + Oxaloacetate to Citrate"""
         enzyme = self.enzymes["citrate_synthase"]
         substrate_conc = min(
-            self.metabolites["Acetyl-CoA"].quantity,
-            self.metabolites["Oxaloacetate"].quantity,
+            self.metabolites["acetyl_coa"].quantity,
+            self.metabolites["oxaloacetate"].quantity,
         )
         reaction_rate = michaelis_menten(
             substrate_conc, enzyme.vmax * enzyme.activity, enzyme.km
@@ -357,3 +374,4 @@ class KrebsCycle(Organelle):
             # - Pausing or modifying the cycle based on certain conditions
 
         logger.info("Krebs cycle complete")
+

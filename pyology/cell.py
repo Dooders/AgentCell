@@ -76,7 +76,8 @@ class Cell(Organelle):
             )
 
             # Cellular respiration in mitochondrion
-            mitochondrial_atp = self.mitochondrion.cellular_respiration(pyruvate)
+            #! Pausing for now
+            # mitochondrial_atp = self.mitochondrion.cellular_respiration(pyruvate)
 
             # Transfer excess ATP from mitochondrion to cytoplasm
             atp_transfer = max(
@@ -148,7 +149,8 @@ class Cell(Organelle):
             )
 
             # Cellular respiration in mitochondrion
-            mitochondrial_atp = self.mitochondrion.cellular_respiration(pyruvate)
+            #! Pausing for now
+            # mitochondrial_atp = self.mitochondrion.cellular_respiration(pyruvate)
 
             # Transfer excess ATP from mitochondrion to cytoplasm
             atp_transfer = max(0, self.metabolites["atp"].quantity - 100)

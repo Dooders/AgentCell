@@ -4,9 +4,9 @@ from typing import Dict
 
 from .constants import *
 from .exceptions import *
-from .organelle import Organelle
 from .krebs_cycle import KrebsCycle
 from .metabolite import Metabolite
+from .organelle import Organelle
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,34 @@ class Mitochondrion(Organelle):
 
         self.krebs_cycle = KrebsCycle()
 
-        # TODO: Consider the roles of H2O and H+ in the electron transport chain
+        # Initialize all necessary metabolites for the Krebs cycle
+        self.initialize_krebs_cycle_metabolites()
+
+    def initialize_krebs_cycle_metabolites(self):
+        krebs_cycle_metabolites = [
+            "acetyl_coa",
+            "citrate",
+            "isocitrate",
+            "alpha_ketoglutarate",
+            "succinyl_coa",
+            "succinate",
+            "fumarate",
+            "malate",
+            "oxaloacetate",  # Ensure this is lowercase
+        ]
+        for metabolite in krebs_cycle_metabolites:
+            self.metabolites[metabolite] = Metabolite(metabolite, 0, max_quantity=100)
+
+    def ensure_metabolite_exists(self, metabolite: str, initial_quantity: float = 0):
+        """
+        Ensure a metabolite exists in the metabolites dictionary.
+        If it doesn't exist, add it with the given initial quantity.
+        """
+        if metabolite not in self.metabolites:
+            logger.warning(
+                f"{metabolite} not found in metabolites. Adding it with initial quantity {initial_quantity}."
+            )
+            self.metabolites[metabolite] = Metabolite(metabolite, initial_quantity)
 
     def change_metabolite_quantity(self, metabolite: str, amount: float) -> float:
         """
@@ -174,7 +201,7 @@ class Mitochondrion(Organelle):
             f"Processing {acetyl_coa_amount} units of acetyl-CoA through the Krebs cycle"
         )
 
-        self.krebs_cycle.add_substrate("Acetyl-CoA", acetyl_coa_amount)
+        self.krebs_cycle.add_substrate("glucose", acetyl_coa_amount)
 
         # Ensure there's enough oxaloacetate to start the cycle
         if self.metabolites["oxaloacetate"].quantity < acetyl_coa_amount:
@@ -261,7 +288,7 @@ class Mitochondrion(Organelle):
             return 0
 
         acetyl_coa = self.pyruvate_to_acetyl_coa(pyruvate_amount)
-        self.krebs_cycle.add_substrate("Acetyl-CoA", acetyl_coa)
+        self.krebs_cycle.add_substrate("glucose", acetyl_coa)
 
         # Implement feedback inhibition
         atp_inhibition_factor = 1 / (
@@ -271,6 +298,9 @@ class Mitochondrion(Organelle):
         self.krebs_cycle.enzymes[
             "isocitrate_dehydrogenase"
         ].activity *= atp_inhibition_factor
+
+        # Ensure all necessary metabolites exist before starting the Krebs cycle
+        self.initialize_krebs_cycle_metabolites()
 
         # Use the new generator-based method for the Krebs cycle
         for reaction_name, result in self.krebs_cycle.reaction_iterator():

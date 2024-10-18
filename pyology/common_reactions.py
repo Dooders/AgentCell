@@ -34,7 +34,7 @@ class GlycolysisReactions:
         name="Phosphofructokinase",
         enzyme=phosphofructokinase,
         substrates={"fructose_6_phosphate": 1, "ATP": 1},
-        products={"fructose_1_6_bisphosphate": 1, "ADP": 1, "AMP": 1},
+        products={"fructose_1_6_bisphosphate": 1, "ADP": 1},
         reversible=False,
     )
 
