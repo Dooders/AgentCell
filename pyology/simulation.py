@@ -3,13 +3,13 @@ import logging
 from pyology.glycolysis import Glycolysis
 
 from .constants import SIMULATION_DURATION
-from .enzymes import Enzyme
 from .exceptions import (
     GlycolysisError,
     InsufficientMetaboliteError,
     QuantityError,
     UnknownMetaboliteError,
 )
+from .enzymes import Enzyme
 from .reaction import Reaction
 
 
@@ -37,11 +37,13 @@ class Reporter:
         )
         self.log_event(f"Total ATP produced: {results['total_atp_produced']:.2f}")
         self.log_event(f"Glucose processed: {results['glucose_processed']:.2f}")
+        self.log_event(f"Glucose consumed: {results['glucose_consumed']:.2f}")
         self.log_event(f"Oxygen remaining: {results['oxygen_remaining']:.2f}")
         self.log_event(f"Final cytoplasm ATP: {results['final_cytoplasm_atp']:.2f}")
-        self.log_event(
-            f"Final mitochondrion ATP: {results['final_mitochondrion_atp']:.2f}"
-        )
+        self.log_event(f"Final mitochondrion ATP: {results['final_mitochondrion_atp']:.2f}")
+        self.log_event(f"Pyruvate produced: {results['pyruvate_produced']:.2f}")
+        self.log_event(f"2-Phosphoglycerate remaining: {results['final_phosphoglycerate_2']:.2f}")
+        self.log_event(f"Phosphoenolpyruvate produced: {results['final_phosphoenolpyruvate']:.2f}")
 
         self.log_event("\nATP Production Breakdown:")
         for step, atp in self.atp_production_log:
@@ -67,11 +69,10 @@ class SimulationController:
         self.max_simulation_time = 20  # Increased max simulation time
 
     def run_simulation(self, glucose):
-        self.cell.initialize_simulation()
         self.initial_adenine_nucleotides = (
-            self.cell.metabolites["ATP"].quantity
-            + self.cell.metabolites["ADP"].quantity
-            + self.cell.metabolites["AMP"].quantity
+            self.cell.metabolites["ATP"].quantity +
+            self.cell.metabolites["ADP"].quantity +
+            self.cell.metabolites["AMP"].quantity
         )
         self.cell.metabolites["glucose"].quantity = round(glucose, 2)
         self.reporter.log_event(f"Starting simulation with {glucose:.2f} glucose units")
@@ -170,9 +171,6 @@ class SimulationController:
 
                     self._check_adenine_nucleotide_balance()
 
-                    # Add this at the end of each simulation step
-                    self.cell.check_adenine_nucleotide_balance()
-
                 except UnknownMetaboliteError as e:
                     self.reporter.log_error(f"Unknown metabolite error: {str(e)}")
                     self.reporter.log_warning("Skipping current simulation step.")
@@ -193,14 +191,18 @@ class SimulationController:
                     self.reporter.log_warning(f"Glycolysis error: {str(e)}")
                     break
             # print(f"metabolites: {self.cell.metabolites}")
-            # Return simulation results
+            # After the simulation loop, update the results dictionary
             results = {
                 "total_atp_produced": total_atp_produced,
                 "glucose_processed": glucose_processed,
                 "simulation_time": self.simulation_time,
-                "oxygen_remaining": self.cell.metabolites.get("oxygen", 0).quantity,
-                "final_cytoplasm_atp": self.cell.metabolites["atp"].quantity,
-                "final_mitochondrion_atp": self.cell.metabolites["atp"].quantity,
+                "oxygen_remaining": self.cell.metabolites["oxygen"].quantity,
+                "final_cytoplasm_atp": self.cell.cytoplasm.metabolites["atp"].quantity,
+                "final_mitochondrion_atp": self.cell.mitochondrion.metabolites["atp"].quantity,
+                "pyruvate_produced": self.cell.metabolites["pyruvate"].quantity,
+                "glucose_consumed": glucose - self.cell.metabolites["glucose"].quantity,
+                "final_phosphoglycerate_2": self.cell.metabolites["phosphoglycerate_2"].quantity,
+                "final_phosphoenolpyruvate": self.cell.metabolites["phosphoenolpyruvate"].quantity,
             }
             self.reporter.report_simulation_results(results)
             return results
@@ -301,9 +303,9 @@ class SimulationController:
 
     def _check_adenine_nucleotide_balance(self):
         total_adenine_nucleotides = (
-            self.cell.metabolites["ATP"].quantity
-            + self.cell.metabolites["ADP"].quantity
-            + self.cell.metabolites["AMP"].quantity
+            self.cell.metabolites["ATP"].quantity +
+            self.cell.metabolites["ADP"].quantity +
+            self.cell.metabolites["AMP"].quantity
         )
         if abs(total_adenine_nucleotides - self.initial_adenine_nucleotides) > 1e-6:
             self.reporter.log_warning(
@@ -311,3 +313,4 @@ class SimulationController:
                 f"Expected: {self.initial_adenine_nucleotides}, "
                 f"Actual: {total_adenine_nucleotides}"
             )
+

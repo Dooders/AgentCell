@@ -52,27 +52,27 @@ class GlycolysisReactions:
     glyceraldehyde_3_phosphate_dehydrogenase = Reaction(
         name="Glyceraldehyde 3-Phosphate Dehydrogenase",
         substrates={"glyceraldehyde_3_phosphate": 1, "NAD+": 1, "Pi": 1},
-        products={"1_3_bisphosphoglycerate": 1, "NADH": 1},
+        products={"bisphosphoglycerate_1_3": 1, "NADH": 1},
         enzyme="Glyceraldehyde 3-phosphate dehydrogenase",
     )
 
     phosphoglycerate_kinase = Reaction(
         name="Phosphoglycerate Kinase",
-        substrates={"1_3_bisphosphoglycerate": 1, "ADP": 1},
-        products={"3_phosphoglycerate": 1, "ATP": 1},
+        substrates={"bisphosphoglycerate_1_3": 1, "ADP": 1},
+        products={"phosphoglycerate_3": 1, "ATP": 1},
         enzyme="Phosphoglycerate kinase",
     )
 
-    phosphoglycerate_mutate = Reaction(
+    phosphoglycerate_mutase = Reaction(
         name="Phosphoglycerate Mutase",
-        substrates={"3_phosphoglycerate": 1},
-        products={"2_phosphoglycerate": 1},
+        substrates={"phosphoglycerate_3": 1},
+        products={"phosphoglycerate_2": 1},
         enzyme="Phosphoglycerate mutase",
     )
 
     enolase = Reaction(
         name="Enolase",
-        substrates={"2_phosphoglycerate": 1},
+        substrates={"phosphoglycerate_2": 1},
         products={"phosphoenolpyruvate": 1, "H2O": 1},
         enzyme="Enolase",
     )
