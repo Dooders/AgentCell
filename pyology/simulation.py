@@ -331,6 +331,7 @@ class SimulationController:
                             )
 
                     # Run observers
+                    #! Need to think through if this works as expected
                     for observer in self.observers:
                         observer.observe(self.cell, self.reporter)
 
