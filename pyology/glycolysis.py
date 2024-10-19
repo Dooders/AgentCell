@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from pyology.common_reactions import GlycolysisReactions
 from pyology.reaction import Reaction
 
-from .exceptions import GlycolysisError, MetaboliteError, ReactionError
+from .exceptions import GlycolysisError, ReactionError
 from .pathway import Pathway
 
 logger = logging.getLogger(__name__)
@@ -67,6 +67,12 @@ class Glycolysis(Pathway):
 
             # Investment phase
             cls.investment_phase(organelle, glucose_units)
+            
+            atp_after_investment = organelle.get_metabolite_quantity("ATP")
+            logger.info(f"ATP after investment phase: {atp_after_investment}")
+            logger.info(
+                f"ATP consumed in investment phase: {initial_atp - atp_after_investment}"
+            )
 
             # Yield phase
             cls.yield_phase(organelle, glucose_units * 2)  # 2 G3P per glucose

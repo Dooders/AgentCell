@@ -126,6 +126,7 @@ class SimulationController:
             + self.cell.mitochondrion.metabolites["ATP"].quantity
         )
         self.initial_glucose = self.cell.cytoplasm.metabolites["glucose"].quantity
+        self.adenine_nucleotide_log = []
 
     def run_simulation(self, glucose: float) -> dict:
         """
@@ -142,9 +143,15 @@ class SimulationController:
             The results of the simulation.
         """
         self.initial_adenine_nucleotides = (
-            self.cell.metabolites["ATP"].quantity
-            + self.cell.metabolites["ADP"].quantity
-            + self.cell.metabolites["AMP"].quantity
+            self.cell.cytoplasm.metabolites["ATP"].quantity
+            + self.cell.cytoplasm.metabolites["ADP"].quantity
+            + self.cell.cytoplasm.metabolites["AMP"].quantity
+            + self.cell.mitochondrion.metabolites["ATP"].quantity
+            + self.cell.mitochondrion.metabolites["ADP"].quantity
+            + self.cell.mitochondrion.metabolites["AMP"].quantity
+        )
+        self.adenine_nucleotide_log.append(
+            ("Initial", self.initial_adenine_nucleotides)
         )
         self.cell.metabolites["glucose"].quantity = round(glucose, 2)
         self.reporter.log_event(f"Starting simulation with {glucose:.2f} glucose units")
@@ -275,7 +282,7 @@ class SimulationController:
                 except GlycolysisError as e:
                     self.reporter.log_warning(f"Glycolysis error: {str(e)}")
                     break
-            # print(f"metabolites: {self.cell.metabolites}")
+
             # After the simulation loop, update the results dictionary
             final_glucose = self.cell.metabolites["glucose"].quantity
             final_pyruvate = self.cell.metabolites["pyruvate"].quantity
@@ -313,6 +320,24 @@ class SimulationController:
                     "phosphoenolpyruvate"
                 ].quantity,
             }
+
+            # Assert non-negative metabolite quantities
+            for metabolite, quantity in results.items():
+                if metabolite.startswith("final_"):
+                    assert (
+                        quantity >= 0
+                    ), f"Negative quantity for {metabolite}: {quantity}"
+
+            # Assert glucose consumption
+            assert (
+                results["glucose_consumed"] >= 0
+            ), f"Negative glucose consumption: {results['glucose_consumed']}"
+
+            # Assert ATP production
+            assert (
+                results["total_atp_produced"] >= 0
+            ), f"Negative ATP production: {results['total_atp_produced']}"
+
             self.reporter.report_simulation_results(results)
 
             # Check adenine nucleotide balance
@@ -480,16 +505,37 @@ class SimulationController:
 
     def _check_adenine_nucleotide_balance(self) -> None:
         """
-        Check the adenine nucleotide balance.
+        Check the adenine nucleotide balance and log any changes.
         """
-        total_adenine_nucleotides = (
-            self.cell.metabolites["ATP"].quantity
-            + self.cell.metabolites["ADP"].quantity
-            + self.cell.metabolites["AMP"].quantity
+        current_adenine_nucleotides = (
+            self.cell.cytoplasm.metabolites["ATP"].quantity
+            + self.cell.cytoplasm.metabolites["ADP"].quantity
+            + self.cell.cytoplasm.metabolites["AMP"].quantity
+            + self.cell.mitochondrion.metabolites["ATP"].quantity
+            + self.cell.mitochondrion.metabolites["ADP"].quantity
+            + self.cell.mitochondrion.metabolites["AMP"].quantity
         )
-        if abs(total_adenine_nucleotides - self.initial_adenine_nucleotides) > 1e-6:
+        difference = current_adenine_nucleotides - self.initial_adenine_nucleotides
+        if abs(difference) > 1e-6:
             self.reporter.log_warning(
                 f"Adenine nucleotide imbalance detected. "
-                f"Expected: {self.initial_adenine_nucleotides}, "
-                f"Actual: {total_adenine_nucleotides}"
+                f"Current: {current_adenine_nucleotides:.6f}, "
+                f"Initial: {self.initial_adenine_nucleotides:.6f}, "
+                f"Difference: {difference:.6f}"
             )
+            self.adenine_nucleotide_log.append(
+                ("Imbalance", current_adenine_nucleotides)
+            )
+
+    def _report_adenine_nucleotide_changes(self) -> None:
+        """
+        Report the changes in adenine nucleotides throughout the simulation.
+        """
+        self.reporter.log_event("\nAdenine Nucleotide Changes:")
+        for stage, value in self.adenine_nucleotide_log:
+            self.reporter.log_event(f"{stage}: {value:.6f}")
+
+        initial = self.adenine_nucleotide_log[0][1]
+        final = self.adenine_nucleotide_log[-1][1]
+        difference = final - initial
+        self.reporter.log_event(f"Total Change: {difference:.6f}")
