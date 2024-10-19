@@ -82,25 +82,13 @@ class Glycolysis(Pathway):
                 f"Final ATP: {final_atp}, Final ADP: {final_adp}, Final AMP: {final_amp}"
             )
 
-            net_atp_produced = final_atp - initial_atp
-            logger.info(f"Net ATP produced: {net_atp_produced}")
-
             # Ensure conservation of adenine nucleotides
             if abs(final_total - initial_total) > 1e-6:
                 logger.warning(
                     f"Adenine nucleotide imbalance detected. Initial: {initial_total}, Final: {final_total}"
                 )
-                # Adjust ATP and ADP to maintain balance
-                excess = final_total - initial_total
-                atp_adjustment = min(excess, final_atp - initial_atp)
-                organelle.metabolites["ATP"].quantity -= atp_adjustment
-                adp_adjustment = excess - atp_adjustment
-                if adp_adjustment > 0:
-                    organelle.metabolites["ADP"].quantity -= adp_adjustment
-                else:
-                    organelle.metabolites["ADP"].quantity += abs(adp_adjustment)
-                logger.info(
-                    f"Adjusted ATP by -{atp_adjustment} and ADP by {-adp_adjustment} to maintain adenine nucleotide balance"
+                cls.adjust_adenine_nucleotides(
+                    organelle, initial_total, final_total, initial_atp, final_atp
                 )
 
             # Recalculate net ATP produced after adjustments
@@ -119,6 +107,43 @@ class Glycolysis(Pathway):
         except Exception as e:
             logger.error(f"Error during glycolysis: {str(e)}")
             raise GlycolysisError(f"Glycolysis failed: {str(e)}")
+
+    @classmethod
+    def adjust_adenine_nucleotides(
+        cls,
+        organelle: "Organelle",
+        initial_total: float,
+        final_total: float,
+        initial_atp: float,
+        final_atp: float,
+    ) -> None:
+        """
+        Adjust the adenine nucleotides to maintain balance.
+
+        Parameters
+        ----------
+        organelle : Organelle
+            The organelle where glycolysis takes place.
+        initial_total : float
+            The initial total adenine nucleotides.
+        final_total : float
+            The final total adenine nucleotides.
+        initial_atp : float
+            The initial amount of ATP.
+        final_atp : float
+            The final amount of ATP.
+        """
+        excess = final_total - initial_total
+        atp_adjustment = min(excess, final_atp - initial_atp)
+        organelle.metabolites["ATP"].quantity -= atp_adjustment
+        adp_adjustment = excess - atp_adjustment
+        if adp_adjustment > 0:
+            organelle.metabolites["ADP"].quantity -= adp_adjustment
+        else:
+            organelle.metabolites["ADP"].quantity += abs(adp_adjustment)
+        logger.info(
+            f"Adjusted ATP by -{atp_adjustment} and ADP by {-adp_adjustment} to maintain adenine nucleotide balance"
+        )
 
     @classmethod
     def investment_phase(cls, organelle, glucose_units):
@@ -223,23 +248,3 @@ class Glycolysis(Pathway):
         if reaction_amount > 0:
             cls.reactions.lactate_dehydrogenase.execute(organelle)
             logger.info(f"Regenerated {reaction_amount} NAD+ via Lactate Dehydrogenase")
-
-
-def create_glycolysis_reactions():
-    reactions = [
-        # ... (other reactions remain unchanged)
-        Reaction(
-            name="Phosphoglycerate kinase",
-            substrates={"1,3-bisphosphoglycerate": 1, "ADP": 1},
-            products={"3-phosphoglycerate": 1, "ATP": 1},
-            rate=1.0,
-        ),
-        # ... (other reactions remain unchanged)
-        Reaction(
-            name="Pyruvate kinase",
-            substrates={"phosphoenolpyruvate": 1, "ADP": 1},
-            products={"pyruvate": 1, "ATP": 1},
-            rate=1.0,
-        ),
-    ]
-    return reactions
