@@ -121,10 +121,10 @@ class SimulationController:
         self.max_cytoplasmic_nadh = 100
         self.max_simulation_time = 20  # Increased max simulation time
         self.initial_adenine_nucleotides = 0
-        self.initial_atp = (
-            self.cell.cytoplasm.metabolites["ATP"].quantity
-            + self.cell.mitochondrion.metabolites["ATP"].quantity
-        )
+        self.initial_atp = self.cell.cytoplasm.metabolites["ATP"].quantity
+        self.initial_adp = self.cell.cytoplasm.metabolites["ADP"].quantity
+        self.initial_amp = self.cell.cytoplasm.metabolites["AMP"].quantity
+        self.initial_adenine_nucleotides = self.initial_atp + self.initial_adp + self.initial_amp
         self.initial_glucose = self.cell.cytoplasm.metabolites["glucose"].quantity
         self.adenine_nucleotide_log = []
 
@@ -143,12 +143,7 @@ class SimulationController:
             The results of the simulation.
         """
         self.initial_adenine_nucleotides = (
-            self.cell.cytoplasm.metabolites["ATP"].quantity
-            + self.cell.cytoplasm.metabolites["ADP"].quantity
-            + self.cell.cytoplasm.metabolites["AMP"].quantity
-            + self.cell.mitochondrion.metabolites["ATP"].quantity
-            + self.cell.mitochondrion.metabolites["ADP"].quantity
-            + self.cell.mitochondrion.metabolites["AMP"].quantity
+            self.initial_atp + self.initial_adp + self.initial_amp
         )
         self.adenine_nucleotide_log.append(
             ("Initial", self.initial_adenine_nucleotides)
@@ -160,12 +155,11 @@ class SimulationController:
             total_atp_produced = 0
             initial_glucose = self.cell.metabolites["glucose"].quantity
             initial_pyruvate = self.cell.metabolites["pyruvate"].quantity
-            initial_atp = self.cell.cytoplasm.metabolites["ATP"].quantity
-            initial_adp = self.cell.cytoplasm.metabolites["ADP"].quantity
-            initial_amp = self.cell.cytoplasm.metabolites["AMP"].quantity
-            initial_total_adenine = initial_atp + initial_adp + initial_amp
+            initial_total_adenine = (
+                self.initial_atp + self.initial_adp + self.initial_amp
+            )
             self.reporter.log_event(
-                f"Initial ATP: {initial_atp}, Initial ADP: {initial_adp}, Initial AMP: {initial_amp}"
+                f"Initial ATP: {self.initial_atp}, Initial ADP: {self.initial_adp}, Initial AMP: {self.initial_amp}"
             )
 
             next_log_time = 0
@@ -198,6 +192,9 @@ class SimulationController:
                     )
                     glucose_processed += glucose_available
                     total_atp_produced += net_atp_produced
+
+                    # Update ATP levels
+                    self.cell.cytoplasm.metabolites["ATP"].quantity += net_atp_produced
 
                     self.reporter.log_event(
                         f"ATP produced in this iteration: {net_atp_produced}"
@@ -357,7 +354,7 @@ class SimulationController:
                 )
                 # Adjust ATP and ADP to maintain balance
                 excess = final_total_adenine - initial_total_adenine
-                atp_adjustment = min(excess, final_atp - initial_atp)
+                atp_adjustment = min(excess, final_atp - self.initial_atp)
                 self.cell.cytoplasm.metabolites["ATP"].quantity -= atp_adjustment
                 adp_adjustment = excess - atp_adjustment
                 if adp_adjustment > 0:
@@ -539,3 +536,7 @@ class SimulationController:
         final = self.adenine_nucleotide_log[-1][1]
         difference = final - initial
         self.reporter.log_event(f"Total Change: {difference:.6f}")
+
+
+
+
