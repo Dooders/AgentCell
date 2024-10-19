@@ -2,9 +2,11 @@ import logging
 import math
 from typing import TYPE_CHECKING
 
-from pyology.common_reactions import GlycolysisReactions
-from pyology.reaction import Reaction
-
+from .common_reactions import GlycolysisReactions
+from .energy_calculations import (
+    calculate_glycolysis_energy_state,
+    calculate_total_adenine_nucleotides,
+)
 from .exceptions import GlycolysisError, ReactionError
 from .pathway import Pathway
 
@@ -56,6 +58,9 @@ class Glycolysis(Pathway):
         if glucose_units <= 0:
             raise GlycolysisError("The number of glucose units must be positive.")
 
+        initial_energy = cls._calculate_energy_state(organelle)
+        initial_adenine = cls._calculate_total_adenine_nucleotides(organelle)
+
         try:
             initial_atp = organelle.get_metabolite_quantity("ATP")
             initial_adp = organelle.get_metabolite_quantity("ADP")
@@ -67,7 +72,7 @@ class Glycolysis(Pathway):
 
             # Investment phase
             cls.investment_phase(organelle, glucose_units)
-            
+
             atp_after_investment = organelle.get_metabolite_quantity("ATP")
             logger.info(f"ATP after investment phase: {atp_after_investment}")
             logger.info(
@@ -108,6 +113,23 @@ class Glycolysis(Pathway):
             logger.info(f"Glycolysis completed. Produced {pyruvate_produced} pyruvate.")
             logger.info(f"Final metabolite levels: {organelle.metabolites.quantities}")
 
+            final_energy = cls._calculate_energy_state(organelle)
+            final_adenine = cls._calculate_total_adenine_nucleotides(organelle)
+
+            # Check energy conservation
+            energy_difference = final_energy - initial_energy
+            if abs(energy_difference) > 1e-6:
+                logger.warning(
+                    f"Energy not conserved in glycolysis. Difference: {energy_difference}"
+                )
+
+            # Check adenine nucleotide conservation
+            adenine_difference = final_adenine - initial_adenine
+            if abs(adenine_difference) > 1e-6:
+                logger.warning(
+                    f"Adenine nucleotides not conserved in glycolysis. Difference: {adenine_difference}"
+                )
+
             return net_atp_produced, pyruvate_produced
 
         except Exception as e:
@@ -140,16 +162,17 @@ class Glycolysis(Pathway):
             The final amount of ATP.
         """
         excess = final_total - initial_total
-        atp_adjustment = min(excess, final_atp - initial_atp)
-        organelle.metabolites["ATP"].quantity -= atp_adjustment
-        adp_adjustment = excess - atp_adjustment
-        if adp_adjustment > 0:
-            organelle.metabolites["ADP"].quantity -= adp_adjustment
-        else:
-            organelle.metabolites["ADP"].quantity += abs(adp_adjustment)
-        logger.info(
-            f"Adjusted ATP by -{atp_adjustment} and ADP by {-adp_adjustment} to maintain adenine nucleotide balance"
-        )
+        if abs(excess) > 1e-6:
+            atp_adjustment = min(excess, final_atp - initial_atp)
+            organelle.metabolites["ATP"].quantity -= atp_adjustment
+            adp_adjustment = excess - atp_adjustment
+            if adp_adjustment > 0:
+                organelle.metabolites["ADP"].quantity -= adp_adjustment
+            else:
+                organelle.metabolites["ADP"].quantity += abs(adp_adjustment)
+            logger.info(
+                f"Adjusted ATP by -{atp_adjustment:.6f} and ADP by {-adp_adjustment:.6f} to maintain adenine nucleotide balance"
+            )
 
     @classmethod
     def investment_phase(cls, organelle, glucose_units):
@@ -215,6 +238,7 @@ class Glycolysis(Pathway):
 
     @classmethod
     def enolase_reaction(cls, organelle: "Organelle"):
+        #! IS THIS USED
         initial_atp = organelle.get_metabolite_quantity("ATP")
         enolase = GlycolysisReactions.enolase
         phosphoglycerate_2 = organelle.get_metabolite_quantity("phosphoglycerate_2")
@@ -233,12 +257,14 @@ class Glycolysis(Pathway):
 
     @classmethod
     def phosphoglycerate_kinase(cls, organelle):
+        #! IS THIS USED
         """1,3-Bisphosphoglycerate to 3-Phosphoglycerate"""
         reaction = cls.reactions.phosphoglycerate_kinase
         reaction.execute(organelle)
 
     @classmethod
     def pyruvate_kinase(cls, organelle):
+        #! IS THIS USED
         """Phosphoenolpyruvate to Pyruvate"""
         reaction = cls.reactions.pyruvate_kinase
         reaction.execute(organelle)
@@ -254,3 +280,11 @@ class Glycolysis(Pathway):
         if reaction_amount > 0:
             cls.reactions.lactate_dehydrogenase.execute(organelle)
             logger.info(f"Regenerated {reaction_amount} NAD+ via Lactate Dehydrogenase")
+
+    @staticmethod
+    def _calculate_energy_state(organelle: "Organelle") -> float:
+        return calculate_glycolysis_energy_state(organelle)
+
+    @staticmethod
+    def _calculate_total_adenine_nucleotides(organelle: "Organelle") -> float:
+        return calculate_total_adenine_nucleotides(organelle.metabolites)
