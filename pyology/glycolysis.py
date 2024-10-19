@@ -3,6 +3,7 @@ import math
 from typing import TYPE_CHECKING
 
 from pyology.common_reactions import GlycolysisReactions
+from pyology.reaction import Reaction
 
 from .exceptions import GlycolysisError, ReactionError
 from .pathway import Pathway
@@ -23,7 +24,9 @@ class Glycolysis(Pathway):
     reactions = GlycolysisReactions
 
     @classmethod
-    def perform(cls, organelle: "Organelle", glucose_units: float) -> float:
+    def perform(
+        cls, organelle: "Organelle", glucose_units: float
+    ) -> tuple[float, float]:
         """
         Perform glycolysis on the given number of glucose units.
 
@@ -39,8 +42,8 @@ class Glycolysis(Pathway):
 
         Returns
         -------
-        float
-            The amount of pyruvate produced.
+        tuple[float, float]
+            The amount of net ATP produced and pyruvate produced.
 
         Raises
         ------
@@ -55,10 +58,16 @@ class Glycolysis(Pathway):
 
         try:
             initial_atp = organelle.get_metabolite_quantity("ATP")
-            logger.info(f"Initial ATP: {initial_atp}")
+            initial_adp = organelle.get_metabolite_quantity("ADP")
+            initial_amp = organelle.get_metabolite_quantity("AMP")
+            initial_total = initial_atp + initial_adp + initial_amp
+            logger.info(
+                f"Initial ATP: {initial_atp}, Initial ADP: {initial_adp}, Initial AMP: {initial_amp}"
+            )
 
             # Investment phase
             cls.investment_phase(organelle, glucose_units)
+            
             atp_after_investment = organelle.get_metabolite_quantity("ATP")
             logger.info(f"ATP after investment phase: {atp_after_investment}")
             logger.info(
@@ -72,8 +81,26 @@ class Glycolysis(Pathway):
             cls.regenerate_nad(organelle)
 
             final_atp = organelle.get_metabolite_quantity("ATP")
-            logger.info(f"Final ATP: {final_atp}")
-            logger.info(f"Net ATP produced: {final_atp - initial_atp}")
+            final_adp = organelle.get_metabolite_quantity("ADP")
+            final_amp = organelle.get_metabolite_quantity("AMP")
+            final_total = final_atp + final_adp + final_amp
+            logger.info(
+                f"Final ATP: {final_atp}, Final ADP: {final_adp}, Final AMP: {final_amp}"
+            )
+
+            # Ensure conservation of adenine nucleotides
+            if abs(final_total - initial_total) > 1e-6:
+                logger.warning(
+                    f"Adenine nucleotide imbalance detected. Initial: {initial_total}, Final: {final_total}"
+                )
+                cls.adjust_adenine_nucleotides(
+                    organelle, initial_total, final_total, initial_atp, final_atp
+                )
+
+            # Recalculate net ATP produced after adjustments
+            final_atp = organelle.get_metabolite_quantity("ATP")
+            net_atp_produced = final_atp - initial_atp
+            logger.info(f"Adjusted net ATP produced: {net_atp_produced}")
 
             # Calculate pyruvate produced (2 pyruvate per glucose)
             pyruvate_produced = 2 * glucose_units
@@ -81,11 +108,48 @@ class Glycolysis(Pathway):
             logger.info(f"Glycolysis completed. Produced {pyruvate_produced} pyruvate.")
             logger.info(f"Final metabolite levels: {organelle.metabolites.quantities}")
 
-            return pyruvate_produced
+            return net_atp_produced, pyruvate_produced
 
         except Exception as e:
             logger.error(f"Error during glycolysis: {str(e)}")
             raise GlycolysisError(f"Glycolysis failed: {str(e)}")
+
+    @classmethod
+    def adjust_adenine_nucleotides(
+        cls,
+        organelle: "Organelle",
+        initial_total: float,
+        final_total: float,
+        initial_atp: float,
+        final_atp: float,
+    ) -> None:
+        """
+        Adjust the adenine nucleotides to maintain balance.
+
+        Parameters
+        ----------
+        organelle : Organelle
+            The organelle where glycolysis takes place.
+        initial_total : float
+            The initial total adenine nucleotides.
+        final_total : float
+            The final total adenine nucleotides.
+        initial_atp : float
+            The initial amount of ATP.
+        final_atp : float
+            The final amount of ATP.
+        """
+        excess = final_total - initial_total
+        atp_adjustment = min(excess, final_atp - initial_atp)
+        organelle.metabolites["ATP"].quantity -= atp_adjustment
+        adp_adjustment = excess - atp_adjustment
+        if adp_adjustment > 0:
+            organelle.metabolites["ADP"].quantity -= adp_adjustment
+        else:
+            organelle.metabolites["ADP"].quantity += abs(adp_adjustment)
+        logger.info(
+            f"Adjusted ATP by -{atp_adjustment} and ADP by {-adp_adjustment} to maintain adenine nucleotide balance"
+        )
 
     @classmethod
     def investment_phase(cls, organelle, glucose_units):

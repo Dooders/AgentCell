@@ -161,9 +161,14 @@ class SimulationController:
             initial_glucose = self.cell.metabolites["glucose"].quantity
             initial_pyruvate = self.cell.metabolites["pyruvate"].quantity
             initial_atp = self.cell.cytoplasm.metabolites["ATP"].quantity
-            self.reporter.log_event(f"Initial ATP: {initial_atp}")
+            initial_adp = self.cell.cytoplasm.metabolites["ADP"].quantity
+            initial_amp = self.cell.cytoplasm.metabolites["AMP"].quantity
+            initial_total_adenine = initial_atp + initial_adp + initial_amp
+            self.reporter.log_event(
+                f"Initial ATP: {initial_atp}, Initial ADP: {initial_adp}, Initial AMP: {initial_amp}"
+            )
 
-            next_log_time = 0  # Initialize next_log_time here
+            next_log_time = 0
             while (
                 glucose_processed < glucose
                 and self.simulation_time < self.max_simulation_time
@@ -177,34 +182,31 @@ class SimulationController:
                         )
                         break
 
-                    # Store ATP levels before reactions
+                    # Store ATP and ADP levels before reactions
                     atp_before = (
-                        self.cell.cytoplasm.metabolites["atp"].quantity
-                        + self.cell.mitochondrion.metabolites["atp"].quantity
+                        self.cell.cytoplasm.metabolites["ATP"].quantity
+                        + self.cell.mitochondrion.metabolites["ATP"].quantity
+                    )
+                    adp_before = (
+                        self.cell.cytoplasm.metabolites["ADP"].quantity
+                        + self.cell.mitochondrion.metabolites["ADP"].quantity
                     )
 
                     # Perform glycolysis
-                    pyruvate_produced = Glycolysis.perform(
+                    net_atp_produced, pyruvate_produced = Glycolysis.perform(
                         self.cell.cytoplasm, glucose_available
                     )
                     glucose_processed += glucose_available
-
-                    # Calculate ATP produced in this iteration
-                    atp_after = (
-                        self.cell.cytoplasm.metabolites["atp"].quantity
-                        + self.cell.mitochondrion.metabolites["atp"].quantity
-                    )
-                    atp_produced = round(atp_after - atp_before, 2)
-                    total_atp_produced = round(total_atp_produced + atp_produced, 2)
+                    total_atp_produced += net_atp_produced
 
                     self.reporter.log_event(
-                        f"ATP produced in this iteration: {atp_produced}"
+                        f"ATP produced in this iteration: {net_atp_produced}"
                     )
                     self.reporter.log_event(
                         f"Total ATP produced so far: {total_atp_produced}"
                     )
 
-                    self.reporter.log_atp_production("Glycolysis", atp_produced)
+                    self.reporter.log_atp_production("Glycolysis", net_atp_produced)
 
                     # Check if there is enough glucose
                     if self.cell.metabolites["glucose"].quantity <= 0:
@@ -285,21 +287,32 @@ class SimulationController:
             final_glucose = self.cell.metabolites["glucose"].quantity
             final_pyruvate = self.cell.metabolites["pyruvate"].quantity
             final_atp = (
-                self.cell.cytoplasm.metabolites["atp"].quantity
-                + self.cell.mitochondrion.metabolites["atp"].quantity
+                self.cell.cytoplasm.metabolites["ATP"].quantity
+                + self.cell.mitochondrion.metabolites["ATP"].quantity
             )
+            final_adp = (
+                self.cell.cytoplasm.metabolites["ADP"].quantity
+                + self.cell.mitochondrion.metabolites["ADP"].quantity
+            )
+            final_amp = (
+                self.cell.cytoplasm.metabolites["AMP"].quantity
+                + self.cell.mitochondrion.metabolites["AMP"].quantity
+            )
+            final_total_adenine = final_atp + final_adp + final_amp
 
             results = {
-                "total_atp_produced": final_atp - initial_atp,
+                "total_atp_produced": total_atp_produced,
                 "glucose_processed": glucose_processed,
                 "glucose_consumed": initial_glucose - final_glucose,
                 "pyruvate_produced": final_pyruvate - initial_pyruvate,
                 "simulation_time": self.simulation_time,
                 "oxygen_remaining": self.cell.metabolites["oxygen"].quantity,
-                "final_cytoplasm_atp": self.cell.cytoplasm.metabolites["atp"].quantity,
+                "final_cytoplasm_atp": self.cell.cytoplasm.metabolites["ATP"].quantity,
                 "final_mitochondrion_atp": self.cell.mitochondrion.metabolites[
-                    "atp"
+                    "ATP"
                 ].quantity,
+                "final_adp": final_adp,
+                "final_amp": final_amp,
                 "final_phosphoglycerate_2": self.cell.metabolites[
                     "phosphoglycerate_2"
                 ].quantity,
@@ -326,6 +339,41 @@ class SimulationController:
             ), f"Negative ATP production: {results['total_atp_produced']}"
 
             self.reporter.report_simulation_results(results)
+
+            # Check adenine nucleotide balance
+            self.reporter.log_event(
+                f"Initial total adenine nucleotides: {initial_total_adenine}"
+            )
+            self.reporter.log_event(
+                f"Final total adenine nucleotides: {final_total_adenine}"
+            )
+            self.reporter.log_event(
+                f"Difference: {final_total_adenine - initial_total_adenine}"
+            )
+
+            if abs(final_total_adenine - initial_total_adenine) > 1e-6:
+                self.reporter.log_warning(
+                    "Adenine nucleotide balance is not conserved!"
+                )
+                # Adjust ATP and ADP to maintain balance
+                excess = final_total_adenine - initial_total_adenine
+                atp_adjustment = min(excess, final_atp - initial_atp)
+                self.cell.cytoplasm.metabolites["ATP"].quantity -= atp_adjustment
+                adp_adjustment = excess - atp_adjustment
+                if adp_adjustment > 0:
+                    self.cell.cytoplasm.metabolites["ADP"].quantity -= adp_adjustment
+                else:
+                    self.cell.cytoplasm.metabolites["ADP"].quantity += abs(
+                        adp_adjustment
+                    )
+                self.reporter.log_event(
+                    f"Adjusted ATP by -{atp_adjustment} and ADP by {-adp_adjustment} to maintain adenine nucleotide balance"
+                )
+                results["final_cytoplasm_atp"] = self.cell.cytoplasm.metabolites[
+                    "ATP"
+                ].quantity
+                results["final_adp"] = self.cell.cytoplasm.metabolites["ADP"].quantity
+
             return results
 
         except Exception as e:
@@ -452,6 +500,8 @@ class SimulationController:
         Reset the simulation state.
         """
         self.cell.reset()
+        self.cell.cytoplasm.metabolites["ADP"].quantity = 1.0
+        self.cell.cytoplasm.metabolites["AMP"].quantity = 1.0
 
     def _check_adenine_nucleotide_balance(self) -> None:
         """
