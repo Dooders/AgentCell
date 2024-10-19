@@ -4,6 +4,10 @@ from pyology.cell import Cell
 from pyology.glycolysis import Glycolysis
 
 from .constants import SIMULATION_DURATION
+from .energy_calculations import (
+    calculate_cell_energy_state,
+    calculate_total_adenine_nucleotides,
+)
 from .exceptions import (
     GlycolysisError,
     InsufficientMetaboliteError,
@@ -124,27 +128,23 @@ class SimulationController:
         self.initial_atp = self.cell.cytoplasm.metabolites["ATP"].quantity
         self.initial_adp = self.cell.cytoplasm.metabolites["ADP"].quantity
         self.initial_amp = self.cell.cytoplasm.metabolites["AMP"].quantity
-        self.initial_adenine_nucleotides = self.initial_atp + self.initial_adp + self.initial_amp
+        self.initial_adenine_nucleotides = (
+            self.initial_atp + self.initial_adp + self.initial_amp
+        )
         self.initial_glucose = self.cell.cytoplasm.metabolites["glucose"].quantity
         self.adenine_nucleotide_log = []
         self.initial_energy_state = self._calculate_total_energy_state()
 
-    def _calculate_total_adenine_nucleotides(self):
-        return (
-            self.cell.cytoplasm.metabolites["ATP"].quantity
-            + self.cell.cytoplasm.metabolites["ADP"].quantity
-            + self.cell.cytoplasm.metabolites["AMP"].quantity
-            + self.cell.mitochondrion.metabolites["ATP"].quantity
-            + self.cell.mitochondrion.metabolites["ADP"].quantity
-            + self.cell.mitochondrion.metabolites["AMP"].quantity
-        )
+    def _calculate_total_energy_state(self) -> float:
+        return calculate_cell_energy_state(self.cell)
 
-    def _calculate_total_energy_state(self):
-        return (
-            self.cell.cytoplasm.metabolites["ATP"].quantity * 50
-            + self.cell.mitochondrion.metabolites["ATP"].quantity * 50
-            + self.cell.mitochondrion.proton_gradient * 5
-        )
+    def _calculate_total_adenine_nucleotides(self) -> float:
+        """
+        Calculate the total adenine nucleotides in the system.
+        """
+        return calculate_total_adenine_nucleotides(
+            self.cell.cytoplasm.metabolites
+        ) + calculate_total_adenine_nucleotides(self.cell.mitochondrion.metabolites)
 
     def run_simulation(self, glucose: float) -> dict:
         """
@@ -213,7 +213,9 @@ class SimulationController:
                     )
 
                     # Add this line to track adenine nucleotides after glycolysis
-                    adenine_after_glycolysis = self._calculate_total_adenine_nucleotides()
+                    adenine_after_glycolysis = (
+                        self._calculate_total_adenine_nucleotides()
+                    )
 
                     # If there's a discrepancy, adjust the quantities
                     if abs(adenine_after_glycolysis - adenine_before) > 1e-6:
@@ -298,7 +300,9 @@ class SimulationController:
                     for metabolite in ["ATP", "ADP", "AMP"]:
                         if self.cell.cytoplasm.metabolites[metabolite].quantity < 0:
                             self.cell.cytoplasm.metabolites[metabolite].quantity = 0
-                            self.reporter.log_warning(f"Set {metabolite} to 0 to avoid negative quantity")
+                            self.reporter.log_warning(
+                                f"Set {metabolite} to 0 to avoid negative quantity"
+                            )
 
                 except UnknownMetaboliteError as e:
                     self.reporter.log_error(f"Unknown metabolite error: {str(e)}")
@@ -586,6 +590,10 @@ class SimulationController:
     def _check_energy_conservation(self) -> None:
         """
         Check the energy conservation and log any changes.
+
+        If the energy state is negative, it means that the system is consuming
+        energy. If the energy state is positive, it means that the system is
+        producing energy.
         """
         current_energy_state = self._calculate_total_energy_state()
         difference = current_energy_state - self.initial_energy_state
@@ -600,28 +608,30 @@ class SimulationController:
     def _check_and_adjust_adenine_balance(self):
         """
         Check the adenine nucleotide balance and make adjustments if necessary.
+
+        If the adenine nucleotide balance is negative, it means that the system
+        is consuming adenine nucleotides. If the adenine nucleotide balance is
+        positive, it means that the system is producing adenine nucleotides.
         """
         current_adenine = self._calculate_total_adenine_nucleotides()
         if abs(current_adenine - self.initial_adenine_nucleotides) > 1e-6:
             adjustment = self.initial_adenine_nucleotides - current_adenine
-            
+
             # Distribute the adjustment across ATP, ADP, and AMP
-            atp_adjustment = min(adjustment, self.cell.cytoplasm.metabolites["ATP"].quantity)
+            atp_adjustment = min(
+                adjustment, self.cell.cytoplasm.metabolites["ATP"].quantity
+            )
             self.cell.cytoplasm.metabolites["ATP"].quantity -= atp_adjustment
-            
+
             remaining_adjustment = adjustment - atp_adjustment
-            adp_adjustment = min(remaining_adjustment, self.cell.cytoplasm.metabolites["ADP"].quantity)
+            adp_adjustment = min(
+                remaining_adjustment, self.cell.cytoplasm.metabolites["ADP"].quantity
+            )
             self.cell.cytoplasm.metabolites["ADP"].quantity -= adp_adjustment
-            
+
             amp_adjustment = remaining_adjustment - adp_adjustment
             self.cell.cytoplasm.metabolites["AMP"].quantity += amp_adjustment
-            
-            self.reporter.log_warning(f"Adjusted ATP by -{atp_adjustment}, ADP by -{adp_adjustment}, and AMP by +{amp_adjustment} to maintain adenine nucleotide balance")
 
-
-
-
-
-
-
-
+            self.reporter.log_warning(
+                f"Adjusted ATP by -{atp_adjustment}, ADP by -{adp_adjustment}, and AMP by +{amp_adjustment} to maintain adenine nucleotide balance"
+            )
