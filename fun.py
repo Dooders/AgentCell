@@ -69,7 +69,13 @@ for glucose in glucose_amounts:
 
     # Assert conservation of adenine nucleotides with a smaller tolerance
     tolerance = 1e-6  # Decreased tolerance
-    assert abs(results['final_adenine_nucleotides'] - results['initial_adenine_nucleotides']) < tolerance, (
+    assert (
+        abs(
+            results["final_adenine_nucleotides"]
+            - results["initial_adenine_nucleotides"]
+        )
+        < tolerance
+    ), (
         f"Adenine nucleotide conservation violated. "
         f"Initial: {results['initial_adenine_nucleotides']:.6f}, "
         f"Final: {results['final_adenine_nucleotides']:.6f}, "

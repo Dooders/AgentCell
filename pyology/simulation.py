@@ -2,6 +2,10 @@ import logging
 
 from pyology.cell import Cell
 from pyology.glycolysis import Glycolysis
+from pyology.observers import (
+    NegativeMetaboliteObserver,
+    AdenineNucleotideBalanceObserver,
+)
 
 from .constants import SIMULATION_DURATION
 from .energy_calculations import (
@@ -134,6 +138,10 @@ class SimulationController:
         self.initial_glucose = self.cell.cytoplasm.metabolites["glucose"].quantity
         self.adenine_nucleotide_log = []
         self.initial_energy_state = self._calculate_total_energy_state()
+        self.observers = [
+            NegativeMetaboliteObserver(),
+            AdenineNucleotideBalanceObserver(),
+        ]
 
     def _calculate_total_energy_state(self) -> float:
         return calculate_cell_energy_state(self.cell)
@@ -145,6 +153,24 @@ class SimulationController:
         return calculate_total_adenine_nucleotides(
             self.cell.cytoplasm.metabolites
         ) + calculate_total_adenine_nucleotides(self.cell.mitochondrion.metabolites)
+
+    def _adjust_adenine_balance_after_glycolysis(self, adenine_before, adenine_after):
+        """
+        Adjust the adenine nucleotide balance after glycolysis if there's a discrepancy.
+
+        Parameters:
+        -----------
+        adenine_before : float
+            Total adenine nucleotides before glycolysis
+        adenine_after : float
+            Total adenine nucleotides after glycolysis
+        """
+        if abs(adenine_after - adenine_before) > 1e-6:
+            adjustment = adenine_before - adenine_after
+            self.cell.cytoplasm.metabolites["ADP"].quantity += adjustment
+            self.reporter.log_event(
+                f"Adjusted ADP by {adjustment:.6f} to maintain adenine nucleotide balance after glycolysis"
+            )
 
     def run_simulation(self, glucose: float) -> dict:
         """
@@ -217,10 +243,10 @@ class SimulationController:
                         self._calculate_total_adenine_nucleotides()
                     )
 
-                    # If there's a discrepancy, adjust the quantities
-                    if abs(adenine_after_glycolysis - adenine_before) > 1e-6:
-                        adjustment = adenine_before - adenine_after_glycolysis
-                        self.cell.cytoplasm.metabolites["ADP"].quantity += adjustment
+                    # Call the new method to adjust adenine balance
+                    self._adjust_adenine_balance_after_glycolysis(
+                        adenine_before, adenine_after_glycolysis
+                    )
 
                     glucose_processed += glucose_available
                     total_atp_produced += net_atp_produced
@@ -303,6 +329,10 @@ class SimulationController:
                             self.reporter.log_warning(
                                 f"Set {metabolite} to 0 to avoid negative quantity"
                             )
+
+                    # Run observers
+                    for observer in self.observers:
+                        observer.observe(self.cell, self.reporter)
 
                 except UnknownMetaboliteError as e:
                     self.reporter.log_error(f"Unknown metabolite error: {str(e)}")
