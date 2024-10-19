@@ -729,3 +729,4 @@ class Mitochondrion(Organelle):
             f"Transferred {cytoplasmic_nadh} cytoplasmic NADH, produced {mitochondrial_nadh} mitochondrial NADH"
         )
         return mitochondrial_nadh
+

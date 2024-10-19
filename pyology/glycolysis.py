@@ -56,6 +56,9 @@ class Glycolysis(Pathway):
         if glucose_units <= 0:
             raise GlycolysisError("The number of glucose units must be positive.")
 
+        initial_energy = cls._calculate_energy_state(organelle)
+        initial_adenine = cls._calculate_total_adenine_nucleotides(organelle)
+
         try:
             initial_atp = organelle.get_metabolite_quantity("ATP")
             initial_adp = organelle.get_metabolite_quantity("ADP")
@@ -108,6 +111,19 @@ class Glycolysis(Pathway):
             logger.info(f"Glycolysis completed. Produced {pyruvate_produced} pyruvate.")
             logger.info(f"Final metabolite levels: {organelle.metabolites.quantities}")
 
+            final_energy = cls._calculate_energy_state(organelle)
+            final_adenine = cls._calculate_total_adenine_nucleotides(organelle)
+
+            # Check energy conservation
+            energy_difference = final_energy - initial_energy
+            if abs(energy_difference) > 1e-6:
+                logger.warning(f"Energy not conserved in glycolysis. Difference: {energy_difference}")
+
+            # Check adenine nucleotide conservation
+            adenine_difference = final_adenine - initial_adenine
+            if abs(adenine_difference) > 1e-6:
+                logger.warning(f"Adenine nucleotides not conserved in glycolysis. Difference: {adenine_difference}")
+
             return net_atp_produced, pyruvate_produced
 
         except Exception as e:
@@ -140,16 +156,17 @@ class Glycolysis(Pathway):
             The final amount of ATP.
         """
         excess = final_total - initial_total
-        atp_adjustment = min(excess, final_atp - initial_atp)
-        organelle.metabolites["ATP"].quantity -= atp_adjustment
-        adp_adjustment = excess - atp_adjustment
-        if adp_adjustment > 0:
-            organelle.metabolites["ADP"].quantity -= adp_adjustment
-        else:
-            organelle.metabolites["ADP"].quantity += abs(adp_adjustment)
-        logger.info(
-            f"Adjusted ATP by -{atp_adjustment} and ADP by {-adp_adjustment} to maintain adenine nucleotide balance"
-        )
+        if abs(excess) > 1e-6:
+            atp_adjustment = min(excess, final_atp - initial_atp)
+            organelle.metabolites["ATP"].quantity -= atp_adjustment
+            adp_adjustment = excess - atp_adjustment
+            if adp_adjustment > 0:
+                organelle.metabolites["ADP"].quantity -= adp_adjustment
+            else:
+                organelle.metabolites["ADP"].quantity += abs(adp_adjustment)
+            logger.info(
+                f"Adjusted ATP by -{atp_adjustment:.6f} and ADP by {-adp_adjustment:.6f} to maintain adenine nucleotide balance"
+            )
 
     @classmethod
     def investment_phase(cls, organelle, glucose_units):
@@ -254,3 +271,28 @@ class Glycolysis(Pathway):
         if reaction_amount > 0:
             cls.reactions.lactate_dehydrogenase.execute(organelle)
             logger.info(f"Regenerated {reaction_amount} NAD+ via Lactate Dehydrogenase")
+
+    @staticmethod
+    def _calculate_energy_state(organelle: "Organelle") -> float:
+        return (
+            organelle.metabolites["ATP"].quantity * 50
+            + organelle.metabolites["ADP"].quantity * 30
+            + organelle.metabolites["glucose"].quantity * 686
+            + organelle.metabolites["glucose_6_phosphate"].quantity * 916
+            + organelle.metabolites["fructose_6_phosphate"].quantity * 916
+            + organelle.metabolites["fructose_1_6_bisphosphate"].quantity * 1146
+            + organelle.metabolites["glyceraldehyde_3_phosphate"].quantity * 573
+            + organelle.metabolites["bisphosphoglycerate_1_3"].quantity * 803
+            + organelle.metabolites["phosphoglycerate_3"].quantity * 573
+            + organelle.metabolites["phosphoglycerate_2"].quantity * 573
+            + organelle.metabolites["phosphoenolpyruvate"].quantity * 803
+            + organelle.metabolites["pyruvate"].quantity * 343
+        )
+
+    @staticmethod
+    def _calculate_total_adenine_nucleotides(organelle: "Organelle") -> float:
+        return (
+            organelle.metabolites["ATP"].quantity
+            + organelle.metabolites["ADP"].quantity
+            + organelle.metabolites["AMP"].quantity
+        )

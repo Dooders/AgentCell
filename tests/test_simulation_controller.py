@@ -133,6 +133,57 @@ class TestSimulationController(unittest.TestCase):
 
         self.assertLess(final_glucose, initial_glucose)
 
+    def test_energy_conservation(self):
+        initial_energy = self.sim_controller._calculate_total_energy_state()
+        results = self.sim_controller.run_simulation(1)  # Run with 1 glucose unit
+        final_energy = self.sim_controller._calculate_total_energy_state()
+
+        self.assertAlmostEqual(
+            initial_energy,
+            final_energy,
+            places=6,
+            msg="Energy was not conserved during simulation",
+        )
+
+    def test_adenine_nucleotide_conservation(self):
+        def print_adenine_nucleotides(prefix):
+            print(f"{prefix} adenine nucleotides:")
+            print(f"  Cytoplasm ATP: {self.cell.cytoplasm.metabolites['ATP'].quantity}")
+            print(f"  Cytoplasm ADP: {self.cell.cytoplasm.metabolites['ADP'].quantity}")
+            print(f"  Cytoplasm AMP: {self.cell.cytoplasm.metabolites['AMP'].quantity}")
+            print(
+                f"  Mitochondrion ATP: {self.cell.mitochondrion.metabolites['ATP'].quantity}"
+            )
+            print(
+                f"  Mitochondrion ADP: {self.cell.mitochondrion.metabolites['ADP'].quantity}"
+            )
+            print(
+                f"  Mitochondrion AMP: {self.cell.mitochondrion.metabolites['AMP'].quantity}"
+            )
+            total = self.sim_controller._calculate_total_adenine_nucleotides()
+            print(f"  Total: {total}")
+
+        print_adenine_nucleotides("Initial")
+
+        results = self.sim_controller.run_simulation(1)  # Run with 1 glucose unit
+
+        print_adenine_nucleotides("Final")
+
+        initial_adenine = self.sim_controller._calculate_total_adenine_nucleotides()
+        final_adenine = self.sim_controller._calculate_total_adenine_nucleotides()
+
+        self.assertAlmostEqual(
+            initial_adenine,
+            final_adenine,
+            places=6,
+            msg="Adenine nucleotides were not conserved during simulation",
+        )
+
+        # Print the simulation results
+        print("Simulation results:")
+        for key, value in results.items():
+            print(f"  {key}: {value}")
+
 
 if __name__ == "__main__":
     unittest.main()

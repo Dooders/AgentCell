@@ -40,8 +40,11 @@ for glucose in glucose_amounts:
 
     reporter.log_event("\nAdenine Nucleotide Balance:")
     reporter.log_event(
-        f"Initial: ATP: {initial_atp}, ADP: {initial_adp}, AMP: {initial_amp}"
+        f"Initial: {results['initial_adenine_nucleotides']:.6f}, "
+        f"Final: {results['final_adenine_nucleotides']:.6f}, "
+        f"Difference: {results['final_adenine_nucleotides'] - results['initial_adenine_nucleotides']:.6f}"
     )
+
     final_atp = results["final_cytoplasm_atp"] + results["final_mitochondrion_atp"]
     final_adp = cell.metabolites["ADP"].quantity
     final_amp = cell.metabolites["AMP"].quantity
@@ -64,12 +67,13 @@ for glucose in glucose_amounts:
     reporter.log_event(f"Total Final Adenine Nucleotides: {total_final:.2f}")
     reporter.log_event(f"Difference: {total_final - total_initial:.2f}")
 
-    # Assert conservation of adenine nucleotides with a larger tolerance
-    tolerance = 1e-3  # Increased tolerance
-    assert abs(total_final - total_initial) < tolerance, (
+    # Assert conservation of adenine nucleotides with a smaller tolerance
+    tolerance = 1e-6  # Decreased tolerance
+    assert abs(results['final_adenine_nucleotides'] - results['initial_adenine_nucleotides']) < tolerance, (
         f"Adenine nucleotide conservation violated. "
-        f"Initial: {total_initial:.2f}, Final: {total_final:.2f}, "
-        f"Difference: {total_final - total_initial:.2f}"
+        f"Initial: {results['initial_adenine_nucleotides']:.6f}, "
+        f"Final: {results['final_adenine_nucleotides']:.6f}, "
+        f"Difference: {results['final_adenine_nucleotides'] - results['initial_adenine_nucleotides']:.6f}"
     )
 
     # Assert glucose consumption
