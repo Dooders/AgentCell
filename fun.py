@@ -46,14 +46,6 @@ for glucose in glucose_amounts:
     final_adp = cell.metabolites["ADP"].quantity
     final_amp = cell.metabolites["AMP"].quantity
 
-    # Calculate the total adenine nucleotides produced
-    total_produced = (
-        final_atp + final_adp + final_amp - (initial_atp + initial_adp + initial_amp)
-    )
-
-    # Adjust the final ATP value
-    final_atp -= total_produced
-
     reporter.log_event(
         f"Final: ATP: {final_atp:.2f}, "
         f"ADP: {final_adp:.2f}, "
