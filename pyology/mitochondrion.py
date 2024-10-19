@@ -287,6 +287,11 @@ class Mitochondrion(Organelle):
             logger.warning("No oxygen available. Cellular respiration halted.")
             return 0
 
+        initial_atp = self.metabolites["ATP"].quantity
+        initial_adp = self.metabolites["ADP"].quantity
+        initial_amp = self.metabolites["AMP"].quantity
+        initial_total_adenine = initial_atp + initial_adp + initial_amp
+
         acetyl_coa = self.pyruvate_to_acetyl_coa(pyruvate_amount)
         self.krebs_cycle.add_substrate("glucose", acetyl_coa)
 
@@ -335,6 +340,34 @@ class Mitochondrion(Organelle):
 
         # Add ATP from substrate-level phosphorylation in Krebs cycle
         atp_produced += self.krebs_cycle.cofactors["GTP"]  # GTP is equivalent to ATP
+
+        # Ensure ADP is consumed when ATP is produced
+        if self.metabolites["ADP"].quantity >= atp_produced:
+            self.metabolites["ADP"].quantity -= atp_produced
+            self.metabolites["ATP"].quantity += atp_produced
+        else:
+            # If not enough ADP, convert AMP to ADP
+            adp_needed = atp_produced - self.metabolites["ADP"].quantity
+            if self.metabolites["AMP"].quantity >= adp_needed:
+                self.metabolites["AMP"].quantity -= adp_needed
+                self.metabolites["ADP"].quantity += adp_needed
+                self.metabolites["ADP"].quantity -= atp_produced
+                self.metabolites["ATP"].quantity += atp_produced
+            else:
+                raise InsufficientMetaboliteError(
+                    "Not enough ADP or AMP for ATP production in cellular respiration"
+                )
+
+        final_atp = self.metabolites["ATP"].quantity
+        final_adp = self.metabolites["ADP"].quantity
+        final_amp = self.metabolites["AMP"].quantity
+        final_total_adenine = final_atp + final_adp + final_amp
+
+        assert abs(final_total_adenine - initial_total_adenine) < 1e-6, (
+            f"Adenine nucleotide conservation violated in cellular respiration. "
+            f"Initial: {initial_total_adenine:.6f}, Final: {final_total_adenine:.6f}, "
+            f"Difference: {final_total_adenine - initial_total_adenine:.6f}"
+        )
 
         logger.info(f"Cellular respiration completed. ATP produced: {atp_produced}")
         return atp_produced

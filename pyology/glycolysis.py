@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from pyology.common_reactions import GlycolysisReactions
 
-from .exceptions import GlycolysisError, MetaboliteError, ReactionError
+from .exceptions import GlycolysisError, ReactionError
 from .pathway import Pathway
 
 logger = logging.getLogger(__name__)
@@ -61,7 +61,9 @@ class Glycolysis(Pathway):
             cls.investment_phase(organelle, glucose_units)
             atp_after_investment = organelle.get_metabolite_quantity("ATP")
             logger.info(f"ATP after investment phase: {atp_after_investment}")
-            logger.info(f"ATP consumed in investment phase: {initial_atp - atp_after_investment}")
+            logger.info(
+                f"ATP consumed in investment phase: {initial_atp - atp_after_investment}"
+            )
 
             # Yield phase
             cls.yield_phase(organelle, glucose_units * 2)  # 2 G3P per glucose
@@ -94,7 +96,9 @@ class Glycolysis(Pathway):
         initial_atp = organelle.get_metabolite_quantity("ATP")
 
         for i in range(glucose_units):
-            logger.info(f"🔄🔄🔄 Processing glucose unit {i+1} of {glucose_units} 🔄🔄🔄")
+            logger.info(
+                f"🔄🔄🔄 Processing glucose unit {i+1} of {glucose_units} 🔄🔄🔄"
+            )
             try:
                 # Steps 1-4 occur once per glucose molecule
                 cls.reactions.hexokinase.execute(organelle=organelle)
@@ -126,9 +130,13 @@ class Glycolysis(Pathway):
         for i in range(g3p_units):
             logger.info(f"🍀🍀🍀 Processing G3P unit {i+1} of {g3p_units} 🍀🍀🍀")
             try:
-                cls.reactions.glyceraldehyde_3_phosphate_dehydrogenase.execute(organelle=organelle)
+                cls.reactions.glyceraldehyde_3_phosphate_dehydrogenase.execute(
+                    organelle=organelle
+                )
                 cls.reactions.phosphoglycerate_kinase.execute(organelle=organelle)
-                cls.reactions.phosphoglycerate_mutate.execute(organelle=organelle)  # Changed from phosphoglycerate_mutate
+                cls.reactions.phosphoglycerate_mutate.execute(
+                    organelle=organelle
+                )  # Changed from phosphoglycerate_mutate
                 cls.reactions.enolase.execute(organelle=organelle)
                 cls.reactions.pyruvate_kinase.execute(organelle=organelle)
 
@@ -176,9 +184,9 @@ class Glycolysis(Pathway):
         """Regenerate NAD+ via Lactate Dehydrogenase reaction"""
         nadh_quantity = organelle.get_metabolite_quantity("NADH")
         pyruvate_quantity = organelle.get_metabolite_quantity("pyruvate")
-        
+
         reaction_amount = min(nadh_quantity, pyruvate_quantity)
-        
+
         if reaction_amount > 0:
             cls.reactions.lactate_dehydrogenase.execute(organelle)
             logger.info(f"Regenerated {reaction_amount} NAD+ via Lactate Dehydrogenase")
