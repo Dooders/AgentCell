@@ -4,6 +4,7 @@ from .constants import SIMULATION_DURATION, TIME_STEP
 from .cytoplasm import Cytoplasm
 from .mitochondrion import KrebsCycle, Mitochondrion
 from .organelle import Organelle
+from .glycolysis import Glycolysis
 
 logger = logging.getLogger(__name__)
 
@@ -11,17 +12,19 @@ logger = logging.getLogger(__name__)
 class Cell(Organelle):
     name = "Cell"
 
-    def __init__(self):
+    def __init__(self, debug=False):
         super().__init__()
         self.atp = 300  # Initial ATP value
         self.cytoplasm = Cytoplasm()
         self.mitochondrion = Mitochondrion()
         self.krebs_cycle = KrebsCycle()
+        self.glycolysis = Glycolysis(logger=logger, debug=debug)  # Pass the logger
         self.simulation_time = 0
         self.time_step = TIME_STEP
         self.base_glycolysis_rate = 1.0  # This is now in the Cell class
         self.glycolysis_rate = self.base_glycolysis_rate  # Initialize glycolysis_rate
         self.initial_adenine_nucleotides = None
+        self.debug = debug
 
     def produce_atp(self, glucose, simulation_duration=SIMULATION_DURATION):
         """Simulates ATP production in the entire cell over a specified duration."""
@@ -62,7 +65,7 @@ class Cell(Organelle):
             glucose_consumed = min(
                 1 * self.glycolysis_rate, self.metabolites["glucose"].quantity
             )
-            pyruvate = self.cytoplasm.glycolysis(glucose_consumed)
+            pyruvate = self.glycolysis.perform_glycolysis(glucose_consumed)
             self.metabolites.add(
                 "pyruvate", pyruvate, max_quantity=1000
             )  # Updated: added max_quantity
@@ -139,7 +142,7 @@ class Cell(Organelle):
             glucose_consumed = min(
                 1 * self.glycolysis_rate, self.metabolites["glucose"].quantity
             )
-            pyruvate = self.cytoplasm.glycolysis(glucose_consumed)
+            pyruvate = self.glycolysis.perform_glycolysis(glucose_consumed)
             glucose_processed += glucose_consumed
 
             cytoplasmic_nadh = self.metabolites["nadh"].quantity

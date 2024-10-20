@@ -2,6 +2,9 @@ import logging
 import math
 from typing import TYPE_CHECKING
 
+from utils.command_data import CommandData
+from utils.tracking import execute_command
+
 from .common_reactions import GlycolysisReactions
 from .energy_calculations import (
     calculate_glycolysis_energy_state,
@@ -10,10 +13,10 @@ from .energy_calculations import (
 from .exceptions import GlycolysisError, ReactionError
 from .pathway import Pathway
 
-logger = logging.getLogger(__name__)
-
 if TYPE_CHECKING:
     from .organelle import Organelle
+
+logger = logging.getLogger(__name__)
 
 
 class Glycolysis(Pathway):
@@ -22,8 +25,11 @@ class Glycolysis(Pathway):
     """
 
     time_step = 0.1  # Default time step in seconds
-
     reactions = GlycolysisReactions
+
+    def __init__(self, logger=None, debug=False):
+        self.debug = debug
+        self.logger = logger or logging.getLogger(__name__)
 
     @classmethod
     def perform(
@@ -288,3 +294,33 @@ class Glycolysis(Pathway):
     @staticmethod
     def _calculate_total_adenine_nucleotides(organelle: "Organelle") -> float:
         return calculate_total_adenine_nucleotides(organelle.metabolites)
+
+    def perform_glycolysis(self, glucose_amount: float) -> float:
+        """
+        Perform glycolysis on the given amount of glucose.
+
+        Args:
+            glucose_amount: The amount of glucose to process.
+
+        Returns:
+            The amount of pyruvate produced.
+        """
+        tracked_attributes = ["glucose", "atp", "adp", "nad", "nadh", "pyruvate"]
+
+        def validate_conservation(obj, initial, final, changes):
+            # Example validation: ensure total adenine nucleotides are conserved
+            initial_adenine = initial["atp"] + initial["adp"]
+            final_adenine = final["atp"] + final["adp"]
+            return abs(final_adenine - initial_adenine) < 1e-6
+
+        command_data = CommandData(
+            obj=self.organelle,
+            command="process_glucose",
+            tracked_attributes=tracked_attributes,
+            args=[glucose_amount],
+            validations=[validate_conservation],
+        )
+
+        result = execute_command(command_data, logger, self.debug)
+
+        return result["result"]  # This should be the amount of pyruvate produced
