@@ -50,7 +50,10 @@ def execute_command(
 
     # Execute the command
     try:
-        result = getattr(obj, command)(*args, **kwargs)
+        if callable(command):
+            result = command(obj, *args, **kwargs)
+        else:
+            result = getattr(obj, command)(*args, **kwargs)
         if debug:
             logger.debug(f"Executed command '{command}' with result: {result}")
     except Exception as e:

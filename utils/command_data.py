@@ -12,8 +12,8 @@ class CommandData(BaseModel):
     obj: Any = Field(
         ..., description="The object on which the command will be executed."
     )
-    command: str = Field(
-        ..., description="The name of the method to be called on the object."
+    command: Callable = Field(
+        ..., description="The command to be executed on the object."
     )
     tracked_attributes: List[str] = Field(
         ...,

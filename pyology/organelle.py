@@ -343,29 +343,3 @@ class Organelle(metaclass=OrganelleMeta):
             If the metabolite is not found in the cytoplasm.
         """
         return self.metabolites[metabolite_name]
-
-    def process_glucose(self, glucose_amount: float) -> float:
-        """
-        Process the given amount of glucose through glycolysis.
-
-        Args:
-            glucose_amount: The amount of glucose to process.
-
-        Returns:
-            The amount of pyruvate produced.
-        """
-        # Simplified glycolysis process
-        if self.metabolites["glucose"].quantity < glucose_amount:
-            glucose_amount = self.metabolites["glucose"].quantity
-
-        self.metabolites["glucose"].quantity -= glucose_amount
-        atp_produced = glucose_amount * 2  # Net ATP production in glycolysis
-        pyruvate_produced = glucose_amount * 2  # Each glucose produces 2 pyruvate
-
-        self.metabolites["atp"].quantity += atp_produced
-        self.metabolites["adp"].quantity -= atp_produced
-        self.metabolites["nad"].quantity -= glucose_amount
-        self.metabolites["nadh"].quantity += glucose_amount
-        self.metabolites["pyruvate"].quantity += pyruvate_produced
-
-        return pyruvate_produced

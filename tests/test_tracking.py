@@ -115,6 +115,26 @@ class TestExecuteCommand(unittest.TestCase):
         with self.assertRaises(ValueError):
             execute_command(command_data, logger=self.mock_logger)
 
+    def test_callable_command(self):
+        def callable_command(obj, *args, **kwargs):
+            obj.attr1 += 5
+            return "callable result"
+
+        command_data = CommandData(
+            obj=self.mock_obj,
+            command=callable_command,
+            tracked_attributes=["attr1"],
+            args=(1, 2),
+            kwargs={"key": "value"}
+        )
+        result = execute_command(command_data, logger=self.mock_logger)
+        
+        self.assertEqual(result["result"], "callable result")
+        self.assertEqual(result["initial_values"]["attr1"], 10)
+        self.assertEqual(result["final_values"]["attr1"], 15)
+        self.assertEqual(result["changes"]["attr1"], 5)
+        self.mock_logger.debug.assert_called_with("Executed command '<function TestExecuteCommand.test_callable_command.<locals>.callable_command at ...>' with result: callable result")
+
 
 if __name__ == "__main__":
     unittest.main()

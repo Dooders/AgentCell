@@ -3,7 +3,6 @@ import logging
 from utils.command_data import CommandData
 from utils.tracking import execute_command
 
-from .exceptions import InsufficientMetaboliteError
 from .glycolysis import Glycolysis
 from .organelle import Organelle
 
@@ -29,11 +28,13 @@ class Cytoplasm(Organelle):
 
     name = "Cytoplasm"
 
-    def __init__(self, debug=False):
+    def __init__(self, logger=None, debug=False):
         super().__init__()
         self.debug = debug
+        self.logger = logger or logging.getLogger(__name__)
 
     def glycolysis(self, glucose_amount: float) -> float:
+        #! Not being used, may not need. SHould this me here or somewhere else
         """
         Perform glycolysis on the given amount of glucose.
 
@@ -52,13 +53,13 @@ class Cytoplasm(Organelle):
 
         command_data = CommandData(
             obj=self,
-            command="process_glucose",
+            command=Glycolysis.perform,
             tracked_attributes=tracked_attributes,
             args=[glucose_amount],
             validations=[validate_conservation],
         )
 
-        result = execute_command(command_data, logger, self.debug)
+        result = execute_command(command_data, self.logger, self.debug)
 
         return result["result"]  # This should be the amount of pyruvate produced
 
