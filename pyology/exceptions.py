@@ -25,3 +25,6 @@ class GlycolysisError(PyologyError):
 class ReactionError(PyologyError):
     """Exception raised when a reaction fails to execute."""
     pass
+
+class InsufficientSubstrateError(ReactionError):
+    pass
