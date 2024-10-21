@@ -55,8 +55,11 @@ class Reaction:
         -------
         bool: True if all substrates are available in sufficient quantities, False otherwise.
         """
-        for substrate, amount in self.substrates.items():
-            if organelle.get_metabolite_quantity(substrate) < amount:
+        for substrate, required_amount in self.substrates.items():
+            available_amount = organelle.get_metabolite_quantity(substrate)
+            if available_amount < required_amount:
+                logger.debug(f"Insufficient {substrate} for reaction '{self.name}': "
+                             f"Required {required_amount}, Available {available_amount}")
                 return False
         return True
 
@@ -106,13 +109,18 @@ class Reaction:
             logger.info(f"{substrate} - Required: {amount}, Available: {available}")
 
         try:
+            # Cache substrate quantities
+            substrate_quantities = {
+                met: organelle.get_metabolite_quantity(met) for met in substrates
+            }
+
             if use_rates:
                 result = self._execute_with_rates(
-                    organelle, time_step, substrates, products
+                    organelle, time_step, substrates, products, substrate_quantities
                 )
             else:
                 result = self._execute_without_rates(
-                    organelle, time_step, substrates, products
+                    organelle, time_step, substrates, products, substrate_quantities
                 )
 
             if result == 0.0:
@@ -120,11 +128,11 @@ class Reaction:
                     f"Reaction '{self.name}' failed to execute due to insufficient substrates"
                 )
 
-            logger.info(f"Reaction '{self.name}' executed successfully")
+            self._log_reaction_success(result)
             return result
 
         except (ReactionError, InsufficientSubstrateError) as e:
-            logger.error(f"Error during '{self.name}' execution: {e}")
+            self._log_reaction_error(str(e))
             raise
 
     def _get_reaction_direction(
@@ -152,6 +160,7 @@ class Reaction:
         time_step: float,
         substrates: Dict[str, float],
         products: Dict[str, float],
+        substrate_quantities: Dict[str, float],
     ) -> float:
         """
         Execute the reaction using enzyme kinetics.
@@ -166,6 +175,8 @@ class Reaction:
             A dictionary of substrate names and their quantities.
         products : Dict[str, float]
             A dictionary of product names and their quantities.
+        substrate_quantities : Dict[str, float]
+            A dictionary of substrate names and their quantities.
 
         Returns
         -------
@@ -191,26 +202,13 @@ class Reaction:
         limiting_factors = {"reaction_rate": reaction_rate * time_step}
         for met, amount in substrates.items():
             if amount > 0:
-                limiting_factors[f"{met}_conc"] = (
-                    organelle.get_metabolite_quantity(met) / amount
-                )
+                limiting_factors[f"{met}_conc"] = substrate_quantities[met] / amount
 
         # Determine actual rate based on available metabolites
         actual_rate = min(limiting_factors.values())
 
         # Log all limiting factors
-        logger.debug(f"Reaction '{self.name}': Potential limiting factors:")
-        for factor_name, factor_value in limiting_factors.items():
-            logger.debug(f"  - {factor_name}: {factor_value:.6f}")
-
-        # Identify the actual limiting factor(s)
-        limiting_factor_names = [
-            name for name, value in limiting_factors.items() if value == actual_rate
-        ]
-        logger.debug(
-            f"Reaction '{self.name}': Rate limited by {', '.join(limiting_factor_names)}. "
-            f"Actual rate: {actual_rate:.6f}"
-        )
+        self._log_limiting_factors(limiting_factors, actual_rate)
 
         # Consume metabolites
         for metabolite, amount in substrates.items():
@@ -221,11 +219,7 @@ class Reaction:
             organelle.change_metabolite_quantity(metabolite, amount * actual_rate)
 
         # Add log entry
-        logger.info(
-            f"Executed reaction '{self.name}' with rate {actual_rate:.4f}. "
-            f"Consumed: {', '.join([f'{m}: {a * actual_rate:.4f}' for m, a in substrates.items()])}. "
-            f"Produced: {', '.join([f'{m}: {a * actual_rate:.4f}' for m, a in products.items()])}"
-        )
+        self._log_metabolite_changes(substrates, products, actual_rate)
 
         return actual_rate
 
@@ -235,6 +229,7 @@ class Reaction:
         time_step: float,
         substrates: Dict[str, float],
         products: Dict[str, float],
+        substrate_quantities: Dict[str, float],
     ) -> float:
         """
         Execute the reaction without using enzyme kinetics.
@@ -249,13 +244,15 @@ class Reaction:
             A dictionary of substrate names and their quantities.
         products : Dict[str, float]
             A dictionary of product names and their quantities.
+        substrate_quantities : Dict[str, float]
+            A dictionary of substrate names and their quantities.
 
         Returns
         -------
         float: 1.0 if the reaction occurred, 0.0 otherwise.
         """
         for metabolite, amount in substrates.items():
-            available = organelle.get_metabolite_quantity(metabolite)
+            available = substrate_quantities[metabolite]
             if available < amount:
                 raise InsufficientSubstrateError(
                     f"Insufficient {metabolite} for reaction '{self.name}'. "
@@ -273,13 +270,45 @@ class Reaction:
             logger.debug(f"Reaction '{self.name}': Produced {amount} {metabolite}")
 
         # Add log entry
-        logger.info(
-            f"Executed reaction '{self.name}' without rates. "
-            f"Consumed: {', '.join([f'{m}: {a:.4f}' for m, a in substrates.items()])}. "
-            f"Produced: {', '.join([f'{m}: {a:.4f}' for m, a in products.items()])}"
-        )
+        self._log_metabolite_changes(substrates, products, 1.0)
 
         return 1.0  # Return 1.0 to indicate the reaction occurred once
+
+    def _log_reaction_success(self, rate: float):
+        logger.info(
+            f"Reaction '{self.name}' executed successfully with rate {rate:.4f}"
+        )
+
+    def _log_reaction_error(self, error_message: str):
+        logger.error(f"Error during '{self.name}' execution: {error_message}")
+
+    def _log_limiting_factors(
+        self, limiting_factors: Dict[str, float], actual_rate: float
+    ):
+        logger.debug(f"Reaction '{self.name}': Potential limiting factors:")
+        for factor_name, factor_value in limiting_factors.items():
+            logger.debug(f"  - {factor_name}: {factor_value:.6f}")
+
+        limiting_factor_names = [
+            name for name, value in limiting_factors.items() if value == actual_rate
+        ]
+        logger.debug(
+            f"Reaction '{self.name}': Rate limited by {', '.join(limiting_factor_names)}. Actual rate: {actual_rate:.6f}"
+        )
+
+    def _log_metabolite_changes(
+        self, substrates: Dict[str, float], products: Dict[str, float], rate: float
+    ):
+        logger.info(
+            f"Executed reaction '{self.name}' with rate {rate:.4f}. "
+            f"Consumed: {self._format_metabolite_changes(substrates, rate)}. "
+            f"Produced: {self._format_metabolite_changes(products, rate)}"
+        )
+
+    def _format_metabolite_changes(
+        self, metabolites: Dict[str, float], rate: float
+    ) -> str:
+        return ", ".join([f"{m}: {a * rate:.4f}" for m, a in metabolites.items()])
 
 
 def perform_reaction(
