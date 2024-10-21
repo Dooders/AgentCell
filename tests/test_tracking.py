@@ -1,116 +1,133 @@
 import unittest
 from unittest.mock import Mock, patch
-import logging
 
+from pyology.reporter import Reporter
 from utils.command_data import CommandData
-from utils.tracking import execute_command
+from utils.tracking import CommandExecutionResult, execute_command
 
 
 class TestExecuteCommand(unittest.TestCase):
     def setUp(self):
         self.mock_obj = Mock()
+        self.mock_obj.get_metabolite_quantity = Mock(
+            side_effect=lambda attr: getattr(self.mock_obj, attr)
+        )
         self.mock_obj.attr1 = 10
         self.mock_obj.attr2 = "initial"
         self.mock_obj.method = Mock(return_value="result")
-        self.mock_logger = Mock(spec=logging.Logger)
+        self.mock_logger = Mock(spec=Reporter)
+        # Add warning and error methods to the mock logger
+        self.mock_logger.warning = Mock()
+        self.mock_logger.error = Mock()
 
-    @patch("utils.tracking.default_logger")
-    def test_simple_tracking(self, mock_default_logger):
+    def test_simple_tracking(self):
         command_data = CommandData(
-            obj=self.mock_obj, command="method", tracked_attributes=["attr1"]
+            obj=self.mock_obj,
+            command=self.mock_obj.method,
+            tracked_attributes=["attr1"],
         )
         result = execute_command(command_data, logger=self.mock_logger)
-        self.assertEqual(result["result"], "result")
-        self.assertEqual(result["initial_values"]["attr1"], 10)
-        self.assertEqual(result["final_values"]["attr1"], 10)
-        self.assertEqual(result["changes"]["attr1"], 0)
+        self.assertIsInstance(result, CommandExecutionResult)
+        self.assertEqual(result.result, "result")
+        self.assertEqual(result.initial_values["attr1"], 10)
+        self.assertEqual(result.final_values["attr1"], 10)
 
-    @patch("utils.tracking.default_logger")
-    def test_numeric_and_non_numeric_attributes(self, mock_default_logger):
-        self.mock_obj.method = Mock(
-            side_effect=lambda: setattr(self.mock_obj, "attr1", 15)
-        )
+    def test_numeric_and_non_numeric_attributes(self):
+        def side_effect(obj):
+            obj.attr1 = 15
+            return None
+
+        self.mock_obj.method = Mock(side_effect=side_effect)
         command_data = CommandData(
-            obj=self.mock_obj, command="method", tracked_attributes=["attr1", "attr2"]
+            obj=self.mock_obj,
+            command=self.mock_obj.method,
+            tracked_attributes=["attr1", "attr2"],
         )
         result = execute_command(command_data, logger=self.mock_logger)
-        self.assertEqual(result["changes"]["attr1"], 5)
-        self.assertNotIn("attr2", result["changes"])
+        self.assertEqual(result.initial_values["attr1"], 10)
+        self.assertEqual(result.final_values["attr1"], 15)
+        self.assertEqual(result.initial_values["attr2"], "initial")
+        self.assertEqual(result.final_values["attr2"], "initial")
 
     def test_no_tracked_attributes(self):
         command_data = CommandData(
-            obj=self.mock_obj, command="method", tracked_attributes=[]
+            obj=self.mock_obj, command=self.mock_obj.method, tracked_attributes=[]
         )
         result = execute_command(command_data, logger=self.mock_logger)
-        self.assertEqual(result["result"], "result")
-        self.assertEqual(result["initial_values"], {})
-        self.assertEqual(result["final_values"], {})
-        self.assertEqual(result["changes"], {})
+        self.assertEqual(result.result, "result")
+        self.assertEqual(result.initial_values, {})
+        self.assertEqual(result.final_values, {})
 
     def test_invalid_attribute(self):
-        # Remove the invalid attribute if it exists (it might be auto-created by Mock)
-        if hasattr(self.mock_obj, "invalid_attr"):
-            delattr(self.mock_obj, "invalid_attr")
-
+        self.mock_obj.get_metabolite_quantity.side_effect = ValueError(
+            "Invalid metabolite"
+        )
         command_data = CommandData(
-            obj=self.mock_obj, command="method", tracked_attributes=["invalid_attr"]
+            obj=self.mock_obj,
+            command=self.mock_obj.method,
+            tracked_attributes=["invalid_attr"],
         )
         result = execute_command(command_data, logger=self.mock_logger)
-        self.assertNotIn("invalid_attr", result["initial_values"])
-        self.assertNotIn("invalid_attr", result["final_values"])
-        self.assertNotIn("invalid_attr", result["changes"])
+        self.assertNotIn("invalid_attr", result.initial_values)
+        self.assertNotIn("invalid_attr", result.final_values)
+        self.mock_logger.warning.assert_called_with(
+            "Error getting quantity for metabolite 'invalid_attr': Invalid metabolite. Skipping."
+        )
 
     def test_validation_pass(self):
-        def validation(obj, initial, final, changes):
+        def validation(obj, initial, final):
             return True
 
         command_data = CommandData(
             obj=self.mock_obj,
-            command="method",
+            command=self.mock_obj.method,
             tracked_attributes=["attr1"],
             validations=[validation],
         )
         result = execute_command(command_data, logger=self.mock_logger)
-        self.assertEqual(result["result"], "result")
-        self.assertTrue(result["validation_results"]["validation_1"])
+        self.assertEqual(result.result, "result")
+        self.assertTrue(result.validation_results["validation_1"])
 
     def test_validation_fail(self):
-        def validation(obj, initial, final, changes):
+        def validation(obj, initial, final):
             return False
 
         command_data = CommandData(
             obj=self.mock_obj,
-            command="method",
+            command=self.mock_obj.method,
             tracked_attributes=["attr1"],
             validations=[validation],
         )
         result = execute_command(command_data, logger=self.mock_logger)
-        self.assertEqual(result["result"], "result")
-        self.assertFalse(result["validation_results"]["validation_1"])
+        self.assertEqual(result.result, "result")
+        self.assertFalse(result.validation_results["validation_1"])
+        self.mock_logger.warning.assert_called_with("Validation 1 failed: validation")
 
     def test_multiple_validations(self):
-        def validation1(obj, initial, final, changes):
+        def validation1(obj, initial, final):
             return True
 
-        def validation2(obj, initial, final, changes):
+        def validation2(obj, initial, final):
             return False
 
         command_data = CommandData(
             obj=self.mock_obj,
-            command="method",
+            command=self.mock_obj.method,
             tracked_attributes=["attr1"],
             validations=[validation1, validation2],
         )
         result = execute_command(command_data, logger=self.mock_logger)
-        self.assertEqual(result["result"], "result")
-        self.assertTrue(result["validation_results"]["validation_1"])
-        self.assertFalse(result["validation_results"]["validation_2"])
+        self.assertEqual(result.result, "result")
+        self.assertTrue(result.validation_results["validation_1"])
+        self.assertFalse(result.validation_results["validation_2"])
+        self.mock_logger.warning.assert_called_with("Validation 2 failed: validation2")
 
-    @patch("utils.tracking.default_logger")
-    def test_error_handling(self, mock_default_logger):
+    def test_error_handling(self):
         self.mock_obj.method = Mock(side_effect=ValueError("Test error"))
         command_data = CommandData(
-            obj=self.mock_obj, command="method", tracked_attributes=["attr1"]
+            obj=self.mock_obj,
+            command=self.mock_obj.method,
+            tracked_attributes=["attr1"],
         )
         with self.assertRaises(ValueError):
             execute_command(command_data, logger=self.mock_logger)
@@ -125,15 +142,27 @@ class TestExecuteCommand(unittest.TestCase):
             command=callable_command,
             tracked_attributes=["attr1"],
             args=(1, 2),
-            kwargs={"key": "value"}
+            kwargs={"key": "value"},
         )
         result = execute_command(command_data, logger=self.mock_logger)
-        
-        self.assertEqual(result["result"], "callable result")
-        self.assertEqual(result["initial_values"]["attr1"], 10)
-        self.assertEqual(result["final_values"]["attr1"], 15)
-        self.assertEqual(result["changes"]["attr1"], 5)
-        self.mock_logger.debug.assert_called_with("Executed command '<function TestExecuteCommand.test_callable_command.<locals>.callable_command at ...>' with result: callable result")
+
+        self.assertEqual(result.result, "callable result")
+        self.assertEqual(result.initial_values["attr1"], 10)
+        self.assertEqual(result.final_values["attr1"], 15)
+
+    def test_get_metabolite_quantity_error(self):
+        self.mock_obj.get_metabolite_quantity.side_effect = AttributeError(
+            "No such method"
+        )
+        command_data = CommandData(
+            obj=self.mock_obj,
+            command=self.mock_obj.method,
+            tracked_attributes=["attr1"],
+        )
+        result = execute_command(command_data, logger=self.mock_logger)
+        self.assertEqual(result.initial_values, {})
+        self.assertEqual(result.final_values, {})
+        self.mock_logger.error.assert_called()
 
 
 if __name__ == "__main__":

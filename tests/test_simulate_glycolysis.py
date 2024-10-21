@@ -10,9 +10,20 @@ from simulate_glycolysis import GlycolysisSimulation
 
 # Create mock versions of the pyology modules
 class MockCell:
-    def __init__(self, logger):
-        self.logger = logger
-        self.atp = 10  # Assume starting with 10 ATP molecules
+    def __init__(self):
+        self.atp = 10
+        self.adp = 5
+        self.amp = 2
+        self.glucose = 4
+        self.metabolites = {
+            "ATP": self.atp,
+            "ADP": self.adp,
+            "AMP": self.amp,
+            "glucose": self.glucose,
+        }
+
+    def get_metabolite_quantity(self, metabolite):
+        return self.metabolites.get(metabolite, 0)
 
 
 class MockGlycolysis:
@@ -20,13 +31,15 @@ class MockGlycolysis:
     def investment_phase(cell, glucose_units, logger=None):
         total_atp_consumed = glucose_units * 2  # Consume 2 ATP per glucose
         cell.atp -= total_atp_consumed
-        logger.info(f"ATP consumed in investment phase: {total_atp_consumed}")
+        if logger:
+            logger.info(f"ATP consumed in investment phase: {total_atp_consumed}")
 
     @staticmethod
     def yield_phase(cell, g3p_units, logger=None):
         total_atp_produced = g3p_units * 2  # Produce 2 ATP per G3P
         cell.atp += total_atp_produced
-        logger.info(f"ATP produced in yield phase: {total_atp_produced}")
+        if logger:
+            logger.info(f"ATP produced in yield phase: {total_atp_produced}")
 
 
 class MockReporter:
@@ -34,13 +47,19 @@ class MockReporter:
         self.logs = []
 
     def info(self, message):
-        self.logs.append(message)
+        self.logs.append(("INFO", message))
+
+    def debug(self, message):
+        self.logs.append(("DEBUG", message))
+
+    def error(self, message):
+        self.logs.append(("ERROR", message))
 
 
 @pytest.fixture
 def mock_cell():
     reporter = MockReporter()
-    cell = MockCell(logger=reporter)
+    cell = MockCell()
     return cell
 
 
@@ -71,8 +90,14 @@ def test_full_glycolysis_simulation(mock_cell, mock_glycolysis, mock_reporter):
         assert (
             mock_cell.atp == final_atp
         ), f"Expected final ATP to be {final_atp}, got {mock_cell.atp}"
-        assert f"ATP consumed in investment phase: {atp_consumed}" in mock_reporter.logs
-        assert f"ATP produced in yield phase: {atp_produced}" in mock_reporter.logs
+        assert any(
+            f"ATP consumed in investment phase: {atp_consumed}" in msg
+            for _, msg in mock_reporter.logs
+        )
+        assert any(
+            f"ATP produced in yield phase: {atp_produced}" in msg
+            for _, msg in mock_reporter.logs
+        )
 
 
 def test_investment_phase(mock_cell, mock_glycolysis, mock_reporter):
@@ -84,7 +109,10 @@ def test_investment_phase(mock_cell, mock_glycolysis, mock_reporter):
         assert (
             mock_cell.atp == expected_atp
         ), f"Expected ATP after investment phase to be {expected_atp}, got {mock_cell.atp}"
-        assert "ATP consumed in investment phase: 8" in mock_reporter.logs
+        assert any(
+            "ATP consumed in investment phase: 8" in msg
+            for _, msg in mock_reporter.logs
+        )
 
 
 def test_yield_phase(mock_cell, mock_glycolysis, mock_reporter):
@@ -98,7 +126,9 @@ def test_yield_phase(mock_cell, mock_glycolysis, mock_reporter):
         assert (
             mock_cell.atp == expected_atp
         ), f"Expected ATP after yield phase to be {expected_atp}, got {mock_cell.atp}"
-        assert "ATP produced in yield phase: 16" in mock_reporter.logs
+        assert any(
+            "ATP produced in yield phase: 16" in msg for _, msg in mock_reporter.logs
+        )
 
 
 def test_atp_levels_during_simulation(mock_cell, mock_glycolysis, mock_reporter):

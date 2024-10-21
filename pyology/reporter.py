@@ -22,21 +22,23 @@ class Reporter:
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.INFO)
-        
-        # Create console handler and set level to INFO
+        self.logger.setLevel(logging.DEBUG)  # Change this line
+
+        # Create console handler and set level to DEBUG
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.INFO)
-        
+        console_handler.setLevel(logging.DEBUG)  # Change this line
+
         # Create formatter
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+
         # Add formatter to console handler
         console_handler.setFormatter(formatter)
-        
+
         # Add console handler to logger
         self.logger.addHandler(console_handler)
-        
+
         self.atp_production_log = []
 
     def info(self, message: str) -> None:
@@ -44,6 +46,12 @@ class Reporter:
         Log an info message.
         """
         self.logger.info(message)
+
+    def debug(self, message: str) -> None:
+        """
+        Log a debug message.
+        """
+        self.logger.debug(message)
 
     def log_event(self, message: str) -> None:
         """

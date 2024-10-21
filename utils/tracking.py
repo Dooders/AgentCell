@@ -1,15 +1,22 @@
-import logging
-from logging import Logger
-from typing import Any, Dict
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List
+
+from pyology.reporter import Reporter
 
 from .command_data import CommandData
 
-default_logger = logging.getLogger(__name__)
+
+@dataclass
+class CommandExecutionResult:
+    result: Any
+    initial_values: Dict[str, Any]
+    final_values: Dict[str, Any]
+    validation_results: Dict[str, Any]
 
 
 def execute_command(
-    command_data: CommandData, logger: Logger = default_logger, debug: bool = False
-) -> Dict[str, Any]:
+    command_data: CommandData, logger: Reporter, debug: bool = True
+) -> CommandExecutionResult:
     """
     Executes a command on an object based on the provided CommandData object,
     tracks specified attributes, logs the results, and performs optional validations.
@@ -18,16 +25,19 @@ def execute_command(
     ----------
     command_data : CommandData
         The CommandData object containing all necessary information for command execution.
-    logger : Logger, optional
-        The logger object to use for logging. Defaults to the default logger.
+    logger : Reporter
+        The logger object to use for logging.
     debug : bool, optional
-        Whether to enable debug logging (default is False).
+        Whether to enable debug logging (default is True).
 
     Returns
     -------
-    Dict[str, Any]
-        A dictionary containing initial and final values of tracked attributes,
-        their changes, and validation results.
+    CommandExecutionResult
+        A dataclass containing:
+        - result: The result of the executed command
+        - initial_values: Initial values of tracked attributes
+        - final_values: Final values of tracked attributes
+        - validation_results: Results of performed validations
     """
     obj = command_data.obj
     command = command_data.command
@@ -36,17 +46,9 @@ def execute_command(
     kwargs = command_data.kwargs
     validations = command_data.validations
 
-    # Log initial values of tracked attributes
-    initial_values = {}
-    for attr in tracked_attributes:
-        if hasattr(obj, attr) and not callable(getattr(obj, attr)):
-            try:
-                value = getattr(obj, attr)
-                initial_values[attr] = value
-                if debug:
-                    logger.debug(f"Initial {attr}: {value}")
-            except AttributeError:
-                logger.warning(f"Attribute '{attr}' not found on object. Skipping.")
+    initial_values = _log_attribute_values(
+        logger, obj, tracked_attributes, "Initial", debug
+    )
 
     # Execute the command
     try:
@@ -60,39 +62,111 @@ def execute_command(
         logger.error(f"Error executing command '{command}': {str(e)}")
         raise
 
-    # Log and store final values, calculate changes
-    final_values = {}
-    changes = {}
+    final_values = _log_attribute_values(
+        logger, obj, tracked_attributes, "Final", debug
+    )
+
+    validation_results = _log_validation_results(
+        logger, obj, initial_values, final_values, validations
+    )
+
+    # Prepare and return results
+    return CommandExecutionResult(
+        result=result,
+        initial_values=initial_values,
+        final_values=final_values,
+        validation_results=validation_results,
+    )
+
+
+def _log_attribute_values(
+    logger: Reporter,
+    obj: Any,
+    tracked_attributes: List[str],
+    stage: str,
+    debug: bool = True,
+) -> Dict[str, Any]:
+    """
+    Log the values of the tracked attributes.
+
+    Parameters
+    ----------
+    logger : Reporter
+        The logger object to use for logging.
+    obj : Any
+        The object to log the attribute values of.
+    tracked_attributes : List[str]
+        The attributes to log.
+    stage : str
+        The stage of the simulation to log the attribute values for.
+    debug : bool, optional
+        Whether to enable debug logging (default is True).
+
+    Returns
+    -------
+    Dict[str, Any]
+        A dictionary containing the attribute values.
+    """
+    values = {}
     for attr in tracked_attributes:
-        if attr in initial_values:
-            try:
-                final_value = getattr(obj, attr)
-                final_values[attr] = final_value
-                if debug:
-                    logger.debug(f"Final {attr}: {final_value}")
+        try:
+            quantity = obj.get_metabolite_quantity(attr)
+            values[attr] = quantity
+        except AttributeError:
+            logger.error(
+                f"Object does not have 'get_metabolite_quantity' method. Skipping '{attr}'."
+            )
+        except ValueError as e:
+            logger.warning(
+                f"Error getting quantity for metabolite '{attr}': {str(e)}. Skipping."
+            )
+        except Exception as e:
+            logger.error(
+                f"Unexpected error occurred while getting quantity for metabolite '{attr}': {str(e)}. Skipping."
+            )
 
-                if isinstance(initial_values[attr], (int, float)) and isinstance(
-                    final_value, (int, float)
-                ):
-                    change = final_value - initial_values[attr]
-                    changes[attr] = change
-                    if debug:
-                        logger.debug(f"Change in {attr}: {change}")
-                else:
-                    if debug:
-                        logger.debug(
-                            f"{attr} changed from {initial_values[attr]} to {final_value}"
-                        )
-            except AttributeError:
-                logger.warning(
-                    f"Attribute '{attr}' not found on object after execution. Skipping."
-                )
+    if debug:
+        logger.debug(f"{stage} values: {values}")
 
+    return values
+
+
+def _log_validation_results(
+    logger: Reporter,
+    obj: Any,
+    initial_values: Dict[str, Any],
+    final_values: Dict[str, Any],
+    validations: List[Callable[[Any, Dict[str, Any], Dict[str, Any]], bool]],
+) -> Dict[str, Any]:
+    """
+    Log the validation results.
+    
+    #! Need to validate this process
+
+    Parameters
+    ----------
+    logger : Reporter
+        The logger object to use for logging.
+    obj : Any
+        The object to validate.
+    initial_values : Dict[str, Any]
+        The initial values of the tracked attributes.
+    final_values : Dict[str, Any]
+        The final values of the tracked attributes.
+    validations : List[Callable[[Any, Dict[str, Any], Dict[str, Any]], bool]]
+        The validations to perform. Each validation should take three arguments:
+        the object, the initial values, and the final values.
+
+    Returns
+    -------
+    Dict[str, Any]
+        A dictionary containing the validation results.
+    """
     # Perform validations
     validation_results = {}
     for idx, validation in enumerate(validations, start=1):
         try:
-            validation_result = validation(obj, initial_values, final_values, changes)
+            validation_result = validation(obj, initial_values, final_values)
             validation_results[f"validation_{idx}"] = validation_result
             if not validation_result:
                 logger.warning(f"Validation {idx} failed: {validation.__name__}")
@@ -100,11 +174,4 @@ def execute_command(
             logger.error(f"Error during validation {validation.__name__}: {str(e)}")
             validation_results[f"validation_{idx}"] = f"error: {str(e)}"
 
-    # Prepare and return results
-    return {
-        "result": result,
-        "initial_values": initial_values,
-        "final_values": final_values,
-        "changes": changes,
-        "validation_results": validation_results,
-    }
+    return validation_results
