@@ -188,13 +188,13 @@ class Glycolysis(Pathway):
             )
             try:
                 # Steps 1-4 occur once per glucose molecule
-                cls.reactions.hexokinase.execute(organelle=organelle)
-                cls.reactions.phosphoglucose_isomerase.execute(organelle=organelle)
-                cls.reactions.phosphofructokinase.execute(organelle=organelle)
-                cls.reactions.aldolase.execute(organelle=organelle)
+                cls.reactions.hexokinase.transform(organelle=organelle)
+                cls.reactions.phosphoglucose_isomerase.transform(organelle=organelle)
+                cls.reactions.phosphofructokinase.transform(organelle=organelle)
+                cls.reactions.aldolase.transform(organelle=organelle)
 
                 # Step 5 occurs once to convert DHAP to G3P
-                cls.reactions.triose_phosphate_isomerase.execute(organelle=organelle)
+                cls.reactions.triose_phosphate_isomerase.transform(organelle=organelle)
 
                 current_atp = organelle.get_metabolite_quantity("ATP")
                 logger.info(f"ATP after processing glucose unit {i+1}: {current_atp}")
@@ -214,18 +214,18 @@ class Glycolysis(Pathway):
         logger.info(f"Starting yield phase with {g3p_units} G3P units")
         initial_atp = organelle.get_metabolite_quantity("ATP")
 
-        for i in range(g3p_units):
+        for i in range(
+            g3p_units
+        ):  #! simplify this into as few lines of logs as possible
             logger.info(f"🍀🍀🍀 Processing G3P unit {i+1} of {g3p_units} 🍀🍀🍀")
             try:
-                cls.reactions.glyceraldehyde_3_phosphate_dehydrogenase.execute(
+                cls.reactions.glyceraldehyde_3_phosphate_dehydrogenase.transform(
                     organelle=organelle
                 )
-                cls.reactions.phosphoglycerate_kinase.execute(organelle=organelle)
-                cls.reactions.phosphoglycerate_mutate.execute(
-                    organelle=organelle
-                )  # Changed from phosphoglycerate_mutate
-                cls.reactions.enolase.execute(organelle=organelle)
-                cls.reactions.pyruvate_kinase.execute(organelle=organelle)
+                cls.reactions.phosphoglycerate_kinase.transform(organelle=organelle)
+                cls.reactions.phosphoglycerate_mutate.transform(organelle=organelle)
+                cls.reactions.enolase.transform(organelle=organelle)
+                cls.reactions.pyruvate_kinase.transform(organelle=organelle)
 
                 current_atp = organelle.get_metabolite_quantity("ATP")
                 logger.info(f"ATP after processing G3P unit {i+1}: {current_atp}")
@@ -244,7 +244,7 @@ class Glycolysis(Pathway):
         phosphoglycerate_2 = organelle.get_metabolite_quantity("phosphoglycerate_2")
 
         while phosphoglycerate_2 > 0:
-            reaction_result = enolase.execute(organelle)
+            reaction_result = enolase.transform(organelle)
             if reaction_result == 0:
                 break
             phosphoglycerate_2 = organelle.get_metabolite_quantity("phosphoglycerate_2")
@@ -260,14 +260,14 @@ class Glycolysis(Pathway):
         #! IS THIS USED
         """1,3-Bisphosphoglycerate to 3-Phosphoglycerate"""
         reaction = cls.reactions.phosphoglycerate_kinase
-        reaction.execute(organelle)
+        reaction.transform(organelle)
 
     @classmethod
     def pyruvate_kinase(cls, organelle):
         #! IS THIS USED
         """Phosphoenolpyruvate to Pyruvate"""
         reaction = cls.reactions.pyruvate_kinase
-        reaction.execute(organelle)
+        reaction.transform(organelle)
 
     @classmethod
     def regenerate_nad(cls, organelle):
@@ -278,7 +278,7 @@ class Glycolysis(Pathway):
         reaction_amount = min(nadh_quantity, pyruvate_quantity)
 
         if reaction_amount > 0:
-            cls.reactions.lactate_dehydrogenase.execute(organelle)
+            cls.reactions.lactate_dehydrogenase.transform(organelle)
             logger.info(f"Regenerated {reaction_amount} NAD+ via Lactate Dehydrogenase")
 
     @staticmethod
