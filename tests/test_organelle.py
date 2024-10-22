@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from pyology.exceptions import (
+    GlycolysisRateError,
     InsufficientMetaboliteError,
     QuantityError,
     UnknownMetaboliteError,
@@ -23,29 +24,38 @@ class TestOrganelle(unittest.TestCase):
         # Initial state should be valid
         try:
             self.organelle.validate_initial_state()
-        except ValueError:
-            self.fail("validate_initial_state raised ValueError unexpectedly")
+        except (QuantityError, GlycolysisRateError):
+            self.fail("validate_initial_state raised an unexpected error")
 
     def test_invalid_glycolysis_rate(self):
-        with self.assertRaises(ValueError):
-            self.organelle.set_glycolysis_rate(0)
+        with self.assertRaises(GlycolysisRateError):
+            self.organelle.glycolysis_rate = 0
 
     def test_add_metabolite(self):
-        self.organelle.add_metabolite("test_metabolite", 50, 100)
+        self.organelle.add_metabolite("test_metabolite", "test_type", 50, 100)
         self.assertIn("test_metabolite", self.organelle.metabolites)
         self.assertEqual(self.organelle.metabolites["test_metabolite"].quantity, 50)
+        self.assertEqual(
+            self.organelle.metabolites["test_metabolite"].type, "test_type"
+        )
 
     def test_add_metabolite_with_existing(self):
-        self.organelle.add_metabolite("glucose", 50, 1000)
-        self.assertEqual(self.organelle.metabolites["glucose"].quantity, 50)
+        initial_quantity = self.organelle.metabolites["glucose"].quantity
+        self.organelle.add_metabolite("glucose", "carbohydrate", 50, 1000)
+        self.assertEqual(
+            self.organelle.metabolites["glucose"].quantity, initial_quantity + 50
+        )
 
     def test_add_metabolite_invalid_quantity(self):
-        with self.assertRaises(ValueError):
-            self.organelle.add_metabolite("test_metabolite", -10, 100)
+        with self.assertRaises(QuantityError):
+            self.organelle.add_metabolite("test_metabolite", "test_type", -10, 100)
 
     def test_change_metabolite_quantity(self):
-        self.organelle.change_metabolite_quantity("glucose", 100)
-        self.assertEqual(self.organelle.metabolites["glucose"].quantity, 100)
+        initial_quantity = self.organelle.metabolites["glucose"].quantity
+        self.organelle.change_metabolite_quantity("glucose", 50)
+        self.assertEqual(
+            self.organelle.metabolites["glucose"].quantity, initial_quantity + 50
+        )
 
     def test_change_metabolite_quantity_invalid(self):
         with self.assertRaises(UnknownMetaboliteError):
@@ -78,12 +88,39 @@ class TestOrganelle(unittest.TestCase):
             self.organelle.consume_metabolites(atp=200)
 
     def test_produce_metabolites(self):
+        initial_quantity = self.organelle.metabolites["glucose"].quantity
         self.organelle.produce_metabolites(glucose=50)
-        self.assertEqual(self.organelle.metabolites["glucose"].quantity, 50)
+        self.assertEqual(
+            self.organelle.metabolites["glucose"].quantity, initial_quantity + 50
+        )
 
     def test_produce_metabolites_exceed_max(self):
         with self.assertRaises(QuantityError):
             self.organelle.produce_metabolites(atp=2000)  # exceeding max quantity
+
+    def test_get_metabolite_quantity(self):
+        quantity = self.organelle.get_metabolite_quantity("glucose")
+        self.assertIsInstance(quantity, float)
+
+    def test_get_metabolite_quantity_unknown(self):
+        with self.assertRaises(UnknownMetaboliteError):
+            self.organelle.get_metabolite_quantity("unknown_metabolite")
+
+    def test_set_metabolite_quantity(self):
+        self.organelle.set_metabolite_quantity("glucose", 75.5)
+        self.assertEqual(self.organelle.metabolites["glucose"].quantity, 75.5)
+
+    def test_set_metabolite_quantity_unknown(self):
+        with self.assertRaises(UnknownMetaboliteError):
+            self.organelle.set_metabolite_quantity("unknown_metabolite", 50)
+
+    def test_get_metabolite(self):
+        metabolite = self.organelle.get_metabolite("glucose")
+        self.assertEqual(metabolite.name, "glucose")
+
+    def test_get_metabolite_unknown(self):
+        with self.assertRaises(UnknownMetaboliteError):
+            self.organelle.get_metabolite("unknown_metabolite")
 
 
 if __name__ == "__main__":

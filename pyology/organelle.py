@@ -1,9 +1,9 @@
 import json
 import os
 from dataclasses import dataclass, field
-from typing import Dict
 
 from .exceptions import (
+    GlycolysisRateError,
     InsufficientMetaboliteError,
     QuantityError,
     UnknownMetaboliteError,
@@ -79,16 +79,15 @@ class OrganelleMeta(type):
             The base classes of the organelle class.
         namespace : dict
             The namespace of the organelle class.
+
+        Returns
+        -------
+        type
+            The new instance of the class.
         """
-        # Check if 'name' is defined in this class or any of its base classes
-        if not any("name" in B.__dict__ for B in bases) and "name" not in namespace:
-            raise AttributeError(
-                f"Class '{name}' must define a 'name' class attribute."
-            )
-
-        cls._registry[namespace["name"]] = namespace
-
-        return super().__new__(cls, name, bases, namespace)
+        new_class = super().__new__(cls, name, bases, namespace)
+        cls._registry[new_class.name] = new_class
+        return new_class
 
     @classmethod
     def get_registry(cls: type) -> dict:
@@ -120,8 +119,6 @@ class Organelle(metaclass=OrganelleMeta):
     -------
     validate_initial_state(self) -> None:
         Validates the initial state of the organelle, including metabolite quantities and rates.
-    set_glycolysis_rate(self, rate: float) -> None:
-        Sets the glycolysis rate with validation.
     add_metabolite(self, name: str, type: str, quantity: float, max_quantity: float) -> None:
         Adds a metabolite to the organelle or increases its quantity if it already exists.
     change_metabolite_quantity(self, metabolite_name: str, amount: float) -> None:
@@ -138,39 +135,41 @@ class Organelle(metaclass=OrganelleMeta):
 
     def __init__(self):
         self.metabolites = CellMetabolites().metabolites
-        self.glycolysis_rate = 1.0
+        self._glycolysis_rate = 1.0
         self.validate_initial_state()
+
+    @property
+    def glycolysis_rate(self):
+        return self._glycolysis_rate
+
+    @glycolysis_rate.setter
+    def glycolysis_rate(self, value):
+        if value <= 0:
+            raise GlycolysisRateError(f"Invalid glycolysis rate: {value}")
+        self._glycolysis_rate = value
 
     def validate_initial_state(self) -> None:
         """
-        Validates the initial state of the organelle, including metabolite quantities and rates.
+        Validates the initial state of the organelle, including metabolite
+        quantities and rates.
+
+        Raises
+        ------
+        QuantityError
+            If the initial quantity of a metabolite is invalid.
+        GlycolysisRateError
+            If the glycolysis rate is invalid.
         """
         for name, metabolite in self.metabolites.items():
             if metabolite.quantity < 0 or metabolite.quantity > metabolite.max_quantity:
-                raise ValueError(
+                raise QuantityError(
                     f"Invalid initial quantity for {name}: {metabolite.quantity}"
                 )
 
         if self.glycolysis_rate <= 0:
-            raise ValueError(f"Invalid glycolysis rate: {self.glycolysis_rate}")
-
-    def set_glycolysis_rate(self, rate: float) -> None:
-        """
-        Sets the glycolysis rate with validation.
-
-        Parameters
-        ----------
-        rate : float
-            The new glycolysis rate.
-
-        Raises
-        ------
-        ValueError
-            If the rate is not positive.
-        """
-        if rate <= 0:
-            raise ValueError(f"Glycolysis rate must be positive. Got: {rate}")
-        self.glycolysis_rate = rate
+            raise GlycolysisRateError(
+                f"Invalid glycolysis rate: {self.glycolysis_rate}"
+            )
 
     def add_metabolite(
         self, name: str, type: str, quantity: float, max_quantity: float
@@ -191,14 +190,14 @@ class Organelle(metaclass=OrganelleMeta):
 
         Raises
         ------
-        ValueError
+        QuantityError
             If the quantity is negative or exceeds the maximum quantity.
         """
         if quantity < 0:
-            raise ValueError(f"Quantity must be non-negative. Got: {quantity}")
+            raise QuantityError(f"Quantity must be non-negative. Got: {quantity}")
 
         if quantity > max_quantity:
-            raise ValueError(
+            raise QuantityError(
                 f"Initial quantity {quantity} exceeds max quantity {max_quantity}."
             )
 
@@ -220,11 +219,18 @@ class Organelle(metaclass=OrganelleMeta):
             The name of the metabolite.
         amount : float
             The amount to change the quantity by.
+
+        Raises
+        ------
+        MetaboliteError
+            If the metabolite name is not a string or the amount is not a number.
+        UnknownMetaboliteError
+            If the metabolite is not found in the organelle.
         """
         if not isinstance(metabolite_name, str):
-            raise TypeError("Metabolite name must be a string.")
+            raise MetaboliteError("Metabolite name must be a string.")
         if not isinstance(amount, (int, float)):
-            raise TypeError("Amount must be a number.")
+            raise MetaboliteError("Amount must be a number.")
         if metabolite_name not in self.metabolites:
             raise UnknownMetaboliteError(f"Unknown metabolite: {metabolite_name}")
 
@@ -233,11 +239,11 @@ class Organelle(metaclass=OrganelleMeta):
 
         if new_quantity < 0:
             raise QuantityError(
-                f"Cannot reduce {metabolite_name} below zero. Attempted to set {metabolite_name} to {new_quantity}."
+                f"Cannot reduce {metabolite_name} below zero. Current: {metabolite.quantity}, Attempted change: {amount}"
             )
         if new_quantity > metabolite.max_quantity:
             raise QuantityError(
-                f"Cannot exceed max quantity for {metabolite_name}. Attempted to set {metabolite_name} to {new_quantity}, but max is {metabolite.max_quantity}."
+                f"Cannot exceed max quantity for {metabolite_name}. Current: {metabolite.quantity}, Max: {metabolite.max_quantity}, Attempted change: {amount}"
             )
 
         metabolite.quantity = new_quantity
@@ -257,6 +263,11 @@ class Organelle(metaclass=OrganelleMeta):
         -------
         bool
             True if the metabolite is available, False otherwise.
+
+        Raises
+        ------
+        UnknownMetaboliteError
+            If the metabolite is not found in the organelle.
         """
         if metabolite not in self.metabolites:
             raise UnknownMetaboliteError(f"Unknown metabolite: {metabolite}")
@@ -274,7 +285,7 @@ class Organelle(metaclass=OrganelleMeta):
         for metabolite, amount in metabolites.items():
             if not self.is_metabolite_available(metabolite, amount):
                 raise InsufficientMetaboliteError(
-                    f"Insufficient {metabolite} for reaction"
+                    f"Insufficient {metabolite} for reaction. Required: {amount}, Available: {self.metabolites[metabolite].quantity}"
                 )
             self.change_metabolite_quantity(metabolite, -amount)
 
@@ -323,23 +334,25 @@ class Organelle(metaclass=OrganelleMeta):
             raise UnknownMetaboliteError(f"Unknown metabolite: {metabolite}")
         self.metabolites[metabolite].quantity = quantity
 
-    def get_metabolite(self, metabolite_name):
+    def get_metabolite(self, metabolite_name: str) -> Metabolite:
         """
         Get a metabolite from the cytoplasm.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         metabolite_name : str
             The name of the metabolite to retrieve.
 
-        Returns:
-        --------
+        Returns
+        -------
         Metabolite
             The requested metabolite object.
 
-        Raises:
-        -------
-        KeyError
-            If the metabolite is not found in the cytoplasm.
+        Raises
+        ------
+        UnknownMetaboliteError
+            If the metabolite is not found in the organelle.
         """
+        if metabolite_name not in self.metabolites:
+            raise UnknownMetaboliteError(f"Unknown metabolite: {metabolite_name}")
         return self.metabolites[metabolite_name]
