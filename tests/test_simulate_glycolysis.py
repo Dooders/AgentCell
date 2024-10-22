@@ -25,6 +25,9 @@ class MockCell:
     def get_metabolite_quantity(self, metabolite):
         return self.metabolites.get(metabolite, 0)
 
+    def set_metabolite_quantity(self, metabolite, quantity):
+        self.metabolites[metabolite] = quantity
+
 
 class MockGlycolysis:
     @staticmethod
