@@ -202,6 +202,7 @@ class Metabolites:
     ) -> None:
         """
         Adds a new metabolite or updates an existing one. Can accept individual parameters or a dictionary.
+        #! return as a named tuple?
 
         Parameters
         ----------

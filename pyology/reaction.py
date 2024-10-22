@@ -254,10 +254,11 @@ class Reaction:
         for metabolite, amount in substrates.items():
             available = substrate_quantities[metabolite]
             if available < amount:
-                raise InsufficientSubstrateError(
-                    f"Insufficient {metabolite} for reaction '{self.name}'. "
+                logger.error(
+                    f"Reaction '{self.name}': Insufficient {metabolite}. "
                     f"Required: {amount}, Available: {available}"
                 )
+                return 0.0
 
         # Consume substrates
         for metabolite, amount in substrates.items():
