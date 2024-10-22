@@ -14,6 +14,7 @@ class GlycolysisSimulation:
 
     def run(self, glucose_units: float, logger: logging.Logger):
         logger.info("Starting glycolysis simulation")
+        self.cell.set_metabolite_quantity("glucose", glucose_units)
         # Investment phase
         investment_command = CommandData(
             obj=self.cell,
