@@ -32,7 +32,7 @@ def test_hexokinase_reaction(cell):
     initial_glucose = cell.get_metabolite_quantity("glucose")
     initial_g6p = cell.get_metabolite_quantity("glucose_6_phosphate")
 
-    reaction.execute(cell)
+    reaction.transform(cell)
 
     assert cell.get_metabolite_quantity("ATP") == initial_atp - 1
     assert cell.get_metabolite_quantity("ADP") == initial_adp + 1
@@ -50,7 +50,7 @@ def test_phosphofructokinase_reaction(cell):
     initial_f6p = cell.get_metabolite_quantity("fructose_6_phosphate")
     initial_f16bp = cell.get_metabolite_quantity("fructose_1_6_bisphosphate")
 
-    reaction.execute(cell)
+    reaction.transform(cell)
 
     assert cell.get_metabolite_quantity("ATP") == initial_atp - 1
     assert cell.get_metabolite_quantity("ADP") == initial_adp + 1
@@ -70,7 +70,7 @@ def test_phosphoglycerate_kinase_reaction(cell):
     initial_bpg = cell.get_metabolite_quantity("bisphosphoglycerate_1_3")
     initial_3pg = cell.get_metabolite_quantity("phosphoglycerate_3")
 
-    reaction.execute(cell)
+    reaction.transform(cell)
 
     assert cell.get_metabolite_quantity("ATP") == initial_atp + 1
     assert cell.get_metabolite_quantity("ADP") == initial_adp - 1
@@ -88,7 +88,7 @@ def test_pyruvate_kinase_reaction(cell):
     initial_pep = cell.get_metabolite_quantity("phosphoenolpyruvate")
     initial_pyruvate = cell.get_metabolite_quantity("pyruvate")
 
-    reaction.execute(cell)
+    reaction.transform(cell)
 
     assert cell.get_metabolite_quantity("ATP") == initial_atp + 1
     assert cell.get_metabolite_quantity("ADP") == initial_adp - 1
@@ -109,7 +109,7 @@ def test_adenine_nucleotide_conservation(cell):
     # Execute all glycolysis reactions
     for reaction in GlycolysisReactions.__dict__.values():
         if isinstance(reaction, Reaction):
-            reaction.execute(cell)
+            reaction.transform(cell)
 
     final_total = (
         cell.get_metabolite_quantity("ATP")

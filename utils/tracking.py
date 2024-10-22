@@ -56,8 +56,6 @@ def execute_command(
             result = command(obj, *args, **kwargs)
         else:
             result = getattr(obj, command)(*args, **kwargs)
-        if debug:
-            logger.debug(f"Executed command '{command}' with result: {result}")
     except Exception as e:
         logger.error(f"Error executing command '{command}': {str(e)}")
         raise
@@ -140,7 +138,7 @@ def _log_validation_results(
 ) -> Dict[str, Any]:
     """
     Log the validation results.
-    
+
     #! Need to validate this process
 
     Parameters
