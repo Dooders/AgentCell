@@ -28,3 +28,15 @@ class ReactionError(PyologyError):
 
 class InsufficientSubstrateError(ReactionError):
     pass
+
+class OrganelleError(PyologyError):
+    """Exception raised for errors during organelle operations."""
+    pass
+
+class GlycolysisRateError(OrganelleError):
+    """Exception raised when a glycolysis rate is invalid."""
+    pass
+
+class MetaboliteNotFoundError(OrganelleError):
+    """Exception raised when a metabolite is not found in the organelle."""
+    pass

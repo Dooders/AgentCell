@@ -1,9 +1,9 @@
 [
   {
     "name": "ATP",
-    "quantity": 10,
-    "max_quantity": 100,
-    "type": "energy_carrier",
+    "quantity": 100,
+    "max_quantity": 1000,
+    "type": "energy",
     "unit": "mM"
   },
   {
