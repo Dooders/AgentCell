@@ -1,5 +1,6 @@
 import logging
 from typing import TYPE_CHECKING, Dict
+
 from .exceptions import ReactionError  # Add this import
 
 if TYPE_CHECKING:
@@ -119,8 +120,10 @@ class Reaction:
         for metabolite, amount in self.substrates.items():
             available = organelle.get_metabolite_quantity(metabolite)
             if available < amount:
-                logger.error(f"Reaction '{self.name}': Insufficient {metabolite}. "
-                             f"Required: {amount}, Available: {available}")
+                logger.error(
+                    f"Reaction '{self.name}': Insufficient {metabolite}. "
+                    f"Required: {amount}, Available: {available}"
+                )
                 return 0.0
 
         # Consume substrates
