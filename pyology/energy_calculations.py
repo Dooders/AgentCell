@@ -1,4 +1,7 @@
+import logging
 from typing import Dict, Union
+
+from pyology.organelle import Organelle
 
 from .metabolite import Metabolite
 
@@ -70,3 +73,40 @@ def calculate_total_adenine_nucleotides(
         get_quantity(metabolites.get(nucleotide, 0))
         for nucleotide in ["ATP", "ADP", "AMP"]
     )
+
+
+def calculate_energy_state(organelle: "Organelle", logger: logging.Logger) -> float:
+    """
+    Calculate the total energy state of the organelle.
+
+    This method calculates the energy state based on the high-energy phosphate bonds
+    in ATP, ADP, and other relevant metabolites.
+
+    Parameters
+    ----------
+    organelle : Organelle
+        The organelle containing the metabolites.
+    logger : logging.Logger
+        The logger to use for logging.
+
+    Returns
+    -------
+    float
+        The total energy state of the organelle.
+    """
+    # Energy values in kJ/mol
+    ATP_ENERGY = 30.5
+    ADP_ENERGY = 30.5
+    NADH_ENERGY = 158
+    FADH2_ENERGY = 105
+
+    energy_state = (
+        organelle.get_metabolite_quantity("ATP") * ATP_ENERGY
+        + organelle.get_metabolite_quantity("ADP") * ADP_ENERGY
+        + organelle.get_metabolite_quantity("NADH") * NADH_ENERGY
+        + organelle.get_metabolite_quantity("FADH2") * FADH2_ENERGY
+    )
+
+    logger.info(f"Calculated energy state: {energy_state:.2f} kJ/mol")
+
+    return energy_state
