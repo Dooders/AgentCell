@@ -59,7 +59,7 @@ class Cytoplasm(Organelle):
             validations=[validate_conservation],
         )
 
-        result = execute_command(command_data, self.logger, self.debug)
+        result = execute_command(self, command_data, self.logger, self.debug)
 
         return result["result"]  # This should be the amount of pyruvate produced
 

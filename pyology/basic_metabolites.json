@@ -63,6 +63,13 @@
     "unit": "mM"
   },
   {
+    "name": "NAD",
+    "quantity": 10,
+    "max_quantity": 5000,
+    "type": "energy_carrier",
+    "unit": "mM"
+  },
+  {
     "name": "NAD+",
     "quantity": 10,
     "max_quantity": 5000,

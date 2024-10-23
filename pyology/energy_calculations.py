@@ -52,16 +52,14 @@ def calculate_glycolysis_energy_state(organelle) -> float:
     return calculate_base_energy_state(organelle.metabolites, energy_values)
 
 
-def calculate_total_adenine_nucleotides(
-    metabolites: Dict[str, Union[float, "Metabolite"]]
-) -> float:
+def calculate_total_adenine_nucleotides(organelle: "Organelle") -> float:
     """
     Calculate the total adenine nucleotides in the system.
 
     Parameters:
     -----------
-    metabolites : Dict[str, Union[float, 'Metabolite']]
-        A dictionary of metabolites and their quantities or Metabolite objects.
+    organelle : Organelle
+        The organelle containing the metabolites.
 
     Returns:
     --------
@@ -70,7 +68,7 @@ def calculate_total_adenine_nucleotides(
     """
 
     return sum(
-        get_quantity(metabolites.get(nucleotide, 0))
+        get_quantity(organelle.get_metabolite_quantity(nucleotide))
         for nucleotide in ["ATP", "ADP", "AMP"]
     )
 

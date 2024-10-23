@@ -304,7 +304,7 @@ class Mitochondrion(Organelle):
             validations=[validate_conservation],
         )
 
-        result = execute_command(command_data, logger, self.debug)
+        result = execute_command(self, command_data, logger, self.debug)
 
         return result["result"]  # This should be the amount of ATP produced
 

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List
 
+from pyology.organelle import Organelle
 from pyology.reporter import Reporter
 
 from .command_data import CommandData
@@ -15,7 +16,10 @@ class CommandExecutionResult:
 
 
 def execute_command(
-    command_data: CommandData, logger: Reporter, debug: bool = True
+    organelle: "Organelle",
+    command_data: CommandData,
+    logger: Reporter,
+    debug: bool = True,
 ) -> CommandExecutionResult:
     """
     Executes a command on an object based on the provided CommandData object,
@@ -47,7 +51,7 @@ def execute_command(
     validations = command_data.validations
 
     initial_values = _log_attribute_values(
-        logger, obj, tracked_attributes, "Initial", debug
+        logger, organelle, tracked_attributes, "Initial", debug
     )
 
     # Execute the command
@@ -61,11 +65,11 @@ def execute_command(
         raise
 
     final_values = _log_attribute_values(
-        logger, obj, tracked_attributes, "Final", debug
+        logger, organelle, tracked_attributes, "Final", debug
     )
 
     validation_results = _log_validation_results(
-        logger, obj, initial_values, final_values, validations
+        logger, organelle, initial_values, final_values, validations
     )
 
     # Prepare and return results
@@ -79,7 +83,7 @@ def execute_command(
 
 def _log_attribute_values(
     logger: Reporter,
-    obj: Any,
+    organelle: "Organelle",
     tracked_attributes: List[str],
     stage: str,
     debug: bool = True,
@@ -91,8 +95,8 @@ def _log_attribute_values(
     ----------
     logger : Reporter
         The logger object to use for logging.
-    obj : Any
-        The object to log the attribute values of.
+    organelle : "Organelle"
+        The organelle to log the attribute values of.
     tracked_attributes : List[str]
         The attributes to log.
     stage : str
@@ -108,7 +112,7 @@ def _log_attribute_values(
     values = {}
     for attr in tracked_attributes:
         try:
-            quantity = obj.get_metabolite_quantity(attr)
+            quantity = organelle.get_metabolite_quantity(attr)
             values[attr] = quantity
         except AttributeError:
             logger.error(
@@ -131,7 +135,7 @@ def _log_attribute_values(
 
 def _log_validation_results(
     logger: Reporter,
-    obj: Any,
+    organelle: "Organelle",
     initial_values: Dict[str, Any],
     final_values: Dict[str, Any],
     validations: List[Callable[[Any, Dict[str, Any], Dict[str, Any]], bool]],
@@ -145,8 +149,8 @@ def _log_validation_results(
     ----------
     logger : Reporter
         The logger object to use for logging.
-    obj : Any
-        The object to validate.
+    organelle : "Organelle"
+        The organelle to validate.
     initial_values : Dict[str, Any]
         The initial values of the tracked attributes.
     final_values : Dict[str, Any]
@@ -164,7 +168,7 @@ def _log_validation_results(
     validation_results = {}
     for idx, validation in enumerate(validations, start=1):
         try:
-            validation_result = validation(obj, initial_values, final_values)
+            validation_result = validation(organelle, initial_values, final_values)
             validation_results[f"validation_{idx}"] = validation_result
             if not validation_result:
                 logger.warning(f"Validation {idx} failed: {validation.__name__}")
