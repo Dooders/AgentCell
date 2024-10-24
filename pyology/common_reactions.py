@@ -85,7 +85,7 @@ class KrebsCycleReactions:
     citrate_synthase = Reaction(
         name="Citrate Synthase",
         enzyme=citrate_synthase,
-        substrates={"Acetyl-CoA": 1, "Oxaloacetate": 1, "H2O": 1},
+        substrates={"Acetyl_CoA": 1, "Oxaloacetate": 1, "H2O": 1},
         products={"Citrate": 1, "CoA": 1},
     )
 
@@ -101,20 +101,20 @@ class KrebsCycleReactions:
         name="Isocitrate Dehydrogenase",
         enzyme=isocitrate_dehydrogenase,
         substrates={"Isocitrate": 1, "NAD+": 1},
-        products={"α-Ketoglutarate": 1, "CO2": 1, "NADH": 1},
+        products={"α_Ketoglutarate": 1, "CO2": 1, "NADH": 1},
     )
 
     alpha_ketoglutarate_dehydrogenase = Reaction(
-        name="α-Ketoglutarate Dehydrogenase",
+        name="α_Ketoglutarate Dehydrogenase",
         enzyme=alpha_ketoglutarate_dehydrogenase,
-        substrates={"α-Ketoglutarate": 1, "NAD+": 1, "CoA": 1},
-        products={"Succinyl-CoA": 1, "CO2": 1, "NADH": 1},
+        substrates={"α_Ketoglutarate": 1, "NAD+": 1, "CoA": 1},
+        products={"Succinyl_CoA": 1, "CO2": 1, "NADH": 1},
     )
 
     succinyl_coa_synthetase = Reaction(
-        name="Succinyl-CoA Synthetase",
+        name="Succinyl_CoA Synthetase",
         enzyme=succinyl_coa_synthetase,
-        substrates={"Succinyl-CoA": 1, "ADP": 1, "Pi": 1},
+        substrates={"Succinyl_CoA": 1, "ADP": 1, "Pi": 1},
         products={"Succinate": 1, "CoA": 1, "ATP": 1},
     )
 

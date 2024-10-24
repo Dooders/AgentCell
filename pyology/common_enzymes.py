@@ -188,7 +188,7 @@ alpha_ketoglutarate_dehydrogenase = Enzyme(
 )
 
 succinyl_coa_synthetase = Enzyme(
-    name="Succinyl-CoA Synthetase",
+    name="Succinyl_CoA Synthetase",
     k_cat=100,
     k_m={"succinyl_coa": 10},
     inhibitors={"adp": 1.0},

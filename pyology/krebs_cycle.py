@@ -1,9 +1,6 @@
 import logging
 from typing import TYPE_CHECKING, Tuple
 
-from utils.command_data import CommandData
-from utils.tracking import execute_command
-
 from .common_reactions import KrebsCycleReactions
 from .energy_calculations import (
     calculate_energy_state,
@@ -14,8 +11,6 @@ from .pathway import Pathway
 
 if TYPE_CHECKING:
     from .organelle import Organelle
-
-logger = logging.getLogger(__name__)
 
 
 class KrebsCycle(Pathway):
@@ -77,28 +72,8 @@ class KrebsCycle(Pathway):
 
             co2_produced = 0
             for i in range(int(acetyl_coa_units)):
-                cycle_results = execute_command(
-                    organelle,
-                    CommandData(
-                        obj=self,
-                        command=self.cycle,
-                        tracked_attributes=[
-                            "ATP",
-                            "ADP",
-                            "AMP",
-                            "Acetyl_CoA",
-                            "NAD",
-                            "NADH",
-                            "FAD",
-                            "FADH2",
-                            "CO2",
-                        ],
-                        args=(),
-                        kwargs={},
-                    ),
-                    logger=logger,
-                )
-                co2_produced += cycle_results.result
+                cycle_results = self.cycle(organelle)
+                co2_produced += cycle_results
 
             logger.info(f"Krebs Cycle completed. Produced {co2_produced} CO2.")
             logger.info(f"Final metabolite levels: {organelle.metabolites.quantities}")
@@ -145,23 +120,40 @@ class KrebsCycle(Pathway):
         KrebsCycleError:
             If the cycle fails to complete.
         """
-        logger = logging.getLogger(__name__)  # Get logger within the method
+        logger = logging.getLogger(__name__)
         logger.info("Starting Krebs Cycle")
         co2_produced = 0
 
         try:
-            self.reactions.citrate_synthase.transform(organelle=organelle)
-            self.reactions.aconitase.transform(organelle=organelle)
-            self.reactions.isocitrate_dehydrogenase.transform(organelle=organelle)
-            co2_produced += 1
-            self.reactions.alpha_ketoglutarate_dehydrogenase.transform(
-                organelle=organelle
+            # Log initial metabolite levels
+            logger.info(
+                f"Initial metabolite levels: {organelle.metabolites.quantities}"
             )
-            co2_produced += 1
-            self.reactions.succinyl_coa_synthetase.transform(organelle=organelle)
-            self.reactions.succinate_dehydrogenase.transform(organelle=organelle)
-            self.reactions.fumarase.transform(organelle=organelle)
-            self.reactions.malate_dehydrogenase.transform(organelle=organelle)
+
+            for reaction in [
+                self.reactions.citrate_synthase,
+                self.reactions.aconitase,
+                self.reactions.isocitrate_dehydrogenase,
+                self.reactions.alpha_ketoglutarate_dehydrogenase,
+                self.reactions.succinyl_coa_synthetase,
+                self.reactions.succinate_dehydrogenase,
+                self.reactions.fumarase,
+                self.reactions.malate_dehydrogenase,
+            ]:
+                logger.info(f"Executing reaction: {reaction.name}")
+                logger.info(f"Substrates before reaction: {reaction.substrates}")
+                logger.info(
+                    f"Current metabolite levels: {organelle.metabolites.quantities}"
+                )
+                reaction.transform(organelle=organelle)
+                if reaction.name in [
+                    "Isocitrate Dehydrogenase",
+                    "α_Ketoglutarate Dehydrogenase",
+                ]:
+                    co2_produced += 1
+                logger.info(
+                    f"Metabolite levels after {reaction.name}: {organelle.metabolites.quantities}"
+                )
 
         except ReactionError as e:
             logger.error(f"Krebs Cycle failed: {str(e)}")

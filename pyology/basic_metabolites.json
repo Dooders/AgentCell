@@ -71,21 +71,21 @@
   },
   {
     "name": "NAD+",
-    "quantity": 10,
+    "quantity": 20,
     "max_quantity": 5000,
     "type": "energy_carrier",
     "unit": "mM"
   },
   {
     "name": "NADH",
-    "quantity": 0,
+    "quantity": 10,
     "max_quantity": 5000,
     "type": "energy_carrier",
     "unit": "mM"
   },
   {
     "name": "FAD",
-    "quantity": 0,
+    "quantity": 10,
     "max_quantity": 3000,
     "type": "energy_carrier",
     "unit": "mM"
@@ -309,35 +309,98 @@
   },
   {
     "name": "bisphosphoglycerate_1_3",
-    "quantity": 0,
+    "quantity": 10,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "phosphoglycerate",
-    "quantity": 0,
+    "quantity": 10,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "phosphoglycerate_3",
-    "quantity": 0,
+    "quantity": 10,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "phosphoglycerate_2",
-    "quantity": 0,
+    "quantity": 10,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "phosphoglycerate_1_3`",
-    "quantity": 0,
+    "quantity": 10,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM"
+  },
+  {
+    "name": "Oxaloacetate",
+    "quantity": 10,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM"
+  },
+  {
+    "name": "Citrate",
+    "quantity": 10,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM"
+  },
+  {
+    "name": "CoA",
+    "quantity": 10,
+    "max_quantity": 3000,
+    "type": "lipid",
+    "unit": "mM"
+  },
+  {
+    "name": "Isocitrate",
+    "quantity": 10,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM"
+  },
+  {
+    "name": "α_Ketoglutarate",
+    "quantity": 10,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM"
+  },
+  {
+    "name": "Succinyl_CoA",
+    "quantity": 10,
+    "max_quantity": 3000,
+    "type": "lipid",
+    "unit": "mM"
+  },
+  {
+    "name": "Succinate",
+    "quantity": 10,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM"
+  },
+  {
+    "name": "Fumarate",
+    "quantity": 10,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM"
+  },
+  {
+    "name": "Malate",
+    "quantity": 10,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
