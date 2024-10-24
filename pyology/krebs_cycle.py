@@ -32,8 +32,9 @@ class KrebsCycle(Pathway):
     time_step = 1
     reactions = KrebsCycleReactions
 
-    def __init__(self, debug=False):
+    def __init__(self, debug=True):
         self.debug = debug
+        self.reactions = KrebsCycleReactions()
 
     def run(
         self, organelle: "Organelle", acetyl_coa_units: float, logger: logging.Logger
@@ -71,18 +72,21 @@ class KrebsCycle(Pathway):
             initial_adenine = calculate_total_adenine_nucleotides(organelle)
 
             co2_produced = 0
+            total_energy_produced = 0
             for i in range(int(acetyl_coa_units)):
-                cycle_results = self.cycle(organelle)
+                cycle_results, cycle_energy = self.cycle(organelle)
                 co2_produced += cycle_results
+                total_energy_produced += cycle_energy
 
             logger.info(f"Krebs Cycle completed. Produced {co2_produced} CO2.")
+            logger.info(f"Total energy produced: {total_energy_produced} kJ/mol")
             logger.info(f"Final metabolite levels: {organelle.metabolites.quantities}")
 
             final_energy = calculate_energy_state(organelle, logger)
             final_adenine = calculate_total_adenine_nucleotides(organelle)
 
             # Check energy conservation
-            energy_difference = final_energy - initial_energy
+            energy_difference = final_energy - initial_energy - total_energy_produced
             if abs(energy_difference) > 1e-6:
                 logger.warning(
                     f"Energy not conserved in Krebs Cycle. Difference: {energy_difference}"
@@ -101,34 +105,15 @@ class KrebsCycle(Pathway):
             logger.error(f"Error during Krebs Cycle: {str(e)}")
             raise KrebsCycleError(f"Krebs Cycle failed: {str(e)}")
 
-    def cycle(self, organelle: "Organelle") -> int:
-        """
-        Perform one complete cycle of the Krebs Cycle.
-
-        Parameters
-        ----------
-        organelle: Organelle
-            The organelle to run the Krebs Cycle on.
-
-        Returns
-        -------
-        int:
-            The number of CO2 molecules produced in this cycle.
-
-        Raises
-        ------
-        KrebsCycleError:
-            If the cycle fails to complete.
-        """
+    def cycle(self, organelle: "Organelle") -> Tuple[int, float]:
         logger = logging.getLogger(__name__)
         logger.info("Starting Krebs Cycle")
         co2_produced = 0
+        energy_produced = 0
 
         try:
             # Log initial metabolite levels
-            logger.info(
-                f"Initial metabolite levels: {organelle.metabolites.quantities}"
-            )
+            logger.info(f"Initial metabolite levels: {organelle.metabolites.quantities}")
 
             for reaction in [
                 self.reactions.citrate_synthase,
@@ -142,22 +127,33 @@ class KrebsCycle(Pathway):
             ]:
                 logger.info(f"Executing reaction: {reaction.name}")
                 logger.info(f"Substrates before reaction: {reaction.substrates}")
-                logger.info(
-                    f"Current metabolite levels: {organelle.metabolites.quantities}"
-                )
-                reaction.transform(organelle=organelle)
-                if reaction.name in [
-                    "Isocitrate Dehydrogenase",
-                    "α_Ketoglutarate Dehydrogenase",
-                ]:
+                logger.info(f"Current metabolite levels: {organelle.metabolites.quantities}")
+                
+                # Execute reaction and track energy changes
+                reaction_energy = reaction.transform(organelle=organelle)
+                energy_produced += reaction_energy
+                
+                if reaction.name in ["Isocitrate Dehydrogenase", "α_Ketoglutarate Dehydrogenase"]:
                     co2_produced += 1
-                logger.info(
-                    f"Metabolite levels after {reaction.name}: {organelle.metabolites.quantities}"
-                )
+                logger.info(f"Metabolite levels after {reaction.name}: {organelle.metabolites.quantities}")
+                logger.info(f"Energy produced in {reaction.name}: {reaction_energy} kJ/mol")
+
+            # Calculate total NADH, FADH2, and GTP produced
+            nadh_produced = organelle.get_metabolite_quantity("NADH") - organelle.get_metabolite_quantity("NAD+")
+            fadh2_produced = organelle.get_metabolite_quantity("FADH2") - organelle.get_metabolite_quantity("FAD")
+            gtp_produced = organelle.get_metabolite_quantity("GTP") - organelle.get_metabolite_quantity("GDP")
+            
+            # Calculate energy from electron transport chain (more accurate values)
+            etc_energy = nadh_produced * 2.5 + fadh2_produced * 1.5 + gtp_produced  # ATP equivalents
+            atp_energy = 30.5  # kJ/mol of ATP
+            energy_produced += etc_energy * atp_energy
+
+            logger.info(f"Krebs Cycle completed. CO2 produced: {co2_produced}")
+            logger.info(f"Total energy produced: {energy_produced:.2f} kJ/mol")
+            logger.info(f"NADH produced: {nadh_produced}, FADH2 produced: {fadh2_produced}, GTP produced: {gtp_produced}")
 
         except ReactionError as e:
             logger.error(f"Krebs Cycle failed: {str(e)}")
             raise KrebsCycleError(f"Krebs Cycle failed: {str(e)}")
 
-        logger.info(f"Krebs Cycle completed. CO2 produced: {co2_produced}")
-        return co2_produced
+        return co2_produced, energy_produced

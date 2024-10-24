@@ -318,6 +318,15 @@ class Reaction:
     ) -> str:
         return ", ".join([f"{m}: {a * rate:.4f}" for m, a in metabolites.items()])
 
+    def _calculate_energy_change(self, organelle: "Organelle") -> float:
+        # This is a simplified calculation and should be refined based on actual biochemical data
+        energy_change = 0
+        for product, amount in self.products.items():
+            energy_change += amount * organelle.get_metabolite_energy(product)
+        for substrate, amount in self.substrates.items():
+            energy_change -= amount * organelle.get_metabolite_energy(substrate)
+        return energy_change
+
 
 def perform_reaction(
     organelle: "Organelle", reaction: Reaction, reverse: bool = False, **kwargs
@@ -349,3 +358,4 @@ def perform_reaction(
         return result > 0
     except ReactionError:
         return False
+

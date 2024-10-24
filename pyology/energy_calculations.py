@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Union
+from typing import Dict, Union, TYPE_CHECKING
 
 from pyology.organelle import Organelle
 
@@ -77,34 +77,102 @@ def calculate_energy_state(organelle: "Organelle", logger: logging.Logger) -> fl
     """
     Calculate the total energy state of the organelle.
 
-    This method calculates the energy state based on the high-energy phosphate bonds
-    in ATP, ADP, and other relevant metabolites.
+    This function accounts for various forms of energy storage in the cell:
+    1. High-energy phosphate compounds (ATP, GTP, etc.)
+    2. Reduced coenzymes (NADH, FADH2)
+    3. Acetyl-CoA
+    4. Concentration gradients of key metabolites
 
     Parameters
     ----------
     organelle : Organelle
-        The organelle containing the metabolites.
+        The organelle to calculate the energy state for.
     logger : logging.Logger
-        The logger to use for logging.
+        Logger for output messages.
 
     Returns
     -------
     float
-        The total energy state of the organelle.
+        The total energy state in kJ/mol.
     """
-    # Energy values in kJ/mol
-    ATP_ENERGY = 30.5
-    ADP_ENERGY = 30.5
-    NADH_ENERGY = 158
-    FADH2_ENERGY = 105
+    total_energy = 0.0
 
-    energy_state = (
-        organelle.get_metabolite_quantity("ATP") * ATP_ENERGY
-        + organelle.get_metabolite_quantity("ADP") * ADP_ENERGY
-        + organelle.get_metabolite_quantity("NADH") * NADH_ENERGY
-        + organelle.get_metabolite_quantity("FADH2") * FADH2_ENERGY
-    )
+    # Energy from high-energy phosphate compounds
+    atp_energy = organelle.get_metabolite_quantity("ATP") * 50  # ~50 kJ/mol
+    gtp_energy = organelle.get_metabolite_quantity("GTP") * 50  # ~50 kJ/mol
+    total_energy += atp_energy + gtp_energy
 
-    logger.info(f"Calculated energy state: {energy_state:.2f} kJ/mol")
+    # Energy from reduced coenzymes
+    nadh_energy = organelle.get_metabolite_quantity("NADH") * 158  # ~158 kJ/mol
+    fadh2_energy = organelle.get_metabolite_quantity("FADH2") * 105  # ~105 kJ/mol
+    total_energy += nadh_energy + fadh2_energy
 
-    return energy_state
+    # Energy from Acetyl-CoA
+    acetyl_coa_energy = organelle.get_metabolite_quantity("Acetyl_CoA") * 31  # ~31 kJ/mol
+    total_energy += acetyl_coa_energy
+
+    # Energy from concentration gradients
+    # This is a simplified approximation and may need refinement
+    proton_gradient_energy = calculate_proton_gradient_energy(organelle)
+    total_energy += proton_gradient_energy
+
+    # Log the energy contributions
+    logger.info(f"Energy from ATP: {atp_energy:.2f} kJ/mol")
+    logger.info(f"Energy from GTP: {gtp_energy:.2f} kJ/mol")
+    logger.info(f"Energy from NADH: {nadh_energy:.2f} kJ/mol")
+    logger.info(f"Energy from FADH2: {fadh2_energy:.2f} kJ/mol")
+    logger.info(f"Energy from Acetyl-CoA: {acetyl_coa_energy:.2f} kJ/mol")
+    logger.info(f"Energy from proton gradient: {proton_gradient_energy:.2f} kJ/mol")
+    logger.info(f"Total energy state: {total_energy:.2f} kJ/mol")
+
+    return total_energy
+
+def calculate_proton_gradient_energy(organelle: "Organelle") -> float:
+    """
+    Calculate the energy stored in the proton gradient across the mitochondrial membrane.
+
+    This is a simplified calculation and may need to be refined based on more detailed models.
+
+    Parameters
+    ----------
+    organelle : Organelle
+        The organelle (assumed to be mitochondrion) to calculate the proton gradient energy for.
+
+    Returns
+    -------
+    float
+        The energy stored in the proton gradient in kJ/mol.
+    """
+    # Simplified calculation based on the proton motive force
+    # Typical proton motive force is around 200-220 mV
+    proton_motive_force = 0.22  # V
+    faraday_constant = 96485  # C/mol
+    
+    # Assuming the gradient is equivalent to moving 3 protons
+    n_protons = 3
+    
+    energy = n_protons * faraday_constant * proton_motive_force
+    
+    return energy
+
+def calculate_total_adenine_nucleotides(organelle: "Organelle") -> float:
+    """
+    Calculate the total amount of adenine nucleotides (ATP + ADP + AMP).
+
+    Parameters
+    ----------
+    organelle : Organelle
+        The organelle to calculate the total adenine nucleotides for.
+
+    Returns
+    -------
+    float
+        The total amount of adenine nucleotides in moles.
+    """
+    atp = organelle.get_metabolite_quantity("ATP")
+    adp = organelle.get_metabolite_quantity("ADP")
+    amp = organelle.get_metabolite_quantity("AMP")
+    
+    total_adenine = atp + adp + amp
+    
+    return total_adenine

@@ -404,5 +404,12 @@
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
+  },
+  {
+    "name": "GDP",
+    "quantity": 0,
+    "max_quantity": 3000,
+    "type": "nucleotide",
+    "unit": "mM"
   }
 ]

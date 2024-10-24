@@ -3,8 +3,6 @@ import logging
 from pyology.cell import Cell
 from pyology.krebs_cycle import KrebsCycle
 from pyology.reporter import Reporter
-from utils.command_data import CommandData
-from utils.tracking import execute_command
 
 
 class KrebsCycleSimulation:
