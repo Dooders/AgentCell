@@ -5,6 +5,7 @@ from .constants import INITIAL_NAD
 from .data import Effector, Enzyme
 from .organelle import Organelle
 from .utils import allosteric_regulation, hill_equation, michaelis_menten
+from .tracker import Tracker, EnergyTracker, CO2Tracker
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,9 @@ class KrebsCycle(Organelle):
             fumarate=(0, 100),
             malate=(0, 100),
         )
+
+        self.energy_tracker = EnergyTracker()
+        self.co2_tracker = CO2Tracker()
 
     def is_metabolite_available(self, metabolite: str, amount: float) -> bool:
         """Check if a metabolite is available in sufficient quantity."""
@@ -137,6 +141,8 @@ class KrebsCycle(Organelle):
             self.produce_metabolites(Citrate=reaction_rate)
             self.cofactors["Coenzyme-A"] += reaction_rate
             logger.info(f"Citrate synthase: Produced {reaction_rate} Citrate")
+            self.energy_tracker.log_energy(0, 0, 0)
+            self.co2_tracker.log_co2_production(0)
             return True
         else:
             logger.warning("Insufficient substrates for step 1")
@@ -152,6 +158,8 @@ class KrebsCycle(Organelle):
 
         if self.consume_metabolites(Citrate=reaction_rate):
             self.produce_metabolites(Isocitrate=reaction_rate)
+            self.energy_tracker.log_energy(0, 0, 0)
+            self.co2_tracker.log_co2_production(0)
         else:
             logger.warning("Insufficient Citrate for step 2")
 
@@ -185,6 +193,8 @@ class KrebsCycle(Organelle):
                     "CO2": reaction_rate,
                 }
             )
+            self.energy_tracker.log_energy(0, reaction_rate, 0)
+            self.co2_tracker.log_co2_production(reaction_rate)
         else:
             logger.warning("Insufficient substrates or NAD⁺ for step 3")
 
@@ -217,6 +227,8 @@ class KrebsCycle(Organelle):
                     "CO2": reaction_rate,
                 }
             )
+            self.energy_tracker.log_energy(0, reaction_rate, 0)
+            self.co2_tracker.log_co2_production(reaction_rate)
         else:
             logger.warning("Insufficient substrates or NAD⁺ for step 4")
 
@@ -236,6 +248,8 @@ class KrebsCycle(Organelle):
                 GTP=reaction_rate,
                 **{"Coenzyme-A": reaction_rate},
             )
+            self.energy_tracker.log_energy(reaction_rate, 0, 0)
+            self.co2_tracker.log_co2_production(0)
         else:
             logger.warning("Insufficient substrates or GDP for step 5")
 
@@ -249,6 +263,8 @@ class KrebsCycle(Organelle):
 
         if self.consume_metabolites(Succinate=reaction_rate, FAD=reaction_rate):
             self.produce_metabolites(Fumarate=reaction_rate, FADH2=reaction_rate)
+            self.energy_tracker.log_energy(0, 0, reaction_rate)
+            self.co2_tracker.log_co2_production(0)
         else:
             logger.warning("Insufficient substrates or FAD for step 6")
 
@@ -262,6 +278,8 @@ class KrebsCycle(Organelle):
 
         if self.consume_metabolites(Fumarate=reaction_rate):
             self.produce_metabolites(Malate=reaction_rate)
+            self.energy_tracker.log_energy(0, 0, 0)
+            self.co2_tracker.log_co2_production(0)
         else:
             logger.warning("Insufficient Fumarate for step 7")
 
@@ -275,10 +293,14 @@ class KrebsCycle(Organelle):
 
         if self.consume_metabolites(Malate=reaction_rate, NAD=reaction_rate):
             self.produce_metabolites(Oxaloacetate=reaction_rate, NADH=reaction_rate)
+            self.energy_tracker.log_energy(0, reaction_rate, 0)
+            self.co2_tracker.log_co2_production(reaction_rate)
         else:
             logger.warning("Insufficient substrates or NAD⁺ for step 8")
 
     def run_cycle(self):
+        self.energy_tracker.start_tracking()
+        self.co2_tracker.start_tracking()
         if self.metabolites["Acetyl-CoA"].quantity > 0:
             self.step1_citrate_synthase()
             self.step2_aconitase()
@@ -290,6 +312,10 @@ class KrebsCycle(Organelle):
             self.step8_malate_dehydrogenase()
         else:
             logger.warning("Insufficient Acetyl-CoA to start Krebs cycle")
+        energy_report = self.energy_tracker.report()
+        co2_report = self.co2_tracker.report()
+        logger.info(f"Energy Report: {energy_report}")
+        logger.info(f"CO2 Report: {co2_report}")
 
     def krebs_cycle_iterator(self, num_cycles: int = None):
         """Generator that yields the state after each Krebs cycle."""
@@ -374,4 +400,3 @@ class KrebsCycle(Organelle):
             # - Pausing or modifying the cycle based on certain conditions
 
         logger.info("Krebs cycle complete")
-
