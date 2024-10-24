@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, Union
 
 from pyology.organelle import Organelle
 
@@ -64,11 +64,10 @@ def calculate_total_adenine_nucleotides(organelle: "Organelle") -> float:
     Returns:
     --------
     float
-        The total adenine nucleotides in the system.
+        The total amount of adenine nucleotides (ATP + ADP + AMP) in moles.
     """
-
     return sum(
-        get_quantity(organelle.get_metabolite_quantity(nucleotide))
+        organelle.get_metabolite_quantity(nucleotide)
         for nucleotide in ["ATP", "ADP", "AMP"]
     )
 
@@ -108,7 +107,9 @@ def calculate_energy_state(organelle: "Organelle", logger: logging.Logger) -> fl
     total_energy += nadh_energy + fadh2_energy
 
     # Energy from Acetyl-CoA
-    acetyl_coa_energy = organelle.get_metabolite_quantity("Acetyl_CoA") * 31  # ~31 kJ/mol
+    acetyl_coa_energy = (
+        organelle.get_metabolite_quantity("Acetyl_CoA") * 31
+    )  # ~31 kJ/mol
     total_energy += acetyl_coa_energy
 
     # Energy from concentration gradients
@@ -126,6 +127,7 @@ def calculate_energy_state(organelle: "Organelle", logger: logging.Logger) -> fl
     logger.info(f"Total energy state: {total_energy:.2f} kJ/mol")
 
     return total_energy
+
 
 def calculate_proton_gradient_energy(organelle: "Organelle") -> float:
     """
@@ -147,32 +149,10 @@ def calculate_proton_gradient_energy(organelle: "Organelle") -> float:
     # Typical proton motive force is around 200-220 mV
     proton_motive_force = 0.22  # V
     faraday_constant = 96485  # C/mol
-    
+
     # Assuming the gradient is equivalent to moving 3 protons
     n_protons = 3
-    
+
     energy = n_protons * faraday_constant * proton_motive_force
-    
+
     return energy
-
-def calculate_total_adenine_nucleotides(organelle: "Organelle") -> float:
-    """
-    Calculate the total amount of adenine nucleotides (ATP + ADP + AMP).
-
-    Parameters
-    ----------
-    organelle : Organelle
-        The organelle to calculate the total adenine nucleotides for.
-
-    Returns
-    -------
-    float
-        The total amount of adenine nucleotides in moles.
-    """
-    atp = organelle.get_metabolite_quantity("ATP")
-    adp = organelle.get_metabolite_quantity("ADP")
-    amp = organelle.get_metabolite_quantity("AMP")
-    
-    total_adenine = atp + adp + amp
-    
-    return total_adenine
