@@ -1,10 +1,6 @@
-Certainly! Below is a comprehensive **schema description** for your `metabolites.yml` file. This schema outlines each variable present in the YAML structure, explaining what it represents, its data type, and any additional pertinent information. This documentation will help ensure consistency, clarity, and ease of use as you develop and expand your metabolic pathway simulation.
+# **Metabolites YAML Schema Description**
 
----
-
-## **Metabolites YAML Schema Description**
-
-### **Top-Level Structure**
+## **Top-Level Structure**
 
 - **`metabolites`** *(object)*:
   - **Description:** The root key containing all metabolite entries.
@@ -18,13 +14,13 @@ Certainly! Below is a comprehensive **schema description** for your `metabolites
         # Metabolite details
     ```
 
-### **Metabolite Entry Structure**
+## **Metabolite Entry Structure**
 
 Each metabolite under the `metabolites` key follows a structured format with specific fields. Below is a detailed description of each field within a metabolite entry.
 
 ---
 
-#### **1. `quantity`** *(number)*
+### **1. `quantity`** *(number)*
 
 - **Description:** Represents the initial or default quantity of the metabolite in the simulation.
 - **Default Value:** `10`
@@ -36,7 +32,7 @@ Each metabolite under the `metabolites` key follows a structured format with spe
 
 ---
 
-#### **2. `type`** *(string)*
+### **2. `type`** *(string)*
 
 - **Description:** Categorizes the metabolite based on its role or classification within metabolic pathways.
 - **Possible Values:** 
@@ -67,7 +63,7 @@ Each metabolite under the `metabolites` key follows a structured format with spe
 
 ---
 
-#### **3. `description`** *(string)*
+### **3. `description`** *(string)*
 
 - **Description:** Provides a brief overview of the metabolite's role and significance within the metabolic pathways.
 - **Example:**
@@ -77,7 +73,7 @@ Each metabolite under the `metabolites` key follows a structured format with spe
 
 ---
 
-#### **4. `meta`** *(object)*
+### **4. `meta`** *(object)*
 
 - **Description:** Contains detailed metadata about the metabolite, encompassing various attributes that influence its behavior and interactions within the cell.
 - **Subfields:** Detailed below.
@@ -1589,11 +1585,3 @@ Depending on the complexity and requirements of your simulation, you might need 
 
 5. **Temporal Dynamics:**
    - Include time-dependent changes in metabolite concentrations or fluxes.
-
----
-
-### **Conclusion**
-
-This schema description provides a structured and detailed framework for representing metabolites in your `metabolites.yml` file. By adhering to this schema, you can ensure that your simulation accurately captures the complex interactions and dynamics of cellular metabolism. Proper documentation and consistent data entry will facilitate easier maintenance, scalability, and collaboration as your project evolves.
-
-If you have any specific questions or need further customization of this schema to better fit your simulation needs, feel free to ask!
