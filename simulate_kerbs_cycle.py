@@ -4,6 +4,16 @@ from pyology.cell import Cell
 from pyology.krebs_cycle import KrebsCycle
 from pyology.reporter import Reporter
 
+target_metabolites = [
+    "FAD",
+    "NAD+",
+    "CoA",
+    "ADP",
+    "Pi",
+    "Oxaloacetate",
+    "Succinate",
+    "α_Ketoglutarate",
+]
 
 class KrebsCycleSimulation:
     def __init__(self, cell: "Cell", debug=True):
@@ -35,9 +45,6 @@ class KrebsCycleSimulation:
             current_quantity = self.cell.get_metabolite_quantity(metabolite)
             if current_quantity < quantity:
                 self.cell.set_metabolite_quantity(metabolite, quantity)
-            logger.info(
-                f"Initial {metabolite} quantity: {self.cell.get_metabolite_quantity(metabolite)}"
-            )
 
         try:
             results = self.krebs_cycle.run(self.cell, acetyl_coa_units, logger)

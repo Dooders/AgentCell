@@ -1,0 +1,32 @@
+quantity: 10
+type: Core Krebs Cycle Intermediate
+description: The first product of the cycle, formed by the condensation of acetyl-CoA and oxaloacetate.
+meta:
+  molecular_formula: C6H8O7
+  pathway: TCA Cycle
+  role: First intermediate in the cycle
+  concentration:
+    default: 0.5
+    unit: mM
+    range:
+      min: 0.1
+      max: 2.0
+  localization:
+    compartments:
+      - Mitochondria
+  kinetics:
+    Km: 0.15  # in mM
+    Vmax: 80  # in μmol/min
+  reactions:
+    - name: Aconitase Reaction
+      enzyme: Aconitase
+      role: Substrate
+  chemical_properties:
+    pKa: 3.1, 4.7, 6.4
+    molecular_weight: 192.12  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: Phosphofructokinase-1
+        effect: Inhibition
+  thermodynamics:
+    delta_G: -7.7  # kJ/mol

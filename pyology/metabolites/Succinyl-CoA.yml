@@ -1,0 +1,27 @@
+quantity: 10
+type: Core Krebs Cycle Intermediate
+description: High-energy thioester compound formed from alpha-ketoglutarate.
+meta:
+  molecular_formula: C25H40N7O19P3S
+  pathway: TCA Cycle
+  role: Substrate for succinyl-CoA synthetase
+  concentration:
+    default: 0.05
+    unit: mM
+    range:
+      min: 0.01
+      max: 0.2
+  localization:
+    compartments:
+      - Mitochondria
+  kinetics:
+    Km: 0.2  # in mM
+    Vmax: 50  # in μmol/min
+  reactions:
+    - name: Succinyl-CoA Synthetase Reaction
+      enzyme: Succinyl-CoA Synthetase
+      role: Substrate
+  chemical_properties:
+    molecular_weight: 867.54  # g/mol
+  thermodynamics:
+    delta_G: -33.5  # kJ/mol

@@ -1,12 +1,27 @@
 import logging
 from typing import TYPE_CHECKING, Dict, Union
 
-from pyology.organelle import Organelle
-
 from .metabolite import Metabolite
 
+if TYPE_CHECKING:
+    from pyology.cell import Cell
+    from pyology.organelle import Organelle
 
-def get_quantity(value):
+
+def get_quantity(value: Union[float, "Metabolite"]) -> float:
+    """
+    Get the quantity of a metabolite.
+
+    Parameters
+    ----------
+    value : Union[float, Metabolite]
+        The value to get the quantity from.
+
+    Returns
+    -------
+    float
+        The quantity of the metabolite.
+    """
     if isinstance(value, (int, float)):
         return value
     elif hasattr(value, "quantity"):
@@ -18,13 +33,41 @@ def get_quantity(value):
 def calculate_base_energy_state(
     metabolites: Dict[str, Union[float, "Metabolite"]], energy_values: Dict[str, float]
 ) -> float:
+    """
+    Calculate the base energy state of the organelle.
+
+    Parameters
+    ----------
+    metabolites : Dict[str, Union[float, Metabolite]]
+        The metabolites in the organelle.
+    energy_values : Dict[str, float]
+        The energy values for the metabolites.
+
+    Returns
+    -------
+    float
+        The base energy state in kJ/mol.
+    """
     return sum(
         get_quantity(metabolites.get(metabolite, 0)) * energy
         for metabolite, energy in energy_values.items()
     )
 
 
-def calculate_cell_energy_state(cell) -> float:
+def calculate_cell_energy_state(cell: "Cell") -> float:
+    """
+    Calculate the energy state of the cell.
+
+    Parameters
+    ----------
+    cell : Cell
+        The cell to calculate the energy state for.
+
+    Returns
+    -------
+    float
+        The energy state of the cell in kJ/mol.
+    """
     energy_values = {"ATP": 50, "proton_gradient": 5}
     return (
         calculate_base_energy_state(cell.cytoplasm.metabolites, energy_values)
@@ -34,7 +77,20 @@ def calculate_cell_energy_state(cell) -> float:
     )
 
 
-def calculate_glycolysis_energy_state(organelle) -> float:
+def calculate_glycolysis_energy_state(organelle: "Organelle") -> float:
+    """
+    Calculate the energy state of the glycolysis pathway.
+
+    Parameters
+    ----------
+    organelle : Organelle
+        The organelle to calculate the energy state for.
+
+    Returns
+    -------
+    float
+        The energy state of the glycolysis pathway in kJ/mol.
+    """
     energy_values = {
         "ATP": 50,
         "ADP": 30,
@@ -56,13 +112,13 @@ def calculate_total_adenine_nucleotides(organelle: "Organelle") -> float:
     """
     Calculate the total adenine nucleotides in the system.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     organelle : Organelle
         The organelle containing the metabolites.
 
-    Returns:
-    --------
+    Returns
+    -------
     float
         The total amount of adenine nucleotides (ATP + ADP + AMP) in moles.
     """
@@ -113,7 +169,6 @@ def calculate_energy_state(organelle: "Organelle", logger: logging.Logger) -> fl
     total_energy += acetyl_coa_energy
 
     # Energy from concentration gradients
-    # This is a simplified approximation and may need refinement
     proton_gradient_energy = calculate_proton_gradient_energy(organelle)
     total_energy += proton_gradient_energy
 
@@ -133,7 +188,8 @@ def calculate_proton_gradient_energy(organelle: "Organelle") -> float:
     """
     Calculate the energy stored in the proton gradient across the mitochondrial membrane.
 
-    This is a simplified calculation and may need to be refined based on more detailed models.
+    This calculation is based on the chemiosmotic theory and provides a more realistic
+    estimate of the energy stored in the proton gradient.
 
     Parameters
     ----------
@@ -145,14 +201,19 @@ def calculate_proton_gradient_energy(organelle: "Organelle") -> float:
     float
         The energy stored in the proton gradient in kJ/mol.
     """
-    # Simplified calculation based on the proton motive force
-    # Typical proton motive force is around 200-220 mV
-    proton_motive_force = 0.22  # V
-    faraday_constant = 96485  # C/mol
-
-    # Assuming the gradient is equivalent to moving 3 protons
-    n_protons = 3
-
-    energy = n_protons * faraday_constant * proton_motive_force
-
-    return energy
+    # Constants
+    R = 8.314  # J/(mol·K), gas constant
+    T = 310  # K, typical cellular temperature (37°C)
+    F = 96485  # C/mol, Faraday constant
+    
+    # Typical values for mitochondrial membrane potential and pH gradient
+    delta_psi = 0.18  # V, electrical potential difference
+    delta_pH = 0.75  # pH units, typical pH gradient across mitochondrial membrane
+    
+    # Calculate the proton motive force (PMF)
+    pmf = delta_psi + (2.303 * R * T / F) * delta_pH
+    
+    # Convert PMF to kJ/mol
+    energy_kj_mol = pmf * F / 1000  # divide by 1000 to convert J to kJ
+    
+    return energy_kj_mol

@@ -1,0 +1,28 @@
+quantity: 10
+type: Core Krebs Cycle Intermediate
+description: Formed from succinyl-CoA, it's oxidized to fumarate in the next step of the cycle.
+meta:
+  molecular_formula: C4H6O4
+  pathway: TCA Cycle
+  role: Substrate for succinate dehydrogenase
+  concentration:
+    default: 0.5
+    unit: mM
+    range:
+      min: 0.1
+      max: 2.0
+  localization:
+    compartments:
+      - Mitochondria
+  kinetics:
+    Km: 0.5  # in mM
+    Vmax: 40  # in μmol/min
+  reactions:
+    - name: Succinate Dehydrogenase Reaction
+      enzyme: Succinate Dehydrogenase
+      role: Substrate
+  chemical_properties:
+    pKa: 4.2, 5.6
+    molecular_weight: 118.09  # g/mol
+  thermodynamics:
+    delta_G: 0.8  # kJ/mol

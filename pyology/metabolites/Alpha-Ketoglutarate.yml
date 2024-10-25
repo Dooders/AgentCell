@@ -1,0 +1,28 @@
+quantity: 10
+type: Core Krebs Cycle Intermediate
+description: Formed from isocitrate, it's a key intermediate that links the TCA cycle with amino acid metabolism.
+meta:
+  molecular_formula: C5H6O5
+  pathway: TCA Cycle, Amino Acid Metabolism
+  role: Substrate for alpha-ketoglutarate dehydrogenase
+  concentration:
+    default: 0.1
+    unit: mM
+    range:
+      min: 0.05
+      max: 0.5
+  localization:
+    compartments:
+      - Mitochondria
+  kinetics:
+    Km: 0.3  # in mM
+    Vmax: 70  # in μmol/min
+  reactions:
+    - name: Alpha-Ketoglutarate Dehydrogenase Reaction
+      enzyme: Alpha-Ketoglutarate Dehydrogenase
+      role: Substrate
+  chemical_properties:
+    pKa: 2.47, 4.68
+    molecular_weight: 146.11  # g/mol
+  thermodynamics:
+    delta_G: -30.0  # kJ/mol

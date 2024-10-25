@@ -1,0 +1,28 @@
+quantity: 10
+type: Core Krebs Cycle Intermediate
+description: Formed from fumarate, it's oxidized to oxaloacetate in the final step of the cycle.
+meta:
+  molecular_formula: C4H6O5
+  pathway: TCA Cycle
+  role: Substrate for malate dehydrogenase
+  concentration:
+    default: 0.3
+    unit: mM
+    range:
+      min: 0.1
+      max: 1.0
+  localization:
+    compartments:
+      - Mitochondria
+  kinetics:
+    Km: 0.25  # in mM
+    Vmax: 75  # in μmol/min
+  reactions:
+    - name: Malate Dehydrogenase Reaction
+      enzyme: Malate Dehydrogenase
+      role: Substrate
+  chemical_properties:
+    pKa: 3.4, 5.1
+    molecular_weight: 134.09  # g/mol
+  thermodynamics:
+    delta_G: -29.7  # kJ/mol

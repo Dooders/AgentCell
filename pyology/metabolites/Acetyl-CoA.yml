@@ -1,0 +1,83 @@
+quantity: 10
+type: Core Krebs Cycle Intermediate
+description: The starting molecule that combines with oxaloacetate to form citrate, initiating the cycle.
+meta:
+  molecular_formula: C23H38N7O17P3S
+  pathway: TCA Cycle, Fatty Acid Oxidation
+  role: Combines with oxaloacetate to form citrate
+  concentration:
+    default: 10
+    unit: mM
+    range:
+      min: 0.1
+      max: 100
+  localization:
+    compartments:
+      - Mitochondria
+  kinetics:
+    Km: 0.5  # in mM
+    Vmax: 100  # in μmol/min
+  transport:
+    mechanism: Active Transport
+    transporters:
+      - Acetyl-CoA Transporter
+  reactions:
+    - name: Citrate Synthase Reaction
+      enzyme: Citrate Synthase
+      role: Substrate
+  chemical_properties:
+    pKa: 5.0
+    solubility: High
+    stability: Stable
+    molecular_weight: 809.57  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: Phosphofructokinase-1
+        effect: Inhibition
+    feedback_loops:
+      - type: Negative Feedback
+        source: Citrate
+  interactions:
+    binding_partners:
+      - Enzyme: Citrate Synthase
+        type: Substrate
+  state_changes:
+    redox_state: None
+    phosphorylation: Unphosphorylated
+    isomers: None
+  thermodynamics:
+    delta_G: -30.5  # kJ/mol
+  flux:
+    production_rate: 5  # μmol/min
+    consumption_rate: 5  # μmol/min
+  synthesis:
+    pathway: Pyruvate Dehydrogenase Complex
+    enzyme: Pyruvate Dehydrogenase
+  degradation:
+    pathway: Fatty Acid Oxidation
+    enzyme: Acetyl-CoA Oxidase
+  genetic_regulation:
+    genes:
+      - name: ACS (Acetyl-CoA Synthase)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: High
+  isomers:
+    D_form: Active
+    L_form: Inactive
+  stoichiometry:
+    reactions:
+      - name: Citrate Synthase Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 809.57  # g/mol
+    charge: -1
+  visualization:
+    structure_2D: "structures/acetyl_coa_2d.png"
+    structure_3D: "structures/acetyl_coa_3d.pdb"
+  energy_metrics:
+    ATP_yield: 3
+  experimental_data:
+    concentration: 5.0  # mM
+    reference: "Smith et al., 2020"

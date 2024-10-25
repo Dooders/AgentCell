@@ -1,0 +1,28 @@
+quantity: 10
+type: Core Krebs Cycle Intermediate
+description: The final product of the cycle, which combines with acetyl-CoA to start the next round.
+meta:
+  molecular_formula: C4H4O5
+  pathway: TCA Cycle, Gluconeogenesis
+  role: Combines with acetyl-CoA to form citrate
+  concentration:
+    default: 0.01
+    unit: mM
+    range:
+      min: 0.001
+      max: 0.1
+  localization:
+    compartments:
+      - Mitochondria
+  kinetics:
+    Km: 0.02  # in mM
+    Vmax: 110  # in μmol/min
+  reactions:
+    - name: Citrate Synthase Reaction
+      enzyme: Citrate Synthase
+      role: Substrate
+  chemical_properties:
+    pKa: 2.4, 4.0
+    molecular_weight: 132.07  # g/mol
+  thermodynamics:
+    delta_G: -31.4  # kJ/mol

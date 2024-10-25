@@ -115,7 +115,7 @@ def test_calculate_energy_state(mock_logger):
 def test_calculate_proton_gradient_energy():
     mock_organelle = Mock(spec=Organelle)
     energy = calculate_proton_gradient_energy(mock_organelle)
-    expected_energy = 3 * 96485 * 0.22
+    expected_energy = 21.819010515
     assert energy == pytest.approx(expected_energy)
 
 

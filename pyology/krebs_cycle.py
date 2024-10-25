@@ -74,13 +74,12 @@ class KrebsCycle(Pathway):
             co2_produced = 0
             total_energy_produced = 0
             for i in range(int(acetyl_coa_units)):
-                cycle_results, cycle_energy = self.cycle(organelle)
+                cycle_results, cycle_energy = self.cycle(organelle, logger)
                 co2_produced += cycle_results
                 total_energy_produced += cycle_energy
 
             logger.info(f"Krebs Cycle completed. Produced {co2_produced} CO2.")
             logger.info(f"Total energy produced: {total_energy_produced} kJ/mol")
-            logger.info(f"Final metabolite levels: {organelle.metabolites.quantities}")
 
             final_energy = calculate_energy_state(organelle, logger)
             final_adenine = calculate_total_adenine_nucleotides(organelle)
@@ -105,15 +104,12 @@ class KrebsCycle(Pathway):
             logger.error(f"Error during Krebs Cycle: {str(e)}")
             raise KrebsCycleError(f"Krebs Cycle failed: {str(e)}")
 
-    def cycle(self, organelle: "Organelle") -> Tuple[int, float]:
-        logger = logging.getLogger(__name__)
+    def cycle(self, organelle: "Organelle", logger: logging.Logger) -> Tuple[int, float]:
         logger.info("Starting Krebs Cycle")
         co2_produced = 0
         energy_produced = 0
 
         try:
-            # Log initial metabolite levels
-            logger.info(f"Initial metabolite levels: {organelle.metabolites.quantities}")
 
             for reaction in [
                 self.reactions.citrate_synthase,
@@ -127,7 +123,6 @@ class KrebsCycle(Pathway):
             ]:
                 logger.info(f"Executing reaction: {reaction.name}")
                 logger.info(f"Substrates before reaction: {reaction.substrates}")
-                logger.info(f"Current metabolite levels: {organelle.metabolites.quantities}")
                 
                 # Execute reaction and track energy changes
                 reaction_energy = reaction.transform(organelle=organelle)
@@ -135,7 +130,6 @@ class KrebsCycle(Pathway):
                 
                 if reaction.name in ["Isocitrate Dehydrogenase", "α_Ketoglutarate Dehydrogenase"]:
                     co2_produced += 1
-                logger.info(f"Metabolite levels after {reaction.name}: {organelle.metabolites.quantities}")
                 logger.info(f"Energy produced in {reaction.name}: {reaction_energy} kJ/mol")
 
             # Calculate total NADH, FADH2, and GTP produced
