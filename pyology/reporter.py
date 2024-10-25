@@ -47,6 +47,12 @@ class Reporter:
         """
         self.logger.info(message)
 
+    def warning(self, message: str) -> None:
+        """
+        Log a warning message.
+        """
+        self.logger.warning(message)
+
     def debug(self, message: str) -> None:
         """
         Log a debug message.

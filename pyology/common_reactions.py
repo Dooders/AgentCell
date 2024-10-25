@@ -1,15 +1,4 @@
-from pyology.common_enzymes import (
-    aldolase,
-    enolase,
-    glyceraldehyde_3_phosphate_dehydrogenase,
-    hexokinase,
-    phosphofructokinase,
-    phosphoglucose_isomerase,
-    phosphoglycerate_kinase,
-    phosphoglycerate_mutate,
-    pyruvate_kinase,
-    triose_phosphate_isomerase,
-)
+from pyology.common_enzymes import *
 from pyology.reaction import Reaction
 
 
@@ -89,4 +78,64 @@ class GlycolysisReactions:
         substrates={"pyruvate": 1, "NADH": 1},
         products={"lactate": 1, "NAD+": 1},
         enzyme="Lactate dehydrogenase",
+    )
+
+
+class KrebsCycleReactions:
+    citrate_synthase = Reaction(
+        name="Citrate Synthase",
+        enzyme=citrate_synthase,
+        substrates={"Acetyl_CoA": 1, "Oxaloacetate": 1, "H2O": 1},
+        products={"Citrate": 1, "CoA": 1},
+    )
+
+    aconitase = Reaction(
+        name="Aconitase",
+        enzyme=aconitase,
+        substrates={"Citrate": 1},
+        products={"Isocitrate": 1},
+        reversible=True,
+    )
+
+    isocitrate_dehydrogenase = Reaction(
+        name="Isocitrate Dehydrogenase",
+        enzyme=isocitrate_dehydrogenase,
+        substrates={"Isocitrate": 1, "NAD+": 1},
+        products={"α_Ketoglutarate": 1, "CO2": 1, "NADH": 1},
+    )
+
+    alpha_ketoglutarate_dehydrogenase = Reaction(
+        name="α_Ketoglutarate Dehydrogenase",
+        enzyme=alpha_ketoglutarate_dehydrogenase,
+        substrates={"α_Ketoglutarate": 1, "NAD+": 1, "CoA": 1},
+        products={"Succinyl_CoA": 1, "CO2": 1, "NADH": 1},
+    )
+
+    succinyl_coa_synthetase = Reaction(
+        name="Succinyl_CoA Synthetase",
+        enzyme=succinyl_coa_synthetase,
+        substrates={"Succinyl_CoA": 1, "ADP": 1, "Pi": 1},
+        products={"Succinate": 1, "CoA": 1, "ATP": 1},
+    )
+
+    succinate_dehydrogenase = Reaction(
+        name="Succinate Dehydrogenase",
+        enzyme=succinate_dehydrogenase,
+        substrates={"Succinate": 1, "FAD": 1},
+        products={"Fumarate": 1, "FADH2": 1},
+    )
+
+    fumarase = Reaction(
+        name="Fumarase",
+        enzyme=fumarase,
+        substrates={"Fumarate": 1, "H2O": 1},
+        products={"Malate": 1},
+        reversible=True,
+    )
+
+    malate_dehydrogenase = Reaction(
+        name="Malate Dehydrogenase",
+        enzyme=malate_dehydrogenase,
+        substrates={"Malate": 1, "NAD+": 1},
+        products={"Oxaloacetate": 1, "NADH": 1},
     )

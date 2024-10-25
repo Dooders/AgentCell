@@ -23,7 +23,7 @@ class GlycolysisSimulation:
             args=(glucose_units, logger),
         )
 
-        execute_command(investment_command, logger=logger)
+        execute_command(self.cell, investment_command, logger=logger)
 
         # Yield phase
         yield_command = CommandData(
@@ -32,7 +32,7 @@ class GlycolysisSimulation:
             tracked_attributes=["ATP", "ADP", "AMP"],
             args=(glucose_units * 2, logger),
         )
-        execute_command(yield_command, logger=logger)
+        execute_command(self.cell, yield_command, logger=logger)
 
 
 reporter = Reporter()

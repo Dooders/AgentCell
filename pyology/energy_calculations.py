@@ -1,12 +1,27 @@
 import logging
-from typing import Dict, Union
-
-from pyology.organelle import Organelle
+from typing import TYPE_CHECKING, Dict, Union
 
 from .metabolite import Metabolite
 
+if TYPE_CHECKING:
+    from pyology.cell import Cell
+    from pyology.organelle import Organelle
 
-def get_quantity(value):
+
+def get_quantity(value: Union[float, "Metabolite"]) -> float:
+    """
+    Get the quantity of a metabolite.
+
+    Parameters
+    ----------
+    value : Union[float, Metabolite]
+        The value to get the quantity from.
+
+    Returns
+    -------
+    float
+        The quantity of the metabolite.
+    """
     if isinstance(value, (int, float)):
         return value
     elif hasattr(value, "quantity"):
@@ -18,13 +33,41 @@ def get_quantity(value):
 def calculate_base_energy_state(
     metabolites: Dict[str, Union[float, "Metabolite"]], energy_values: Dict[str, float]
 ) -> float:
+    """
+    Calculate the base energy state of the organelle.
+
+    Parameters
+    ----------
+    metabolites : Dict[str, Union[float, Metabolite]]
+        The metabolites in the organelle.
+    energy_values : Dict[str, float]
+        The energy values for the metabolites.
+
+    Returns
+    -------
+    float
+        The base energy state in kJ/mol.
+    """
     return sum(
         get_quantity(metabolites.get(metabolite, 0)) * energy
         for metabolite, energy in energy_values.items()
     )
 
 
-def calculate_cell_energy_state(cell) -> float:
+def calculate_cell_energy_state(cell: "Cell") -> float:
+    """
+    Calculate the energy state of the cell.
+
+    Parameters
+    ----------
+    cell : Cell
+        The cell to calculate the energy state for.
+
+    Returns
+    -------
+    float
+        The energy state of the cell in kJ/mol.
+    """
     energy_values = {"ATP": 50, "proton_gradient": 5}
     return (
         calculate_base_energy_state(cell.cytoplasm.metabolites, energy_values)
@@ -34,7 +77,20 @@ def calculate_cell_energy_state(cell) -> float:
     )
 
 
-def calculate_glycolysis_energy_state(organelle) -> float:
+def calculate_glycolysis_energy_state(organelle: "Organelle") -> float:
+    """
+    Calculate the energy state of the glycolysis pathway.
+
+    Parameters
+    ----------
+    organelle : Organelle
+        The organelle to calculate the energy state for.
+
+    Returns
+    -------
+    float
+        The energy state of the glycolysis pathway in kJ/mol.
+    """
     energy_values = {
         "ATP": 50,
         "ADP": 30,
@@ -52,25 +108,22 @@ def calculate_glycolysis_energy_state(organelle) -> float:
     return calculate_base_energy_state(organelle.metabolites, energy_values)
 
 
-def calculate_total_adenine_nucleotides(
-    metabolites: Dict[str, Union[float, "Metabolite"]]
-) -> float:
+def calculate_total_adenine_nucleotides(organelle: "Organelle") -> float:
     """
     Calculate the total adenine nucleotides in the system.
 
-    Parameters:
-    -----------
-    metabolites : Dict[str, Union[float, 'Metabolite']]
-        A dictionary of metabolites and their quantities or Metabolite objects.
+    Parameters
+    ----------
+    organelle : Organelle
+        The organelle containing the metabolites.
 
-    Returns:
-    --------
+    Returns
+    -------
     float
-        The total adenine nucleotides in the system.
+        The total amount of adenine nucleotides (ATP + ADP + AMP) in moles.
     """
-
     return sum(
-        get_quantity(metabolites.get(nucleotide, 0))
+        organelle.get_metabolite_quantity(nucleotide)
         for nucleotide in ["ATP", "ADP", "AMP"]
     )
 
@@ -79,34 +132,88 @@ def calculate_energy_state(organelle: "Organelle", logger: logging.Logger) -> fl
     """
     Calculate the total energy state of the organelle.
 
-    This method calculates the energy state based on the high-energy phosphate bonds
-    in ATP, ADP, and other relevant metabolites.
+    This function accounts for various forms of energy storage in the cell:
+    1. High-energy phosphate compounds (ATP, GTP, etc.)
+    2. Reduced coenzymes (NADH, FADH2)
+    3. Acetyl-CoA
+    4. Concentration gradients of key metabolites
 
     Parameters
     ----------
     organelle : Organelle
-        The organelle containing the metabolites.
+        The organelle to calculate the energy state for.
     logger : logging.Logger
-        The logger to use for logging.
+        Logger for output messages.
 
     Returns
     -------
     float
-        The total energy state of the organelle.
+        The total energy state in kJ/mol.
     """
-    # Energy values in kJ/mol
-    ATP_ENERGY = 30.5
-    ADP_ENERGY = 30.5
-    NADH_ENERGY = 158
-    FADH2_ENERGY = 105
+    total_energy = 0.0
 
-    energy_state = (
-        organelle.get_metabolite_quantity("ATP") * ATP_ENERGY
-        + organelle.get_metabolite_quantity("ADP") * ADP_ENERGY
-        + organelle.get_metabolite_quantity("NADH") * NADH_ENERGY
-        + organelle.get_metabolite_quantity("FADH2") * FADH2_ENERGY
-    )
+    # Energy from high-energy phosphate compounds
+    atp_energy = organelle.get_metabolite_quantity("ATP") * 50  # ~50 kJ/mol
+    gtp_energy = organelle.get_metabolite_quantity("GTP") * 50  # ~50 kJ/mol
+    total_energy += atp_energy + gtp_energy
 
-    logger.info(f"Calculated energy state: {energy_state:.2f} kJ/mol")
+    # Energy from reduced coenzymes
+    nadh_energy = organelle.get_metabolite_quantity("NADH") * 158  # ~158 kJ/mol
+    fadh2_energy = organelle.get_metabolite_quantity("FADH2") * 105  # ~105 kJ/mol
+    total_energy += nadh_energy + fadh2_energy
 
-    return energy_state
+    # Energy from Acetyl-CoA
+    acetyl_coa_energy = (
+        organelle.get_metabolite_quantity("Acetyl_CoA") * 31
+    )  # ~31 kJ/mol
+    total_energy += acetyl_coa_energy
+
+    # Energy from concentration gradients
+    proton_gradient_energy = calculate_proton_gradient_energy(organelle)
+    total_energy += proton_gradient_energy
+
+    # Log the energy contributions
+    logger.info(f"Energy from ATP: {atp_energy:.2f} kJ/mol")
+    logger.info(f"Energy from GTP: {gtp_energy:.2f} kJ/mol")
+    logger.info(f"Energy from NADH: {nadh_energy:.2f} kJ/mol")
+    logger.info(f"Energy from FADH2: {fadh2_energy:.2f} kJ/mol")
+    logger.info(f"Energy from Acetyl-CoA: {acetyl_coa_energy:.2f} kJ/mol")
+    logger.info(f"Energy from proton gradient: {proton_gradient_energy:.2f} kJ/mol")
+    logger.info(f"Total energy state: {total_energy:.2f} kJ/mol")
+
+    return total_energy
+
+
+def calculate_proton_gradient_energy(organelle: "Organelle") -> float:
+    """
+    Calculate the energy stored in the proton gradient across the mitochondrial membrane.
+
+    This calculation is based on the chemiosmotic theory and provides a more realistic
+    estimate of the energy stored in the proton gradient.
+
+    Parameters
+    ----------
+    organelle : Organelle
+        The organelle (assumed to be mitochondrion) to calculate the proton gradient energy for.
+
+    Returns
+    -------
+    float
+        The energy stored in the proton gradient in kJ/mol.
+    """
+    # Constants
+    R = 8.314  # J/(mol·K), gas constant
+    T = 310  # K, typical cellular temperature (37°C)
+    F = 96485  # C/mol, Faraday constant
+    
+    # Typical values for mitochondrial membrane potential and pH gradient
+    delta_psi = 0.18  # V, electrical potential difference
+    delta_pH = 0.75  # pH units, typical pH gradient across mitochondrial membrane
+    
+    # Calculate the proton motive force (PMF)
+    pmf = delta_psi + (2.303 * R * T / F) * delta_pH
+    
+    # Convert PMF to kJ/mol
+    energy_kj_mol = pmf * F / 1000  # divide by 1000 to convert J to kJ
+    
+    return energy_kj_mol

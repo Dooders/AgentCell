@@ -4,14 +4,18 @@
     "quantity": 100,
     "max_quantity": 1000,
     "type": "energy",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Nucleotide",
+    "tags": ["High-Energy Molecule", "Electron Carrier"]
   },
   {
     "name": "ADP",
     "quantity": 10,
     "max_quantity": 100,
     "type": "energy_carrier",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Nucleotide",
+    "tags": ["High-Energy Molecule"]
   },
   {
     "name": "bisphosphoglycerate_1_3",
@@ -63,39 +67,58 @@
     "unit": "mM"
   },
   {
-    "name": "NAD+",
+    "name": "NAD",
     "quantity": 10,
     "max_quantity": 5000,
     "type": "energy_carrier",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Coenzyme",
+    "tags": ["Electron Carrier"]
+  },
+  {
+    "name": "NAD+",
+    "quantity": 20,
+    "max_quantity": 5000,
+    "type": "energy_carrier",
+    "unit": "mM",
+    "category": "Coenzyme",
+    "tags": ["Electron Carrier"]
   },
   {
     "name": "NADH",
-    "quantity": 0,
+    "quantity": 10,
     "max_quantity": 5000,
     "type": "energy_carrier",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Coenzyme",
+    "tags": ["Electron Carrier"]
   },
   {
     "name": "FAD",
-    "quantity": 0,
+    "quantity": 10,
     "max_quantity": 3000,
     "type": "energy_carrier",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Coenzyme",
+    "tags": ["Electron Carrier"]
   },
   {
     "name": "FADH2",
     "quantity": 0,
     "max_quantity": 3000,
     "type": "energy_carrier",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Coenzyme",
+    "tags": ["Electron Carrier"]
   },
   {
     "name": "Glucose",
     "quantity": 10,
     "max_quantity": 100,
     "type": "carbohydrate",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Monosaccharide",
+    "tags": ["Glycolysis Linker"]
   },
   {
     "name": "Fructose",
@@ -144,14 +167,18 @@
     "quantity": 0,
     "max_quantity": 5000,
     "type": "carbohydrate",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Carbohydrate Intermediate",
+    "tags": ["Glycolysis Linker", "Krebs Cycle Precursor"]
   },
   {
     "name": "Lactate",
     "quantity": 0,
     "max_quantity": 5000,
     "type": "carbohydrate",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Carbohydrate Intermediate",
+    "tags": ["Glycolysis Linker"]
   },
   {
     "name": "Glycogen",
@@ -165,174 +192,304 @@
     "quantity": 0,
     "max_quantity": 2000,
     "type": "amino_acid",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Amino Acid",
+    "tags": ["Anaplerotic and Cataplerotic Metabolite"]
   },
   {
     "name": "Glutamate",
     "quantity": 0,
     "max_quantity": 2000,
     "type": "amino_acid",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Amino Acid",
+    "tags": ["Anaplerotic and Cataplerotic Metabolite"]
   },
   {
     "name": "Aspartate",
     "quantity": 0,
     "max_quantity": 2000,
     "type": "amino_acid",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Amino Acid",
+    "tags": ["Anaplerotic and Cataplerotic Metabolite"]
   },
   {
     "name": "Glycine",
     "quantity": 0,
     "max_quantity": 2000,
     "type": "amino_acid",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Amino Acid",
+    "tags": ["Anaplerotic and Cataplerotic Metabolite"]
   },
   {
     "name": "Acetyl_CoA",
     "quantity": 0,
     "max_quantity": 5000,
     "type": "lipid",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Coenzyme A Derivative",
+    "tags": ["Core Krebs Cycle Intermediate"]
   },
   {
     "name": "Malonyl_CoA",
     "quantity": 0,
     "max_quantity": 3000,
     "type": "lipid",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Coenzyme A Derivative",
+    "tags": ["Core Krebs Cycle Intermediate"]
   },
   {
     "name": "Palmitic_Acid",
     "quantity": 0,
     "max_quantity": 1000,
     "type": "lipid",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Fatty Acid",
+    "tags": ["Core Krebs Cycle Intermediate"]
   },
   {
     "name": "Glycerol",
     "quantity": 0,
     "max_quantity": 2000,
     "type": "lipid",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Fatty Acid",
+    "tags": ["Core Krebs Cycle Intermediate"]
   },
   {
     "name": "GTP",
     "quantity": 0,
     "max_quantity": 3000,
     "type": "nucleotide",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Nucleotide",
+    "tags": ["High-Energy Molecule"]
   },
   {
     "name": "CTP",
     "quantity": 0,
     "max_quantity": 3000,
     "type": "nucleotide",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Nucleotide",
+    "tags": ["High-Energy Molecule"]
   },
   {
     "name": "UTP",
     "quantity": 0,
     "max_quantity": 3000,
     "type": "nucleotide",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Nucleotide",
+    "tags": ["High-Energy Molecule"]
   },
   {
     "name": "dATP",
     "quantity": 0,
     "max_quantity": 1000,
     "type": "nucleotide",
-    "unit": "µM"
+    "unit": "µM",
+    "category": "Nucleotide",
+    "tags": ["High-Energy Molecule"]
   },
   {
     "name": "dGTP",
     "quantity": 0,
     "max_quantity": 1000,
     "type": "nucleotide",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Nucleotide",
+    "tags": ["High-Energy Molecule"]
   },
   {
     "name": "dCTP",
     "quantity": 0,
     "max_quantity": 1000,
     "type": "nucleotide",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Nucleotide",
+    "tags": ["High-Energy Molecule"]
   },
   {
     "name": "dTTP",
     "quantity": 0,
     "max_quantity": 1000,
     "type": "nucleotide",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Nucleotide",
+    "tags": ["High-Energy Molecule"]
   },
   {
     "name": "CO2",
     "quantity": 0,
     "max_quantity": 10000,
     "type": "other",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Inorganic Compound",
+    "tags": ["Respiratory Substrate and Byproduct"]
   },
   {
     "name": "Oxygen",
     "quantity": 1000,
     "max_quantity": 10000,
     "type": "other",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Inorganic Compound",
+    "tags": ["Respiratory Substrate and Byproduct"]
   },
   {
     "name": "H2O",
     "quantity": 1000,
     "max_quantity": 10000,
     "type": "other",
-    "unit": "M"
+    "unit": "M",
+    "category": "Inorganic Compound",
+    "tags": ["Respiratory Substrate and Byproduct"]
   },
   {
     "name": "H_plus",
     "quantity": 0,
     "max_quantity": 1000,
     "type": "other",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Inorganic Compound",
+    "tags": ["Respiratory Substrate and Byproduct"]
   },
   {
     "name": "Pi",
     "quantity": 10,
     "max_quantity": 5000,
     "type": "other",
-    "unit": "mM"
+    "unit": "mM",
+    "category": "Inorganic Compound",
+    "tags": ["Coenzyme and Other Intermediate"]
   },
   {
     "name": "bisphosphoglycerate_1_3",
-    "quantity": 0,
+    "quantity": 10,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "phosphoglycerate",
-    "quantity": 0,
+    "quantity": 10,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "phosphoglycerate_3",
-    "quantity": 0,
+    "quantity": 10,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "phosphoglycerate_2",
-    "quantity": 0,
+    "quantity": 10,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
   },
   {
     "name": "phosphoglycerate_1_3`",
-    "quantity": 0,
+    "quantity": 10,
     "max_quantity": 3000,
     "type": "carbohydrate",
     "unit": "mM"
+  },
+  {
+    "name": "Oxaloacetate",
+    "quantity": 10,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM",
+    "category": "Carbohydrate Intermediate",
+    "tags": ["Core Krebs Cycle Intermediate"]
+  },
+  {
+    "name": "Citrate",
+    "quantity": 10,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM",
+    "category": "Carbohydrate Intermediate",
+    "tags": ["Core Krebs Cycle Intermediate"]
+  },
+  {
+    "name": "CoA",
+    "quantity": 10,
+    "max_quantity": 3000,
+    "type": "lipid",
+    "unit": "mM",
+    "category": "Coenzyme",
+    "tags": ["Coenzyme and Other Intermediate"]
+  },
+  {
+    "name": "Isocitrate",
+    "quantity": 10,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM",
+    "category": "Carbohydrate Intermediate",
+    "tags": ["Core Krebs Cycle Intermediate"]
+  },
+  {
+    "name": "α_Ketoglutarate",
+    "quantity": 10,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM",
+    "category": "Carbohydrate Intermediate",
+    "tags": ["Core Krebs Cycle Intermediate"]
+  },
+  {
+    "name": "Succinyl_CoA",
+    "quantity": 10,
+    "max_quantity": 3000,
+    "type": "lipid",
+    "unit": "mM",
+    "category": "Coenzyme A Derivative",
+    "tags": ["Core Krebs Cycle Intermediate"]
+  },
+  {
+    "name": "Succinate",
+    "quantity": 10,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM",
+    "category": "Carbohydrate Intermediate",
+    "tags": ["Core Krebs Cycle Intermediate"]
+  },
+  {
+    "name": "Fumarate",
+    "quantity": 10,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM",
+    "category": "Carbohydrate Intermediate",
+    "tags": ["Core Krebs Cycle Intermediate"]
+  },
+  {
+    "name": "Malate",
+    "quantity": 10,
+    "max_quantity": 3000,
+    "type": "carbohydrate",
+    "unit": "mM",
+    "category": "Carbohydrate Intermediate",
+    "tags": ["Core Krebs Cycle Intermediate"]
+  },
+  {
+    "name": "GDP",
+    "quantity": 0,
+    "max_quantity": 3000,
+    "type": "nucleotide",
+    "unit": "mM",
+    "category": "Nucleotide",
+    "tags": ["High-Energy Molecule"]
   }
 ]

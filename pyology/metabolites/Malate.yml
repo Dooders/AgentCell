@@ -1,0 +1,80 @@
+quantity: 10
+type: Core Krebs Cycle Intermediate
+description: Formed from fumarate, it's oxidized to oxaloacetate in the final step of the cycle.
+meta:
+  molecular_formula: C4H6O5
+  pathway: TCA Cycle
+  role: Substrate for malate dehydrogenase
+  concentration:
+    default: 0.3
+    unit: mM
+    range:
+      min: 0.1
+      max: 1.0
+  localization:
+    compartments:
+      - Mitochondria
+  kinetics:
+    Km: 0.25  # in mM
+    Vmax: 75  # in μmol/min
+  transport:
+    mechanism: Facilitated Diffusion
+    transporters:
+      - Malate-Aspartate Shuttle
+  reactions:
+    - name: Malate Dehydrogenase Reaction
+      enzyme: Malate Dehydrogenase
+      role: Substrate
+  chemical_properties:
+    pKa: 3.4, 5.1
+    solubility: High
+    stability: Stable
+    molecular_weight: 134.09  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: Malate Dehydrogenase
+        effect: None
+  interactions:
+    binding_partners:
+      - Enzyme: Malate Dehydrogenase
+        type: Substrate
+  state_changes:
+    redox_state: None
+    phosphorylation: Unphosphorylated
+    isomers: None
+  thermodynamics:
+    delta_G: -29.7  # kJ/mol
+  flux:
+    production_rate: 5  # μmol/min
+    consumption_rate: 5  # μmol/min
+  synthesis:
+    pathway: TCA Cycle
+    enzyme: Fumarase
+  degradation:
+    pathway: TCA Cycle
+    enzyme: Malate Dehydrogenase
+  genetic_regulation:
+    genes:
+      - name: MDH2 (Malate Dehydrogenase 2)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: High
+  isomers:
+    D_form: Inactive
+    L_form: Active
+  stoichiometry:
+    reactions:
+      - name: Malate Dehydrogenase Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 134.09  # g/mol
+    charge: -2
+  visualization:
+    structure_2D: "structures/malate_2d.png"
+    structure_3D: "structures/malate_3d.pdb"
+  energy_metrics:
+    ATP_yield: 1
+  experimental_data:
+    concentration: 0.3  # mM
+    reference: "Garcia et al., 2020"

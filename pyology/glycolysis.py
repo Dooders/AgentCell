@@ -83,8 +83,9 @@ class Glycolysis(Pathway):
 
             # Investment phase
             investment_results = execute_command(
+                organelle,
                 CommandData(
-                    obj=self.cell,
+                    obj=self,
                     command=Glycolysis.investment_phase,
                     tracked_attributes=["ATP", "ADP", "AMP", "glucose"],
                     args=(glucose_units, logger),
@@ -94,8 +95,9 @@ class Glycolysis(Pathway):
 
             # Yield phase
             yield_results = execute_command(
+                organelle,
                 CommandData(
-                    obj=self.cell,
+                    obj=self,
                     command=Glycolysis.yield_phase,
                     tracked_attributes=["ATP", "ADP", "AMP"],
                     args=(glucose_units * 2, logger),

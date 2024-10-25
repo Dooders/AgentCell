@@ -58,8 +58,10 @@ class Reaction:
         for substrate, required_amount in self.substrates.items():
             available_amount = organelle.get_metabolite_quantity(substrate)
             if available_amount < required_amount:
-                logger.debug(f"Insufficient {substrate} for reaction '{self.name}': "
-                             f"Required {required_amount}, Available {available_amount}")
+                logger.debug(
+                    f"Insufficient {substrate} for reaction '{self.name}': "
+                    f"Required {required_amount}, Available {available_amount}"
+                )
                 return False
         return True
 
@@ -124,8 +126,13 @@ class Reaction:
                 )
 
             if result == 0.0:
+                insufficient_substrates = [
+                    f"{substrate}: required {amount}, available {substrate_quantities[substrate]:.4f}"
+                    for substrate, amount in substrates.items()
+                    if substrate_quantities[substrate] < amount
+                ]
                 raise InsufficientSubstrateError(
-                    f"Reaction '{self.name}' failed to execute due to insufficient substrates"
+                    f"Reaction '{self.name}' failed to execute due to insufficient substrates: {', '.join(insufficient_substrates)}"
                 )
 
             self._log_reaction_success(result)
@@ -311,6 +318,15 @@ class Reaction:
     ) -> str:
         return ", ".join([f"{m}: {a * rate:.4f}" for m, a in metabolites.items()])
 
+    def _calculate_energy_change(self, organelle: "Organelle") -> float:
+        # This is a simplified calculation and should be refined based on actual biochemical data
+        energy_change = 0
+        for product, amount in self.products.items():
+            energy_change += amount * organelle.get_metabolite_energy(product)
+        for substrate, amount in self.substrates.items():
+            energy_change -= amount * organelle.get_metabolite_energy(substrate)
+        return energy_change
+
 
 def perform_reaction(
     organelle: "Organelle", reaction: Reaction, reverse: bool = False, **kwargs
@@ -342,3 +358,4 @@ def perform_reaction(
         return result > 0
     except ReactionError:
         return False
+

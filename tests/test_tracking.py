@@ -26,7 +26,7 @@ class TestExecuteCommand(unittest.TestCase):
             command=self.mock_obj.method,
             tracked_attributes=["attr1"],
         )
-        result = execute_command(command_data, logger=self.mock_logger)
+        result = execute_command(self.mock_obj, command_data, logger=self.mock_logger)
         self.assertIsInstance(result, CommandExecutionResult)
         self.assertEqual(result.result, "result")
         self.assertEqual(result.initial_values["attr1"], 10)
@@ -43,7 +43,7 @@ class TestExecuteCommand(unittest.TestCase):
             command=self.mock_obj.method,
             tracked_attributes=["attr1", "attr2"],
         )
-        result = execute_command(command_data, logger=self.mock_logger)
+        result = execute_command(self.mock_obj, command_data, logger=self.mock_logger)
         self.assertEqual(result.initial_values["attr1"], 10)
         self.assertEqual(result.final_values["attr1"], 15)
         self.assertEqual(result.initial_values["attr2"], "initial")
@@ -53,7 +53,7 @@ class TestExecuteCommand(unittest.TestCase):
         command_data = CommandData(
             obj=self.mock_obj, command=self.mock_obj.method, tracked_attributes=[]
         )
-        result = execute_command(command_data, logger=self.mock_logger)
+        result = execute_command(self.mock_obj, command_data, logger=self.mock_logger)
         self.assertEqual(result.result, "result")
         self.assertEqual(result.initial_values, {})
         self.assertEqual(result.final_values, {})
@@ -67,7 +67,7 @@ class TestExecuteCommand(unittest.TestCase):
             command=self.mock_obj.method,
             tracked_attributes=["invalid_attr"],
         )
-        result = execute_command(command_data, logger=self.mock_logger)
+        result = execute_command(self.mock_obj, command_data, logger=self.mock_logger)
         self.assertNotIn("invalid_attr", result.initial_values)
         self.assertNotIn("invalid_attr", result.final_values)
         self.mock_logger.warning.assert_called_with(
@@ -84,7 +84,7 @@ class TestExecuteCommand(unittest.TestCase):
             tracked_attributes=["attr1"],
             validations=[validation],
         )
-        result = execute_command(command_data, logger=self.mock_logger)
+        result = execute_command(self.mock_obj, command_data, logger=self.mock_logger)
         self.assertEqual(result.result, "result")
         self.assertTrue(result.validation_results["validation_1"])
 
@@ -98,7 +98,7 @@ class TestExecuteCommand(unittest.TestCase):
             tracked_attributes=["attr1"],
             validations=[validation],
         )
-        result = execute_command(command_data, logger=self.mock_logger)
+        result = execute_command(self.mock_obj, command_data, logger=self.mock_logger)
         self.assertEqual(result.result, "result")
         self.assertFalse(result.validation_results["validation_1"])
         self.mock_logger.warning.assert_called_with("Validation 1 failed: validation")
@@ -116,7 +116,7 @@ class TestExecuteCommand(unittest.TestCase):
             tracked_attributes=["attr1"],
             validations=[validation1, validation2],
         )
-        result = execute_command(command_data, logger=self.mock_logger)
+        result = execute_command(self.mock_obj, command_data, logger=self.mock_logger)
         self.assertEqual(result.result, "result")
         self.assertTrue(result.validation_results["validation_1"])
         self.assertFalse(result.validation_results["validation_2"])
@@ -130,7 +130,7 @@ class TestExecuteCommand(unittest.TestCase):
             tracked_attributes=["attr1"],
         )
         with self.assertRaises(ValueError):
-            execute_command(command_data, logger=self.mock_logger)
+            execute_command(self.mock_obj, command_data, logger=self.mock_logger)
 
     def test_callable_command(self):
         def callable_command(obj, *args, **kwargs):
@@ -144,7 +144,7 @@ class TestExecuteCommand(unittest.TestCase):
             args=(1, 2),
             kwargs={"key": "value"},
         )
-        result = execute_command(command_data, logger=self.mock_logger)
+        result = execute_command(self.mock_obj, command_data, logger=self.mock_logger)
 
         self.assertEqual(result.result, "callable result")
         self.assertEqual(result.initial_values["attr1"], 10)
@@ -159,7 +159,7 @@ class TestExecuteCommand(unittest.TestCase):
             command=self.mock_obj.method,
             tracked_attributes=["attr1"],
         )
-        result = execute_command(command_data, logger=self.mock_logger)
+        result = execute_command(self.mock_obj, command_data, logger=self.mock_logger)
         self.assertEqual(result.initial_values, {})
         self.assertEqual(result.final_values, {})
         self.mock_logger.error.assert_called()

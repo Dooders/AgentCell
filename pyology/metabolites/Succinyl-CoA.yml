@@ -1,0 +1,80 @@
+quantity: 10
+type: Core Krebs Cycle Intermediate
+description: High-energy thioester compound formed from alpha-ketoglutarate.
+meta:
+  molecular_formula: C25H40N7O19P3S
+  pathway: TCA Cycle
+  role: Substrate for succinyl-CoA synthetase
+  concentration:
+    default: 0.05
+    unit: mM
+    range:
+      min: 0.01
+      max: 0.2
+  localization:
+    compartments:
+      - Mitochondria
+  kinetics:
+    Km: 0.2  # in mM
+    Vmax: 50  # in μmol/min
+  transport:
+    mechanism: Active Transport
+    transporters:
+      - Succinyl-CoA Transporter
+  reactions:
+    - name: Succinyl-CoA Synthetase Reaction
+      enzyme: Succinyl-CoA Synthetase
+      role: Substrate
+  chemical_properties:
+    pKa: 4.0
+    solubility: Moderate
+    stability: Unstable
+    molecular_weight: 867.54  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: Succinyl-CoA Synthetase
+        effect: None
+  interactions:
+    binding_partners:
+      - Enzyme: Succinyl-CoA Synthetase
+        type: Substrate
+  state_changes:
+    redox_state: None
+    phosphorylation: Unphosphorylated
+    isomers: None
+  thermodynamics:
+    delta_G: -33.5  # kJ/mol
+  flux:
+    production_rate: 2  # μmol/min
+    consumption_rate: 2  # μmol/min
+  synthesis:
+    pathway: TCA Cycle
+    enzyme: Alpha-Ketoglutarate Dehydrogenase Complex
+  degradation:
+    pathway: TCA Cycle
+    enzyme: Succinyl-CoA Synthetase
+  genetic_regulation:
+    genes:
+      - name: SUCLG1 (Succinate-CoA Ligase Alpha Subunit)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: High
+  isomers:
+    D_form: Active
+    L_form: Inactive
+  stoichiometry:
+    reactions:
+      - name: Succinyl-CoA Synthetase Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 867.54  # g/mol
+    charge: -4
+  visualization:
+    structure_2D: "structures/succinyl_coa_2d.png"
+    structure_3D: "structures/succinyl_coa_3d.pdb"
+  energy_metrics:
+    ATP_yield: 1
+  experimental_data:
+    concentration: 0.05  # mM
+    reference: "Park et al., 2022"

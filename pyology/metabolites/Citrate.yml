@@ -1,0 +1,83 @@
+quantity: 10
+type: Core Krebs Cycle Intermediate
+description: The first product of the cycle, formed by the condensation of acetyl-CoA and oxaloacetate.
+meta:
+  molecular_formula: C6H8O7
+  pathway: TCA Cycle
+  role: First intermediate in the cycle
+  concentration:
+    default: 0.5
+    unit: mM
+    range:
+      min: 0.1
+      max: 2.0
+  localization:
+    compartments:
+      - Mitochondria
+  kinetics:
+    Km: 0.15  # in mM
+    Vmax: 80  # in μmol/min
+  transport:
+    mechanism: Active Transport
+    transporters:
+      - Citrate Carrier
+  reactions:
+    - name: Aconitase Reaction
+      enzyme: Aconitase
+      role: Substrate
+  chemical_properties:
+    pKa: 3.1, 4.7, 6.4
+    solubility: High
+    stability: Stable
+    molecular_weight: 192.12  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: Phosphofructokinase-1
+        effect: Inhibition
+    feedback_loops:
+      - type: Negative Feedback
+        source: ATP
+  interactions:
+    binding_partners:
+      - Enzyme: Aconitase
+        type: Substrate
+  state_changes:
+    redox_state: None
+    phosphorylation: Unphosphorylated
+    isomers: None
+  thermodynamics:
+    delta_G: -7.7  # kJ/mol
+  flux:
+    production_rate: 6  # μmol/min
+    consumption_rate: 6  # μmol/min
+  synthesis:
+    pathway: TCA Cycle
+    enzyme: Citrate Synthase
+  degradation:
+    pathway: TCA Cycle
+    enzyme: Aconitase
+  genetic_regulation:
+    genes:
+      - name: ACO2 (Aconitase 2)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: Moderate
+  isomers:
+    D_form: Active
+    L_form: Inactive
+  stoichiometry:
+    reactions:
+      - name: Aconitase Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 192.12  # g/mol
+    charge: -3
+  visualization:
+    structure_2D: "structures/citrate_2d.png"
+    structure_3D: "structures/citrate_3d.pdb"
+  energy_metrics:
+    ATP_yield: 0
+  experimental_data:
+    concentration: 0.5  # mM
+    reference: "Wilson et al., 2017"

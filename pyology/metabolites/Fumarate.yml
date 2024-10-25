@@ -1,0 +1,80 @@
+quantity: 10
+type: Core Krebs Cycle Intermediate
+description: Formed from succinate, it's hydrated to form malate in the next step of the cycle.
+meta:
+  molecular_formula: C4H4O4
+  pathway: TCA Cycle
+  role: Substrate for fumarase
+  concentration:
+    default: 0.1
+    unit: mM
+    range:
+      min: 0.05
+      max: 0.5
+  localization:
+    compartments:
+      - Mitochondria
+  kinetics:
+    Km: 0.1  # in mM
+    Vmax: 90  # in μmol/min
+  transport:
+    mechanism: Facilitated Diffusion
+    transporters:
+      - Dicarboxylate Carrier
+  reactions:
+    - name: Fumarase Reaction
+      enzyme: Fumarase
+      role: Substrate
+  chemical_properties:
+    pKa: 3.0, 4.4
+    solubility: Moderate
+    stability: Stable
+    molecular_weight: 116.07  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: Fumarase
+        effect: None
+  interactions:
+    binding_partners:
+      - Enzyme: Fumarase
+        type: Substrate
+  state_changes:
+    redox_state: None
+    phosphorylation: Unphosphorylated
+    isomers: None
+  thermodynamics:
+    delta_G: -3.4  # kJ/mol
+  flux:
+    production_rate: 4  # μmol/min
+    consumption_rate: 4  # μmol/min
+  synthesis:
+    pathway: TCA Cycle
+    enzyme: Succinate Dehydrogenase
+  degradation:
+    pathway: TCA Cycle
+    enzyme: Fumarase
+  genetic_regulation:
+    genes:
+      - name: FH (Fumarate Hydratase)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: High
+  isomers:
+    D_form: Inactive
+    L_form: Active
+  stoichiometry:
+    reactions:
+      - name: Fumarase Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 116.07  # g/mol
+    charge: -2
+  visualization:
+    structure_2D: "structures/fumarate_2d.png"
+    structure_3D: "structures/fumarate_3d.pdb"
+  energy_metrics:
+    ATP_yield: 0
+  experimental_data:
+    concentration: 0.1  # mM
+    reference: "Thompson et al., 2019"

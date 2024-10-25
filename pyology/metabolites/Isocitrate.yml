@@ -1,0 +1,83 @@
+quantity: 10
+type: Core Krebs Cycle Intermediate
+description: Formed from citrate through the action of aconitase.
+meta:
+  molecular_formula: C6H8O7
+  pathway: TCA Cycle
+  role: Substrate for isocitrate dehydrogenase
+  concentration:
+    default: 0.03
+    unit: mM
+    range:
+      min: 0.01
+      max: 0.1
+  localization:
+    compartments:
+      - Mitochondria
+  kinetics:
+    Km: 0.05 # in mM
+    Vmax: 60 # in μmol/min
+  transport:
+    mechanism: Passive Diffusion
+    transporters:
+      - Mitochondrial Dicarboxylate Carrier
+  reactions:
+    - name: Isocitrate Dehydrogenase Reaction
+      enzyme: Isocitrate Dehydrogenase
+      role: Substrate
+  chemical_properties:
+    pKa: 3.3, 4.7, 6.4
+    solubility: High
+    stability: Stable
+    molecular_weight: 192.12 # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: Isocitrate Dehydrogenase
+        effect: Activation
+    feedback_loops:
+      - type: Negative Feedback
+        source: α-Ketoglutarate
+  interactions:
+    binding_partners:
+      - Enzyme: Isocitrate Dehydrogenase
+        type: Substrate
+  state_changes:
+    redox_state: None
+    phosphorylation: Unphosphorylated
+    isomers: None
+  thermodynamics:
+    delta_G: -8.4 # kJ/mol
+  flux:
+    production_rate: 3 # μmol/min
+    consumption_rate: 3 # μmol/min
+  synthesis:
+    pathway: TCA Cycle
+    enzyme: Aconitase
+  degradation:
+    pathway: TCA Cycle
+    enzyme: Isocitrate Dehydrogenase
+  genetic_regulation:
+    genes:
+      - name: IDH (Isocitrate Dehydrogenase)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: High
+  isomers:
+    D_form: Active
+    L_form: Inactive
+  stoichiometry:
+    reactions:
+      - name: Isocitrate Dehydrogenase Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 192.12 # g/mol
+    charge: -3
+  visualization:
+    structure_2D: "structures/isocitrate_2d.png"
+    structure_3D: "structures/isocitrate_3d.pdb"
+  energy_metrics:
+    ATP_yield: 1
+  experimental_data:
+    concentration: 0.03 # mM
+    reference: "Johnson et al., 2019"

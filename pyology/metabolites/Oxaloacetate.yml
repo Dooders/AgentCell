@@ -1,0 +1,82 @@
+quantity: 10
+type: Core Krebs Cycle Intermediate
+description: The final product of the cycle, which combines with acetyl-CoA to start the next round.
+meta:
+  molecular_formula: C4H4O5
+  pathway: 
+    - TCA Cycle
+    - Gluconeogenesis
+  role: Combines with acetyl-CoA to form citrate
+  concentration:
+    default: 0.01
+    unit: mM
+    range:
+      min: 0.001
+      max: 0.1
+  localization:
+    compartments:
+      - Mitochondria
+  kinetics:
+    Km: 0.02  # in mM
+    Vmax: 110  # in μmol/min
+  transport:
+    mechanism: Active Transport
+    transporters:
+      - Malate-Aspartate Shuttle
+  reactions:
+    - name: Citrate Synthase Reaction
+      enzyme: Citrate Synthase
+      role: Substrate
+  chemical_properties:
+    pKa: 2.4, 4.0
+    solubility: High
+    stability: Unstable
+    molecular_weight: 132.07  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: Phosphoenolpyruvate Carboxykinase
+        effect: Activation
+  interactions:
+    binding_partners:
+      - Enzyme: Citrate Synthase
+        type: Substrate
+  state_changes:
+    redox_state: None
+    phosphorylation: Unphosphorylated
+    isomers: None
+  thermodynamics:
+    delta_G: -31.4  # kJ/mol
+  flux:
+    production_rate: 3  # μmol/min
+    consumption_rate: 3  # μmol/min
+  synthesis:
+    pathway: TCA Cycle
+    enzyme: Malate Dehydrogenase
+  degradation:
+    pathway: TCA Cycle
+    enzyme: Citrate Synthase
+  genetic_regulation:
+    genes:
+      - name: PC (Pyruvate Carboxylase)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: High
+  isomers:
+    D_form: Active
+    L_form: Inactive
+  stoichiometry:
+    reactions:
+      - name: Citrate Synthase Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 132.07  # g/mol
+    charge: -2
+  visualization:
+    structure_2D: "structures/oxaloacetate_2d.png"
+    structure_3D: "structures/oxaloacetate_3d.pdb"
+  energy_metrics:
+    ATP_yield: 0
+  experimental_data:
+    concentration: 0.01  # mM
+    reference: "Lee et al., 2018"
