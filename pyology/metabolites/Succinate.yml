@@ -17,12 +17,64 @@ meta:
   kinetics:
     Km: 0.5  # in mM
     Vmax: 40  # in μmol/min
+  transport:
+    mechanism: Facilitated Diffusion
+    transporters:
+      - Dicarboxylate Carrier
   reactions:
     - name: Succinate Dehydrogenase Reaction
       enzyme: Succinate Dehydrogenase
       role: Substrate
   chemical_properties:
     pKa: 4.2, 5.6
+    solubility: High
+    stability: Stable
     molecular_weight: 118.09  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: Succinate Dehydrogenase
+        effect: None
+  interactions:
+    binding_partners:
+      - Enzyme: Succinate Dehydrogenase
+        type: Substrate
+  state_changes:
+    redox_state: None
+    phosphorylation: Unphosphorylated
+    isomers: None
   thermodynamics:
     delta_G: 0.8  # kJ/mol
+  flux:
+    production_rate: 3  # μmol/min
+    consumption_rate: 3  # μmol/min
+  synthesis:
+    pathway: TCA Cycle
+    enzyme: Succinyl-CoA Synthetase
+  degradation:
+    pathway: TCA Cycle
+    enzyme: Succinate Dehydrogenase
+  genetic_regulation:
+    genes:
+      - name: SDHA (Succinate Dehydrogenase Complex Flavoprotein Subunit A)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: High
+  isomers:
+    D_form: Active
+    L_form: Active
+  stoichiometry:
+    reactions:
+      - name: Succinate Dehydrogenase Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 118.09  # g/mol
+    charge: -2
+  visualization:
+    structure_2D: "structures/succinate_2d.png"
+    structure_3D: "structures/succinate_3d.pdb"
+  energy_metrics:
+    ATP_yield: 2
+  experimental_data:
+    concentration: 0.5  # mM
+    reference: "Kim et al., 2021"

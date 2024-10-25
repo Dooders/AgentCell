@@ -3,7 +3,9 @@ type: Core Krebs Cycle Intermediate
 description: Formed from isocitrate, it's a key intermediate that links the TCA cycle with amino acid metabolism.
 meta:
   molecular_formula: C5H6O5
-  pathway: TCA Cycle, Amino Acid Metabolism
+  pathway:
+    - TCA Cycle
+    - Amino Acid Metabolism
   role: Substrate for alpha-ketoglutarate dehydrogenase
   concentration:
     default: 0.1
@@ -17,12 +19,64 @@ meta:
   kinetics:
     Km: 0.3  # in mM
     Vmax: 70  # in μmol/min
+  transport:
+    mechanism: Passive Diffusion
+    transporters:
+      - Mitochondrial Dicarboxylate Carrier
   reactions:
     - name: Alpha-Ketoglutarate Dehydrogenase Reaction
       enzyme: Alpha-Ketoglutarate Dehydrogenase
       role: Substrate
   chemical_properties:
     pKa: 2.47, 4.68
+    solubility: High
+    stability: Stable
     molecular_weight: 146.11  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: Alpha-Ketoglutarate Dehydrogenase
+        effect: Activation
+  interactions:
+    binding_partners:
+      - Enzyme: Alpha-Ketoglutarate Dehydrogenase
+        type: Substrate
+  state_changes:
+    redox_state: None
+    phosphorylation: Unphosphorylated
+    isomers: None
   thermodynamics:
     delta_G: -30.0  # kJ/mol
+  flux:
+    production_rate: 4  # μmol/min
+    consumption_rate: 4  # μmol/min
+  synthesis:
+    pathway: TCA Cycle
+    enzyme: Isocitrate Dehydrogenase
+  degradation:
+    pathway: TCA Cycle
+    enzyme: Alpha-Ketoglutarate Dehydrogenase
+  genetic_regulation:
+    genes:
+      - name: OGDH (Alpha-Ketoglutarate Dehydrogenase)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: High
+  isomers:
+    D_form: Active
+    L_form: Inactive
+  stoichiometry:
+    reactions:
+      - name: Alpha-Ketoglutarate Dehydrogenase Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 146.11  # g/mol
+    charge: -2
+  visualization:
+    structure_2D: "structures/alpha_ketoglutarate_2d.png"
+    structure_3D: "structures/alpha_ketoglutarate_3d.pdb"
+  energy_metrics:
+    ATP_yield: 1
+  experimental_data:
+    concentration: 0.1  # mM
+    reference: "Brown et al., 2018"
