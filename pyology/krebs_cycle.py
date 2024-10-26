@@ -104,8 +104,10 @@ class KrebsCycle(Pathway):
             logger.error(f"Error during Krebs Cycle: {str(e)}")
             raise KrebsCycleError(f"Krebs Cycle failed: {str(e)}")
 
-    def cycle(self, organelle: "Organelle", logger: logging.Logger) -> Tuple[int, float]:
-        logger.info("Starting Krebs Cycle")
+    def cycle(
+        self, organelle: "Organelle", logger: logging.Logger
+    ) -> Tuple[int, float]:
+        logger.info("Starting Krebs Cycle Reactions")
         co2_produced = 0
         energy_produced = 0
 
@@ -121,30 +123,44 @@ class KrebsCycle(Pathway):
                 self.reactions.fumarase,
                 self.reactions.malate_dehydrogenase,
             ]:
-                logger.info(f"Executing reaction: {reaction.name}")
-                logger.info(f"Substrates before reaction: {reaction.substrates}")
-                
+                logger.info(
+                    f"Executing reaction: {reaction.name}, substrates: {reaction.substrates}"
+                )
+
                 # Execute reaction and track energy changes
                 reaction_energy = reaction.transform(organelle=organelle)
                 energy_produced += reaction_energy
-                
-                if reaction.name in ["Isocitrate Dehydrogenase", "α_Ketoglutarate Dehydrogenase"]:
+
+                if reaction.name in [
+                    "Isocitrate Dehydrogenase",
+                    "α_Ketoglutarate Dehydrogenase",
+                ]:
                     co2_produced += 1
-                logger.info(f"Energy produced in {reaction.name}: {reaction_energy} kJ/mol")
+                logger.info(
+                    f"Energy produced in {reaction.name}: {reaction_energy} kJ/mol"
+                )
 
             # Calculate total NADH, FADH2, and GTP produced
-            nadh_produced = organelle.get_metabolite_quantity("NADH") - organelle.get_metabolite_quantity("NAD+")
-            fadh2_produced = organelle.get_metabolite_quantity("FADH2") - organelle.get_metabolite_quantity("FAD")
-            gtp_produced = organelle.get_metabolite_quantity("GTP") - organelle.get_metabolite_quantity("GDP")
-            
+            nadh_produced = organelle.get_metabolite_quantity(
+                "NADH"
+            ) - organelle.get_metabolite_quantity("NAD+")
+            fadh2_produced = organelle.get_metabolite_quantity(
+                "FADH2"
+            ) - organelle.get_metabolite_quantity("FAD")
+            gtp_produced = organelle.get_metabolite_quantity(
+                "GTP"
+            ) - organelle.get_metabolite_quantity("GDP")
+
             # Calculate energy from electron transport chain (more accurate values)
-            etc_energy = nadh_produced * 2.5 + fadh2_produced * 1.5 + gtp_produced  # ATP equivalents
+            etc_energy = (
+                nadh_produced * 2.5 + fadh2_produced * 1.5 + gtp_produced
+            )  # ATP equivalents
             atp_energy = 30.5  # kJ/mol of ATP
             energy_produced += etc_energy * atp_energy
 
-            logger.info(f"Krebs Cycle completed. CO2 produced: {co2_produced}")
-            logger.info(f"Total energy produced: {energy_produced:.2f} kJ/mol")
-            logger.info(f"NADH produced: {nadh_produced}, FADH2 produced: {fadh2_produced}, GTP produced: {gtp_produced}")
+            logger.info(
+                f"Reactions Completed. CO2+: {co2_produced}, energy+: {energy_produced:.2f} kJ/mol, NADH+: {nadh_produced}, FADH2+: {fadh2_produced}, GTP+: {gtp_produced}"
+            )
 
         except ReactionError as e:
             logger.error(f"Krebs Cycle failed: {str(e)}")

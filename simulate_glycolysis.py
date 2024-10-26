@@ -6,6 +6,10 @@ from pyology.reporter import Reporter
 from utils.command_data import CommandData
 from utils.tracking import execute_command
 
+class GlycolysisPathway:
+    metabolites = ["glucose", "ATP", "ADP", "AMP", "pyruvate"]
+    #! change to pathway executes the reactions in sequence, can hbave a tag called "phase" to capture metadata
+    reactions = [Glycolysis.investment_phase, Glycolysis.yield_phase]
 
 class GlycolysisSimulation:
     def __init__(self, cell: "Cell", debug=True):
