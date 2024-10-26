@@ -61,6 +61,7 @@ class Metabolite:
         type: str = "default",
     ) -> None:
         self.name = name.lower()
+        self.label = name
         self.type = type
         self.quantity = float(quantity)
         self.max_quantity = float(max_quantity)
@@ -409,6 +410,9 @@ class Metabolites:
 
     def values(self):
         return self.data.values()
+    
+    def __iter__(self):
+        return iter(self.data.values())
 
     def exists(self, key: str) -> bool:
         """

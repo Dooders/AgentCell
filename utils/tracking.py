@@ -57,7 +57,11 @@ def execute_command(
     # Execute the command
     try:
         if callable(command):
-            result = command(obj, *args, **kwargs)
+            if isinstance(command, classmethod):
+                # For class methods, we don't pass the obj as the first argument
+                result = command.__func__(obj, *args, **kwargs)
+            else:
+                result = command(*args, **kwargs)
         else:
             result = getattr(obj, command)(*args, **kwargs)
     except Exception as e:

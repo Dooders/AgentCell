@@ -79,16 +79,19 @@ class Glycolysis(Pathway):
                 raise GlycolysisError("The number of glucose units must be positive.")
 
             initial_energy = calculate_energy_state(organelle, logger)
-            initial_adenine = calculate_total_adenine_nucleotides(organelle, logger)
+            initial_adenine = calculate_total_adenine_nucleotides(organelle)
+            logger.info(
+                f"Initial energy: {initial_energy:.2f} kJ/mol, Initial adenine nucleotides: {initial_adenine:.2f} mol"
+            )
 
             # Investment phase
             investment_results = execute_command(
                 organelle,
                 CommandData(
-                    obj=self,
-                    command=Glycolysis.investment_phase,
+                    obj=self.__class__,  # Pass the class, not the instance
+                    command=self.__class__.investment_phase,
                     tracked_attributes=["ATP", "ADP", "AMP", "glucose"],
-                    args=(glucose_units, logger),
+                    args=(organelle, glucose_units, logger),
                 ),
                 logger=logger,
             )
@@ -97,10 +100,10 @@ class Glycolysis(Pathway):
             yield_results = execute_command(
                 organelle,
                 CommandData(
-                    obj=self,
-                    command=Glycolysis.yield_phase,
+                    obj=self.__class__,
+                    command=self.__class__.yield_phase,
                     tracked_attributes=["ATP", "ADP", "AMP"],
-                    args=(glucose_units * 2, logger),
+                    args=(organelle, glucose_units * 2, logger),  # Add logger here
                 ),
                 logger=logger,
             )
@@ -108,10 +111,14 @@ class Glycolysis(Pathway):
             pyruvate_produced = yield_results.result
 
             logger.info(f"Glycolysis completed. Produced {pyruvate_produced} pyruvate.")
-            logger.info(f"Final metabolite levels: {organelle.metabolites.quantities}")
 
             final_energy = calculate_energy_state(organelle, logger)
-            final_adenine = calculate_total_adenine_nucleotides(organelle, logger)
+            final_adenine = calculate_total_adenine_nucleotides(organelle)
+
+            logger.info(f"Final metabolite levels: {organelle.metabolites.quantities}")
+            logger.info(
+                f"Final energy: {final_energy:.2f} kJ/mol, Final adenine nucleotides: {final_adenine:.2f} mol"
+            )
 
             #! Add these to checks and have as part of validation for commands
             # Check energy conservation
@@ -219,3 +226,16 @@ class Glycolysis(Pathway):
 
         final_atp = organelle.get_metabolite_quantity("ATP")
         logger.info(f"ATP produced in yield phase: {final_atp - initial_atp}")
+
+
+def energy_in_balance(initial_energy: float, final_energy: float) -> bool:
+    """
+    Check the energy balance of the glycolysis pathway by comparing the initial
+    and final energy states.
+
+    Returns
+    -------
+    bool:
+        True if the energy balance is within the acceptable range, False otherwise.
+    """
+    return abs(initial_energy - final_energy) < 1e-6
