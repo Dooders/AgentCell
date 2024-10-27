@@ -7,6 +7,34 @@ from .exceptions import (
     UnknownMetaboliteError,
 )
 
+gibbs_free_energies = {
+    "ATP": 50,
+    "ADP": 30,
+    "AMP": 10,
+    "GTP": 50,
+    "NADH": 158,
+    "FADH2": 105,
+    "Acetyl_CoA": 31,
+    "proton_gradient": 5,
+    "glucose": 686,
+    "glucose_6_phosphate": 916,
+    "fructose_6_phosphate": 916,
+    "fructose_1_6_bisphosphate": 1146,
+    "glyceraldehyde_3_phosphate": 573,
+    "bisphosphoglycerate_1_3": 803,
+    "phosphoglycerate_3": 573,
+    "phosphoglycerate_2": 573,
+    "phosphoenolpyruvate": 803,
+    "pyruvate": 343,
+    "pyruvate_dehydrogenase": 100,
+    "phosphoenolpyruvate_carboxykinase": 100,
+    "phosphoenolpyruvate_mutase": 100,
+    "pyruvate_kinase": 100,
+    "phosphoglycerate_kinase": 100,
+    "phosphoglycerate_mutase": 100,
+    "phosphoglycerate_phosphatase": 100,
+}
+
 
 class Metabolite:
     """
@@ -90,6 +118,10 @@ class Metabolite:
             if self.on_change:
                 self.on_change(self)
 
+    @property
+    def energy(self):
+        return gibbs_free_energies.get(self.label, 0) * self.quantity
+
     def reset(self) -> None:
         with self.lock:
             self.quantity = self.min_quantity
@@ -128,6 +160,27 @@ class Metabolite:
             f"max_quantity={self.max_quantity}, unit='{self.unit}', type='{self.type}')"
         )
 
+    @property
+    def state(self) -> dict:
+        """
+        Returns the current state of the metabolite.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the current state of the metabolite.
+        """
+        return {
+            "name": self.name,
+            "label": self.label,
+            "type": self.type,
+            "quantity": self.quantity,
+            "max_quantity": self.max_quantity,
+            "min_quantity": self.min_quantity,
+            "unit": self.unit,
+            "metadata": self.metadata,
+        }
+
 
 class Metabolites:
     """
@@ -156,6 +209,8 @@ class Metabolites:
     validate_all() -> None:
         Validates all metabolites to ensure quantities are within valid ranges.
     """
+
+    DEFAULT_STATE_ATTRIBUTES = ['quantity', 'energy']
 
     def __init__(self):
         """
@@ -187,12 +242,13 @@ class Metabolites:
             raise ValueError(
                 f"Initial quantity {quantity} exceeds max quantity {max_quantity}."
             )
-        if name in self.data:
-            metabolite = self.data[name]
+        if name.lower() not in self.data:
+            metabolite = Metabolite(name, quantity, max_quantity)
+            self.data[name.lower()] = metabolite
+        else:
+            metabolite = self.data[name.lower()]
             new_quantity = min(metabolite.quantity + quantity, metabolite.max_quantity)
             metabolite.quantity = new_quantity
-        else:
-            self.data[name.lower()] = Metabolite(name, quantity, max_quantity)
 
     def register(
         self,
@@ -203,7 +259,6 @@ class Metabolites:
     ) -> None:
         """
         Adds a new metabolite or updates an existing one. Can accept individual parameters or a dictionary.
-        #! return as a named tuple?
 
         Parameters
         ----------
@@ -410,9 +465,33 @@ class Metabolites:
 
     def values(self):
         return self.data.values()
-    
+
     def __iter__(self):
         return iter(self.data.values())
+
+    @property
+    def names(self):
+        return [metabolite.name for metabolite in self.data.values()]
+
+    @property
+    def labels(self):
+        return [metabolite.label for metabolite in self.data.values()]
+
+    @property
+    def types(self):
+        return [metabolite.type for metabolite in self.data.values()]
+
+    @property
+    def quantities(self):
+        return [metabolite.quantity for metabolite in self.data.values()]
+
+    @property
+    def total_energy(self):
+        return sum(metabolite.energy for metabolite in self.data.values())
+
+    @property
+    def energy_dict(self):
+        return {metabolite.name: metabolite.energy for metabolite in self.data.values()}
 
     def exists(self, key: str) -> bool:
         """
@@ -430,3 +509,29 @@ class Metabolites:
         """
         normalized_key = key.lower().replace("-", "_")
         return normalized_key in self.data
+
+    @property
+    def state(self, attributes: list = None) -> dict:
+        """
+        Returns the current states of all metabolites.
+
+        Parameters
+        ----------
+        attributes : list, optional
+            A list of attribute names to include in the state. 
+            If None, uses DEFAULT_STATE_ATTRIBUTES.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the current states of all metabolites.
+        """
+        if attributes is None:
+            attributes = self.DEFAULT_STATE_ATTRIBUTES
+
+        return {
+            x.name: {attr: getattr(x, attr) for attr in attributes if hasattr(x, attr)}
+            for x in self.data.values()
+        }
+
+

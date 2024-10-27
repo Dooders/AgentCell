@@ -12,12 +12,13 @@ class GlycolysisSimulation:
 
     def run(self, glucose_units: float, logger: logging.Logger):
         logger.info("Starting glycolysis simulation")
+        logger.info(f"Initial State: {self.cell.metabolites.state}")
         self.cell.set_metabolite_quantity("glucose", glucose_units)
 
         glycolysis = Glycolysis()
         result = glycolysis.run(self.cell, glucose_units, logger)
+        logger.info(f"Final State: {self.cell.metabolites.state}")
         logger.info(f"Glycolysis simulation completed, result: {result}")
-
 
 reporter = Reporter()
 reporter.logger.setLevel(logging.DEBUG)  # Add this line

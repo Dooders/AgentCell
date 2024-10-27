@@ -78,7 +78,7 @@ class Glycolysis(Pathway):
             if glucose_units <= 0:
                 raise GlycolysisError("The number of glucose units must be positive.")
 
-            initial_energy = calculate_energy_state(organelle, logger)
+            initial_energy = organelle.metabolites.total_energy
             initial_adenine = calculate_total_adenine_nucleotides(organelle)
             logger.info(
                 f"Initial energy: {initial_energy:.2f} kJ/mol, Initial adenine nucleotides: {initial_adenine:.2f} mol"
@@ -112,10 +112,9 @@ class Glycolysis(Pathway):
 
             logger.info(f"Glycolysis completed. Produced {pyruvate_produced} pyruvate.")
 
-            final_energy = calculate_energy_state(organelle, logger)
+            final_energy = organelle.metabolites.total_energy
             final_adenine = calculate_total_adenine_nucleotides(organelle)
 
-            logger.info(f"Final metabolite levels: {organelle.metabolites.quantities}")
             logger.info(
                 f"Final energy: {final_energy:.2f} kJ/mol, Final adenine nucleotides: {final_adenine:.2f} mol"
             )
