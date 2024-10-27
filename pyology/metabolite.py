@@ -16,23 +16,58 @@ gibbs_free_energies = {
     "FADH2": 105,
     "Acetyl_CoA": 31,
     "proton_gradient": 5,
-    "glucose": 686,
-    "glucose_6_phosphate": 916,
-    "fructose_6_phosphate": 916,
-    "fructose_1_6_bisphosphate": 1146,
-    "glyceraldehyde_3_phosphate": 573,
-    "bisphosphoglycerate_1_3": 803,
+    "Glucose": 686,
+    "Fructose": 686,
+    "Glucose_6_Phosphate": 916,
+    "Fructose_6_Phosphate": 916,
+    "Fructose_1_6_Bisphosphate": 1146,
+    "Glyceraldehyde_3_Phosphate": 573,
+    "Bisphosphoglycerate_1_3": 803,
     "phosphoglycerate_3": 573,
     "phosphoglycerate_2": 573,
     "phosphoenolpyruvate": 803,
-    "pyruvate": 343,
+    "Pyruvate": 343,
     "pyruvate_dehydrogenase": 100,
     "phosphoenolpyruvate_carboxykinase": 100,
     "phosphoenolpyruvate_mutase": 100,
     "pyruvate_kinase": 100,
-    "phosphoglycerate_kinase": 100,
-    "phosphoglycerate_mutase": 100,
-    "phosphoglycerate_phosphatase": 100,
+    "Phosphoglycerate_Kinase": 100,
+    "Phosphoglycerate_Mutase": 100,
+    "Phosphoglycerate_Phosphatase": 100,
+    "bisphosphoglycerate_3": 803,
+    "Phosphoglycerate_3": 573,
+    "Phosphoglycerate_2": 573,
+    "Phosphoglycerate": 573,
+    "NAD": 100,
+    "NAD+": 100,
+    "NADH": 158,
+    "FAD": 100,
+    "FADH2": 105,
+    "NADP": 100,
+    "NADP+": 100,
+    "bisphosphoglycerate_1_3": 803,
+    "dihydroxyacetone_phosphate": 34,
+    "phosphoglycerate": 34,
+    "Lactate": 34,
+    "Glycogen": 34,
+    "Alanine": 34,
+    "Glutamate": 34,
+    "Glutamine": 34,
+    "Aspartate": 34,
+    "Asparagine": 34,
+    "Glycine": 34,
+    "Serine": 34,
+    "Threonine": 34,
+    "Proline": 34,
+    "Tyrosine": 34,
+    "Valine": 34,
+    "Methionine": 34,
+    "Leucine": 34,
+    "Isoleucine": 34,
+    "Phenylalanine": 34,
+    "Tryptophan": 34,
+    "Malonyl_CoA": 34,
+    "Palmitic_Acid": 34,
 }
 
 
@@ -120,7 +155,10 @@ class Metabolite:
 
     @property
     def energy(self):
-        return gibbs_free_energies.get(self.label, 0) * self.quantity
+        if self.label not in gibbs_free_energies:
+            pass
+            # raise KeyError(f"Gibbs free energy not found for metabolite: {self.label}")
+        return gibbs_free_energies.get(self.label, 1) * self.quantity
 
     def reset(self) -> None:
         with self.lock:
@@ -210,7 +248,7 @@ class Metabolites:
         Validates all metabolites to ensure quantities are within valid ranges.
     """
 
-    DEFAULT_STATE_ATTRIBUTES = ['quantity', 'energy']
+    DEFAULT_STATE_ATTRIBUTES = ["quantity", "energy"]
 
     def __init__(self):
         """
@@ -510,7 +548,6 @@ class Metabolites:
         normalized_key = key.lower().replace("-", "_")
         return normalized_key in self.data
 
-    @property
     def state(self, attributes: list = None) -> dict:
         """
         Returns the current states of all metabolites.
@@ -518,8 +555,10 @@ class Metabolites:
         Parameters
         ----------
         attributes : list, optional
-            A list of attribute names to include in the state. 
+            A list of attribute names to include in the state.
             If None, uses DEFAULT_STATE_ATTRIBUTES.
+        no_zero : bool, optional
+            If True, only includes metabolites with a quantity greater than zero.
 
         Returns
         -------
@@ -533,5 +572,3 @@ class Metabolites:
             x.name: {attr: getattr(x, attr) for attr in attributes if hasattr(x, attr)}
             for x in self.data.values()
         }
-
-

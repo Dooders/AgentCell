@@ -5,10 +5,7 @@ from utils.command_data import CommandData
 from utils.tracking import execute_command
 
 from .common_reactions import GlycolysisReactions
-from .energy_calculations import (
-    calculate_energy_state,
-    calculate_total_adenine_nucleotides,
-)
+from .energy_calculations import calculate_total_adenine_nucleotides
 from .exceptions import GlycolysisError, ReactionError
 from .pathway import Pathway
 
@@ -90,7 +87,7 @@ class Glycolysis(Pathway):
                 CommandData(
                     obj=self.__class__,  # Pass the class, not the instance
                     command=self.__class__.investment_phase,
-                    tracked_attributes=["ATP", "ADP", "AMP", "glucose"],
+                    tracked_attributes=["ATP", "ADP", "NADH", "glucose"],
                     args=(organelle, glucose_units, logger),
                 ),
                 logger=logger,
@@ -102,15 +99,11 @@ class Glycolysis(Pathway):
                 CommandData(
                     obj=self.__class__,
                     command=self.__class__.yield_phase,
-                    tracked_attributes=["ATP", "ADP", "AMP"],
-                    args=(organelle, glucose_units * 2, logger),  # Add logger here
+                    tracked_attributes=["ATP", "ADP", "NADH"],
+                    args=(organelle, glucose_units * 2, logger),
                 ),
                 logger=logger,
             )
-
-            pyruvate_produced = yield_results.result
-
-            logger.info(f"Glycolysis completed. Produced {pyruvate_produced} pyruvate.")
 
             final_energy = organelle.metabolites.total_energy
             final_adenine = calculate_total_adenine_nucleotides(organelle)
@@ -134,7 +127,7 @@ class Glycolysis(Pathway):
                     f"Adenine nucleotides not conserved in glycolysis. Difference: {adenine_difference}"
                 )
 
-            return final_energy, final_adenine, pyruvate_produced
+            return final_energy, final_adenine
 
         except Exception as e:
             logger.error(f"Error during glycolysis: {str(e)}")

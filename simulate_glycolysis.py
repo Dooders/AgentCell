@@ -12,16 +12,27 @@ class GlycolysisSimulation:
 
     def run(self, glucose_units: float, logger: logging.Logger):
         logger.info("Starting glycolysis simulation")
-        logger.info(f"Initial State: {self.cell.metabolites.state}")
         self.cell.set_metabolite_quantity("glucose", glucose_units)
+        initial_state = self.cell.metabolites.state()
+        logger.info(f"Initial State: {initial_state}")
 
         glycolysis = Glycolysis()
         result = glycolysis.run(self.cell, glucose_units, logger)
-        logger.info(f"Final State: {self.cell.metabolites.state}")
+        final_state = self.cell.metabolites.state()
+        logger.info(f"Final State: {final_state}")
         logger.info(f"Glycolysis simulation completed, result: {result}")
+
+        # log each metabolite that changed with the amount it changed
+        for metabolite, initial_value in initial_state.items():
+            final_value = final_state[metabolite]
+            if initial_value["quantity"] != final_value["quantity"]:
+                logger.info(
+                    f"{metabolite}: {final_value['quantity'] - initial_value['quantity']}"
+                )
+
 
 reporter = Reporter()
 reporter.logger.setLevel(logging.DEBUG)  # Add this line
 cell = Cell(logger=reporter)
 sim_controller = GlycolysisSimulation(cell, debug=True)
-sim_controller.run(4, logger=reporter)
+sim_controller.run(1, logger=reporter)
