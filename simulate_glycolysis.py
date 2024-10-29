@@ -14,21 +14,19 @@ class GlycolysisSimulation:
         logger.info("Starting glycolysis simulation")
         self.cell.set_metabolite_quantity("glucose", glucose_units)
         initial_state = self.cell.metabolites.state()
-        logger.info(f"Initial State: {initial_state}")
 
         glycolysis = Glycolysis()
         result = glycolysis.run(self.cell, glucose_units, logger)
         final_state = self.cell.metabolites.state()
-        logger.info(f"Final State: {final_state}")
         logger.info(f"Glycolysis simulation completed, result: {result}")
 
         # log each metabolite that changed with the amount it changed
-        for metabolite, initial_value in initial_state.items():
-            final_value = final_state[metabolite]
-            if initial_value["quantity"] != final_value["quantity"]:
-                logger.info(
-                    f"{metabolite}: {final_value['quantity'] - initial_value['quantity']}"
-                )
+        # for metabolite, initial_value in initial_state.items():
+        #     final_value = final_state[metabolite]
+        #     if initial_value["quantity"] != final_value["quantity"]:
+        #         logger.info(
+        #             f"{metabolite}: {final_value['quantity'] - initial_value['quantity']}"
+        #         )
 
 
 reporter = Reporter()
