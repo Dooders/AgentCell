@@ -1,0 +1,97 @@
+quantity: 10.0
+type: Energy Status Indicator
+description: Adenosine monophosphate, a key energy status indicator that regulates metabolic pathways and energy metabolism.
+meta:
+  molecular_formula: C10H14N5O7P
+  pathway:
+    - Energy Metabolism
+    - AMP-activated Protein Kinase Signaling
+    - Purine Metabolism
+  role: Metabolic regulator and energy sensor
+  concentration:
+    default: 0.1
+    unit: mM
+    range:
+      min: 0.02
+      max: 30.0
+  localization:
+    compartments:
+      - Cytosol
+      - Mitochondria
+  kinetics:
+    Km: 0.1  # in mM
+    Vmax: 45  # in μmol/min
+  transport:
+    mechanism: Facilitated Diffusion
+    transporters:
+      - Nucleoside Transporters
+  reactions:
+    - name: Adenylate Kinase Reaction
+      enzyme: Adenylate Kinase
+      role: Product
+    - name: AMP Deaminase Reaction
+      enzyme: AMP Deaminase
+      role: Substrate
+  chemical_properties:
+    pKa: 6.2
+    solubility: High
+    stability: Stable
+    molecular_weight: 347.22  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: AMPK
+        effect: Activation
+      - target_enzyme: Phosphofructokinase-1
+        effect: Activation
+    feedback_loops:
+      - type: Positive Feedback
+        source: ATP Depletion
+  interactions:
+    binding_partners:
+      - Enzyme: AMPK
+        type: Activator
+      - Enzyme: Adenylate Kinase
+        type: Substrate
+  state_changes:
+    redox_state: None
+    phosphorylation: Monophosphate
+    isomers: None
+  thermodynamics:
+    delta_G: -20.5  # kJ/mol
+  flux:
+    production_rate: 15  # μmol/min
+    consumption_rate: 15  # μmol/min
+  synthesis:
+    pathway: Energy Metabolism
+    enzyme: Adenylate Kinase
+  degradation:
+    pathway: Purine Metabolism
+    enzyme: AMP Deaminase
+  genetic_regulation:
+    genes:
+      - name: AMPD1 (AMP Deaminase 1)
+      - name: AK1 (Adenylate Kinase 1)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: Moderate
+  isomers:
+    D_form: Active
+    L_form: Inactive
+  stoichiometry:
+    reactions:
+      - name: Adenylate Kinase Reaction
+        coefficient: 1
+      - name: AMP Deaminase Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 347.22  # g/mol
+    charge: -2
+  visualization:
+    structure_2D: "structures/amp_2d.png"
+    structure_3D: "structures/amp_3d.pdb"
+  energy_metrics:
+    ATP_yield: -2  # Requires 2 ATP to convert back to ATP
+  experimental_data:
+    concentration: 0.1  # mM
+    reference: "Johnson et al., 2021" 

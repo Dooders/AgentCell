@@ -1,0 +1,98 @@
+quantity: 10.0
+type: Inorganic Ion
+description: Inorganic phosphate, essential substrate in glycolysis and key regulator of cellular metabolism and energy production.
+meta:
+  molecular_formula: H2PO4-
+  pathway:
+    - Glycolysis
+    - Oxidative Phosphorylation
+    - Phosphate Transport
+  role: Phosphate donor and cellular buffer
+  concentration:
+    default: 4.0
+    unit: mM
+    range:
+      min: 2.0
+      max: 20.0
+  localization:
+    compartments:
+      - Cytosol
+      - Mitochondria
+  kinetics:
+    Km: 2.0  # in mM
+    Vmax: 80  # in μmol/min
+  transport:
+    mechanism: Active Transport
+    transporters:
+      - Phosphate Carrier
+      - Na/Pi Cotransporter
+  reactions:
+    - name: GAPDH Reaction
+      enzyme: Glyceraldehyde-3-phosphate Dehydrogenase
+      role: Substrate
+    - name: ATP Synthase Reaction
+      enzyme: ATP Synthase
+      role: Substrate
+  chemical_properties:
+    pKa: 7.2
+    solubility: High
+    stability: Stable
+    molecular_weight: 95.97  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: GAPDH
+        effect: Substrate
+      - target_enzyme: ATP Synthase
+        effect: Substrate
+    feedback_loops:
+      - type: Negative Feedback
+        source: ATP
+  interactions:
+    binding_partners:
+      - Enzyme: GAPDH
+        type: Substrate
+      - Enzyme: ATP Synthase
+        type: Substrate
+  state_changes:
+    redox_state: None
+    phosphorylation: None
+    isomers: None
+  thermodynamics:
+    delta_G: -30.5  # kJ/mol
+  flux:
+    production_rate: 40  # μmol/min
+    consumption_rate: 40  # μmol/min
+  synthesis:
+    pathway: Phosphate Transport
+    enzyme: Na/Pi Cotransporter
+  degradation:
+    pathway: ATP Synthesis
+    enzyme: ATP Synthase
+  genetic_regulation:
+    genes:
+      - name: SLC20A1 (Sodium-dependent Pi transporter 1)
+      - name: SLC34A1 (Sodium-dependent Pi transporter 2)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: Moderate
+  isomers:
+    D_form: None
+    L_form: None
+  stoichiometry:
+    reactions:
+      - name: GAPDH Reaction
+        coefficient: 1
+      - name: ATP Synthase Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 95.97  # g/mol
+    charge: -2
+  visualization:
+    structure_2D: "structures/pi_2d.png"
+    structure_3D: "structures/pi_3d.pdb"
+  energy_metrics:
+    ATP_yield: 0
+  experimental_data:
+    concentration: 4.0  # mM
+    reference: "Thompson et al., 2021" 

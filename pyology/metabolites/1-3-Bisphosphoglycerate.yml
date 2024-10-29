@@ -11,7 +11,7 @@ meta:
     unit: mM
     range:
       min: 0.0005
-      max: 0.002
+      max: 30.0
   localization:
     compartments:
       - Cytosol

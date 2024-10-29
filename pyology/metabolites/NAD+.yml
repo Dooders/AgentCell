@@ -1,0 +1,96 @@
+quantity: 10.0
+type: Electron Carrier
+description: Oxidized form of nicotinamide adenine dinucleotide, essential electron acceptor in many metabolic reactions including glycolysis.
+meta:
+  molecular_formula: C21H27N7O14P2
+  pathway:
+    - Glycolysis
+    - TCA Cycle
+    - Electron Transport Chain
+  role: Electron acceptor
+  concentration:
+    default: 0.5
+    unit: mM
+    range:
+      min: 0.3
+      max: 20.00
+  localization:
+    compartments:
+      - Cytosol
+      - Mitochondria
+  kinetics:
+    Km: 0.06  # in mM
+    Vmax: 75  # in μmol/min
+  transport:
+    mechanism: Shuttle Systems
+    transporters:
+      - Malate-Aspartate Shuttle
+      - Glycerol-3-Phosphate Shuttle
+  reactions:
+    - name: GAPDH Reaction
+      enzyme: Glyceraldehyde-3-phosphate Dehydrogenase
+      role: Substrate
+    - name: Complex I Reaction
+      enzyme: NADH Dehydrogenase
+      role: Product
+  chemical_properties:
+    pKa: None
+    solubility: High
+    stability: Stable
+    molecular_weight: 663.43  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: GAPDH
+        effect: Substrate
+    feedback_loops:
+      - type: Negative Feedback
+        source: NADH
+  interactions:
+    binding_partners:
+      - Enzyme: GAPDH
+        type: Substrate
+      - Enzyme: Lactate Dehydrogenase
+        type: Substrate
+  state_changes:
+    redox_state: Oxidized
+    phosphorylation: None
+    isomers: None
+  thermodynamics:
+    delta_G: 220  # kJ/mol
+  flux:
+    production_rate: 20  # μmol/min
+    consumption_rate: 20  # μmol/min
+  synthesis:
+    pathway: Electron Transport Chain
+    enzyme: Complex I
+  degradation:
+    pathway: Glycolysis
+    enzyme: GAPDH
+  genetic_regulation:
+    genes:
+      - name: NAMPT (Nicotinamide Phosphoribosyltransferase)
+      - name: NMNAT (Nicotinamide Mononucleotide Adenylyltransferase)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: High
+  isomers:
+    D_form: Active
+    L_form: Inactive
+  stoichiometry:
+    reactions:
+      - name: GAPDH Reaction
+        coefficient: 1
+      - name: Complex I Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 663.43  # g/mol
+    charge: -1
+  visualization:
+    structure_2D: "structures/nad+_2d.png"
+    structure_3D: "structures/nad+_3d.pdb"
+  energy_metrics:
+    ATP_yield: 0
+  experimental_data:
+    concentration: 0.5  # mM
+    reference: "Wilson et al., 2021" 

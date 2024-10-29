@@ -5,7 +5,26 @@ from pyology.energy_calculations import calculate_energy_state
 from pyology.glycolysis import Glycolysis
 from pyology.reporter import Reporter
 
-metabolites_list = ["glucose", "pyruvate", "ATP", "ADP", "NADH"]
+metabolites_list = [
+    "glucose",
+    "glucose-6-phosphate",
+    "fructose-6-phosphate",
+    "fructose-1-6-bisphosphate",
+    "dihydroxyacetone-phosphate",
+    "glyceraldehyde-3-phosphate",
+    "1-3-bisphosphoglycerate",
+    "3-phosphoglycerate",
+    "2-phosphoglycerate",
+    "phosphoenolpyruvate",
+    "pyruvate",
+    "ATP",
+    "ADP",
+    "AMP",
+    "NADH",
+    "NAD+",
+    "Pi",
+    "H2O",
+]
 
 
 class GlycolysisSimulation:

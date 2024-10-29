@@ -13,7 +13,7 @@ meta:
     unit: mM
     range:
       min: 0.1
-      max: 0.5
+      max: 30.0
   localization:
     compartments:
       - Cytosol
@@ -92,4 +92,4 @@ meta:
     ATP_yield: -1  # ATP consumed in formation
   experimental_data:
     concentration: 0.2  # mM
-    reference: "Smith et al., 2021" 
+    reference: "Smith et al., 2021"

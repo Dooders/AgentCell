@@ -30,14 +30,14 @@ def test_hexokinase_reaction(cell):
     initial_atp = cell.get_metabolite_quantity("ATP")
     initial_adp = cell.get_metabolite_quantity("ADP")
     initial_glucose = cell.get_metabolite_quantity("glucose")
-    initial_g6p = cell.get_metabolite_quantity("glucose_6_phosphate")
+    initial_g6p = cell.get_metabolite_quantity("glucose-6-phosphate")
 
     reaction.transform(cell)
 
     assert cell.get_metabolite_quantity("ATP") == initial_atp - 1
     assert cell.get_metabolite_quantity("ADP") == initial_adp + 1
     assert cell.get_metabolite_quantity("glucose") == initial_glucose - 1
-    assert cell.get_metabolite_quantity("glucose_6_phosphate") == initial_g6p + 1
+    assert cell.get_metabolite_quantity("glucose-6-phosphate") == initial_g6p + 1
     assert initial_atp + initial_adp == cell.get_metabolite_quantity(
         "ATP"
     ) + cell.get_metabolite_quantity("ADP")
@@ -47,16 +47,16 @@ def test_phosphofructokinase_reaction(cell):
     reaction = GlycolysisReactions.phosphofructokinase
     initial_atp = cell.get_metabolite_quantity("ATP")
     initial_adp = cell.get_metabolite_quantity("ADP")
-    initial_f6p = cell.get_metabolite_quantity("fructose_6_phosphate")
-    initial_f16bp = cell.get_metabolite_quantity("fructose_1_6_bisphosphate")
+    initial_f6p = cell.get_metabolite_quantity("fructose-6-phosphate")
+    initial_f16bp = cell.get_metabolite_quantity("fructose-1-6-bisphosphate")
 
     reaction.transform(cell)
 
     assert cell.get_metabolite_quantity("ATP") == initial_atp - 1
     assert cell.get_metabolite_quantity("ADP") == initial_adp + 1
-    assert cell.get_metabolite_quantity("fructose_6_phosphate") == initial_f6p - 1
+    assert cell.get_metabolite_quantity("fructose-6-phosphate") == initial_f6p - 1
     assert (
-        cell.get_metabolite_quantity("fructose_1_6_bisphosphate") == initial_f16bp + 1
+        cell.get_metabolite_quantity("fructose-1-6-bisphosphate") == initial_f16bp + 1
     )
     assert initial_atp + initial_adp == cell.get_metabolite_quantity(
         "ATP"
@@ -67,15 +67,15 @@ def test_phosphoglycerate_kinase_reaction(cell):
     reaction = GlycolysisReactions.phosphoglycerate_kinase
     initial_atp = cell.get_metabolite_quantity("ATP")
     initial_adp = cell.get_metabolite_quantity("ADP")
-    initial_bpg = cell.get_metabolite_quantity("bisphosphoglycerate_1_3")
-    initial_3pg = cell.get_metabolite_quantity("phosphoglycerate_3")
+    initial_bpg = cell.get_metabolite_quantity("bisphosphoglycerate-1-3")
+    initial_3pg = cell.get_metabolite_quantity("3-phosphoglycerate")
 
     reaction.transform(cell)
 
     assert cell.get_metabolite_quantity("ATP") == initial_atp + 1
     assert cell.get_metabolite_quantity("ADP") == initial_adp - 1
-    assert cell.get_metabolite_quantity("bisphosphoglycerate_1_3") == initial_bpg - 1
-    assert cell.get_metabolite_quantity("phosphoglycerate_3") == initial_3pg + 1
+    assert cell.get_metabolite_quantity("bisphosphoglycerate-1-3") == initial_bpg - 1
+    assert cell.get_metabolite_quantity("3-phosphoglycerate") == initial_3pg + 1
     assert initial_atp + initial_adp == cell.get_metabolite_quantity(
         "ATP"
     ) + cell.get_metabolite_quantity("ADP")

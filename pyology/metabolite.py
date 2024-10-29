@@ -19,13 +19,13 @@ gibbs_free_energies = {
     "Acetyl_CoA": 31,
     "proton_gradient": 5,
     "glucose": 686,
-    "glucose_6_phosphate": 916,
-    "fructose_6_phosphate": 916,
-    "fructose_1_6_bisphosphate": 1146,
-    "glyceraldehyde_3_phosphate": 573,
-    "bisphosphoglycerate_1_3": 803,
-    "phosphoglycerate_3": 573,
-    "phosphoglycerate_2": 573,
+    "glucose-6-phosphate": 916,
+    "fructose-6-phosphate": 916,
+    "fructose-1-6-bisphosphate": 1146,
+    "glyceraldehyde-3-phosphate": 573,
+    "1-3-bisphosphoglycerate": 803,
+    "3-phosphoglycerate": 573,
+    "2-phosphoglycerate": 573,
     "phosphoenolpyruvate": 803,
     "pyruvate": 343,
     "pyruvate_dehydrogenase": 100,
@@ -437,7 +437,7 @@ class Metabolites:
             metabolite.reset()
 
     def __getitem__(self, key):
-        normalized_key = key.lower().replace("-", "_")
+        normalized_key = key.lower()
         if normalized_key not in self.data:
             # If the metabolite doesn't exist, create it with default values
             self._register(
@@ -516,7 +516,7 @@ class Metabolites:
         bool
             True if the metabolite exists, False otherwise.
         """
-        normalized_key = key.lower().replace("-", "_")
+        normalized_key = key.lower()
         return normalized_key in self.data
 
     def state(self, attributes: list = None) -> dict:
