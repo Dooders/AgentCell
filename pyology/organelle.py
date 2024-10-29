@@ -1,6 +1,9 @@
 import json
 import os
 from dataclasses import dataclass, field
+from typing import List
+
+import yaml
 
 from .exceptions import (
     GlycolysisRateError,
@@ -133,8 +136,8 @@ class Organelle(metaclass=OrganelleMeta):
 
     name = "Organelle"
 
-    def __init__(self):
-        self.metabolites = CellMetabolites().metabolites
+    def __init__(self, metabolites_list: List[str] = None, logger=None, debug=False):
+        self.metabolites = Metabolites.from_list(metabolites_list)
         self._glycolysis_rate = 1.0
         self.validate_initial_state()
 

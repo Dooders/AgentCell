@@ -128,57 +128,57 @@ def calculate_total_adenine_nucleotides(organelle: "Organelle") -> float:
     )
 
 
-def calculate_energy_state(organelle: "Organelle", logger: logging.Logger) -> float:
-    """
-    Calculate the total energy state of the organelle, with detailed logging for energy debugging.
+# def calculate_energy_state(organelle: "Organelle", logger: logging.Logger) -> float:
+#     """
+#     Calculate the total energy state of the organelle, with detailed logging for energy debugging.
 
-    This function accounts for various forms of energy storage in the cell:
-    1. High-energy phosphate compounds (ATP, GTP, etc.)
-    2. Reduced coenzymes (NADH, FADH2)
-    3. Acetyl-CoA
-    4. Concentration gradients of key metabolites
+#     This function accounts for various forms of energy storage in the cell:
+#     1. High-energy phosphate compounds (ATP, GTP, etc.)
+#     2. Reduced coenzymes (NADH, FADH2)
+#     3. Acetyl-CoA
+#     4. Concentration gradients of key metabolites
 
-    Parameters
-    ----------
-    organelle : Organelle
-        The organelle to calculate the energy state for.
-    logger : logging.Logger
-        Logger for output messages.
+#     Parameters
+#     ----------
+#     organelle : Organelle
+#         The organelle to calculate the energy state for.
+#     logger : logging.Logger
+#         Logger for output messages.
 
-    Returns
-    -------
-    float
-        The total energy state in kJ/mol.
-    """
-    total_energy = 0.0
+#     Returns
+#     -------
+#     float
+#         The total energy state in kJ/mol.
+#     """
+#     total_energy = 0.0
 
-    # Energy from high-energy phosphate compounds
-    atp_energy = organelle.get_metabolite_quantity("ATP") * 50  # ~50 kJ/mol
-    gtp_energy = organelle.get_metabolite_quantity("GTP") * 50  # ~50 kJ/mol
-    total_energy += atp_energy + gtp_energy
+#     # Energy from high-energy phosphate compounds
+#     atp_energy = organelle.get_metabolite_quantity("ATP") * 50  # ~50 kJ/mol
+#     gtp_energy = organelle.get_metabolite_quantity("GTP") * 50  # ~50 kJ/mol
+#     total_energy += atp_energy + gtp_energy
 
-    # Energy from reduced coenzymes
-    nadh_energy = organelle.get_metabolite_quantity("NADH") * 158  # ~158 kJ/mol
-    fadh2_energy = organelle.get_metabolite_quantity("FADH2") * 105  # ~105 kJ/mol
-    total_energy += nadh_energy + fadh2_energy
+#     # Energy from reduced coenzymes
+#     nadh_energy = organelle.get_metabolite_quantity("NADH") * 158  # ~158 kJ/mol
+#     fadh2_energy = organelle.get_metabolite_quantity("FADH2") * 105  # ~105 kJ/mol
+#     total_energy += nadh_energy + fadh2_energy
 
-    # Energy from Acetyl-CoA
-    acetyl_coa_energy = (
-        organelle.get_metabolite_quantity("Acetyl_CoA") * 31
-    )  # ~31 kJ/mol
-    total_energy += acetyl_coa_energy
+#     # Energy from Acetyl-CoA
+#     acetyl_coa_energy = (
+#         organelle.get_metabolite_quantity("Acetyl_CoA") * 31
+#     )  # ~31 kJ/mol
+#     total_energy += acetyl_coa_energy
 
-    # Energy from concentration gradients
-    proton_gradient_energy = calculate_proton_gradient_energy(organelle)
-    total_energy += proton_gradient_energy
+#     # Energy from concentration gradients
+#     proton_gradient_energy = calculate_proton_gradient_energy(organelle)
+#     total_energy += proton_gradient_energy
 
-    # Combine energy contributions into a single-line log message
-    energy_log = f"""Total energy state: {total_energy:.2f} kJ/mol | ATP: {atp_energy:.2f}, GTP: {gtp_energy:.2f}, NADH: {nadh_energy:.2f}, FADH2: {fadh2_energy:.2f}, Acetyl-CoA: {acetyl_coa_energy:.2f}, Proton gradient: {proton_gradient_energy:.2f} kJ/mol"""
+#     # Combine energy contributions into a single-line log message
+#     energy_log = f"""Total energy state: {total_energy:.2f} kJ/mol | ATP: {atp_energy:.2f}, GTP: {gtp_energy:.2f}, NADH: {nadh_energy:.2f}, FADH2: {fadh2_energy:.2f}, Acetyl-CoA: {acetyl_coa_energy:.2f}, Proton gradient: {proton_gradient_energy:.2f} kJ/mol"""
 
-    # Log the combined energy contributions
-    logger.info(energy_log)
+#     # Log the combined energy contributions
+#     logger.info(energy_log)
 
-    return total_energy
+#     return total_energy
 
 gibbs_free_energies = {
     "ATP": 50,
@@ -209,14 +209,18 @@ gibbs_free_energies = {
 }
 
 
-def calculate_energy_state(organelle: "Organelle", logger: logging.Logger, gibbs_free_energies: dict = gibbs_free_energies) -> float:
+def calculate_energy_state(
+    organelle_or_dict: Union["Organelle", Dict[str, Dict[str, float]]], 
+    logger: logging.Logger, 
+    gibbs_free_energies: dict = gibbs_free_energies
+) -> float:
     """
-    Calculate the total energy from a dictionary of metabolites using Gibbs free energies.
+    Calculate the total energy from either an Organelle object or a state dictionary using Gibbs free energies.
 
     Parameters
     ----------
-    organelle : Organelle
-        The organelle to calculate the energy state for.
+    organelle_or_dict : Union[Organelle, Dict[str, Dict[str, float]]]
+        Either an Organelle object or a state dictionary where each metabolite has a nested dict with 'quantity' key.
     logger : logging.Logger
         The logger to use for logging messages.
     gibbs_free_energies : dict
@@ -229,17 +233,37 @@ def calculate_energy_state(organelle: "Organelle", logger: logging.Logger, gibbs
     """
     total_energy = 0.0
 
+    # Handle different input types
+    if hasattr(organelle_or_dict, 'metabolites'):
+        # Input is an Organelle object
+        iterate_over = organelle_or_dict.metabolites
+    else:
+        # Input is a dictionary
+        iterate_over = organelle_or_dict.items()
+
     # Calculate energy contribution of each metabolite
-    for metabolite in organelle.metabolites:
-        # Fetch the Gibbs free energy for the metabolite, default to 0 if not found
-        delta_g_f = gibbs_free_energies.get(metabolite.label, 0.0)
+    for item in iterate_over:
+        if hasattr(organelle_or_dict, 'metabolites'):
+            # For Organelle object
+            label = item.label
+            quantity = item.quantity
+            name = item.name
+        else:
+            # For dictionary
+            label = item[0]
+            quantity = item[1]['quantity']  # Access the nested quantity value
+            name = label
+
+        # Fetch the Gibbs free energy for the metabolite
+        delta_g_f = gibbs_free_energies.get(label, 0.0)
         # Calculate energy contribution
-        contribution = metabolite.quantity * delta_g_f
+        contribution = quantity * delta_g_f
         # Add to total energy
         total_energy += contribution
         
         if contribution > 0:
-            logger.debug(f"{metabolite.name} contributes {contribution:.2f} kJ/mol to total energy.")
+            #! remove this or have debug arg
+            logger.debug(f"{name} contributes {contribution:.2f} kJ/mol to total energy.")
 
     return total_energy
 

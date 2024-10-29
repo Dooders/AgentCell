@@ -1,0 +1,85 @@
+quantity: 5.0
+type: Glycolysis Intermediate
+description: Isomer of glucose-6-phosphate, formed by glucose-6-phosphate isomerase and substrate for phosphofructokinase-1.
+meta:
+  molecular_formula: C6H13O9P
+  pathway:
+    - Glycolysis
+    - Pentose Phosphate Pathway
+  role: Substrate for rate-limiting PFK-1 step
+  concentration:
+    default: 0.15
+    unit: mM
+    range:
+      min: 0.05
+      max: 0.4
+  localization:
+    compartments:
+      - Cytosol
+  kinetics:
+    Km: 0.1  # in mM
+    Vmax: 55  # in μmol/min
+  transport:
+    mechanism: None  # Charged molecule, doesn't cross membranes
+    transporters: []
+  reactions:
+    - name: Phosphofructokinase-1 Reaction
+      enzyme: Phosphofructokinase-1
+      role: Substrate
+  chemical_properties:
+    pKa: 6.1
+    solubility: High
+    stability: Stable
+    molecular_weight: 260.14  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: Phosphofructokinase-1
+        effect: Substrate
+    feedback_loops:
+      - type: Negative Feedback
+        source: ATP
+  interactions:
+    binding_partners:
+      - Enzyme: Phosphofructokinase-1
+        type: Substrate
+  state_changes:
+    redox_state: None
+    phosphorylation: Phosphorylated
+    isomers: None
+  thermodynamics:
+    delta_G: -14.2  # kJ/mol
+  flux:
+    production_rate: 10  # μmol/min
+    consumption_rate: 10  # μmol/min
+  synthesis:
+    pathway: Glycolysis
+    enzyme: Glucose-6-phosphate Isomerase
+  degradation:
+    pathway: Glycolysis
+    enzyme: Phosphofructokinase-1
+  genetic_regulation:
+    genes:
+      - name: PFKM (Phosphofructokinase, Muscle)
+      - name: PFKL (Phosphofructokinase, Liver)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: Low
+  isomers:
+    D_form: Active
+    L_form: Inactive
+  stoichiometry:
+    reactions:
+      - name: Phosphofructokinase-1 Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 260.14  # g/mol
+    charge: -2
+  visualization:
+    structure_2D: "structures/f6p_2d.png"
+    structure_3D: "structures/f6p_3d.pdb"
+  energy_metrics:
+    ATP_yield: 0
+  experimental_data:
+    concentration: 0.15  # mM
+    reference: "Johnson et al., 2021" 

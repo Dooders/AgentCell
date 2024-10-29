@@ -1,0 +1,107 @@
+quantity: 5.0
+type: Core Glycolysis Product
+description: The end product of glycolysis and a key metabolic intermediate that can enter several pathways including the TCA cycle.
+meta:
+  molecular_formula: C3H4O3
+  pathway:
+    - Glycolysis
+    - TCA Cycle
+    - Gluconeogenesis
+  role: Key metabolic junction point
+  concentration:
+    default: 0.1
+    unit: mM
+    range:
+      min: 0.05
+      max: 50
+  localization:
+    compartments:
+      - Cytosol
+      - Mitochondria
+  kinetics:
+    Km: 0.2  # in mM
+    Vmax: 65  # in μmol/min
+  transport:
+    mechanism: Active Transport
+    transporters:
+      - Mitochondrial Pyruvate Carrier
+      - Monocarboxylate Transporter
+  reactions:
+    - name: Pyruvate Dehydrogenase Reaction
+      enzyme: Pyruvate Dehydrogenase Complex
+      role: Substrate
+    - name: Pyruvate Carboxylase Reaction
+      enzyme: Pyruvate Carboxylase
+      role: Substrate
+  chemical_properties:
+    pKa: 2.5
+    solubility: High
+    stability: Stable
+    molecular_weight: 88.06  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: Pyruvate Dehydrogenase
+        effect: Activation
+      - target_enzyme: Pyruvate Carboxylase
+        effect: Activation
+    feedback_loops:
+      - type: Negative Feedback
+        source: ATP
+      - type: Positive Feedback
+        source: Acetyl-CoA
+  interactions:
+    binding_partners:
+      - Enzyme: Pyruvate Dehydrogenase
+        type: Substrate
+      - Enzyme: Pyruvate Carboxylase
+        type: Substrate
+      - Enzyme: Lactate Dehydrogenase
+        type: Substrate
+  state_changes:
+    redox_state: None
+    phosphorylation: Unphosphorylated
+    isomers: None
+  thermodynamics:
+    delta_G: -31.4  # kJ/mol
+  flux:
+    production_rate: 8  # μmol/min
+    consumption_rate: 8  # μmol/min
+  synthesis:
+    pathway: Glycolysis
+    enzyme: Pyruvate Kinase
+  degradation:
+    pathway:
+      - TCA Cycle
+      - Gluconeogenesis
+    enzyme:
+      - Pyruvate Dehydrogenase
+      - Pyruvate Carboxylase
+  genetic_regulation:
+    genes:
+      - name: PDH (Pyruvate Dehydrogenase)
+      - name: PC (Pyruvate Carboxylase)
+      - name: PKM (Pyruvate Kinase)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: Moderate
+  isomers:
+    D_form: Active
+    L_form: Inactive
+  stoichiometry:
+    reactions:
+      - name: Pyruvate Dehydrogenase Reaction
+        coefficient: 1
+      - name: Pyruvate Carboxylase Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 88.06  # g/mol
+    charge: -1
+  visualization:
+    structure_2D: "structures/pyruvate_2d.png"
+    structure_3D: "structures/pyruvate_3d.pdb"
+  energy_metrics:
+    ATP_yield: 0
+  experimental_data:
+    concentration: 0.1  # mM
+    reference: "Anderson et al., 2021" 

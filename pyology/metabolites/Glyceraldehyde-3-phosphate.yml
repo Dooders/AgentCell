@@ -1,0 +1,83 @@
+quantity: 5.0
+type: Glycolysis Intermediate
+description: Three-carbon phosphorylated aldehyde that enters the energy-generating phase of glycolysis.
+meta:
+  molecular_formula: C3H7O6P
+  pathway:
+    - Glycolysis
+    - Gluconeogenesis
+  role: Key intermediate in energy-generating phase
+  concentration:
+    default: 0.03
+    unit: mM
+    range:
+      min: 0.01
+      max: 0.06
+  localization:
+    compartments:
+      - Cytosol
+  kinetics:
+    Km: 0.1  # in mM
+    Vmax: 65  # in μmol/min
+  transport:
+    mechanism: None
+    transporters: []
+  reactions:
+    - name: GAPDH Reaction
+      enzyme: Glyceraldehyde-3-phosphate Dehydrogenase
+      role: Substrate
+  chemical_properties:
+    pKa: 6.45
+    solubility: High
+    stability: Moderate
+    molecular_weight: 170.06  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: GAPDH
+        effect: Substrate
+  interactions:
+    binding_partners:
+      - Enzyme: GAPDH
+        type: Substrate
+  state_changes:
+    redox_state: Reduced
+    phosphorylation: Phosphorylated
+    isomers: None
+  thermodynamics:
+    delta_G: 6.3  # kJ/mol
+  flux:
+    production_rate: 20  # μmol/min (2x due to F1,6BP splitting)
+    consumption_rate: 20  # μmol/min
+  synthesis:
+    pathway: Glycolysis
+    enzyme:
+      - Aldolase
+      - Triose Phosphate Isomerase
+  degradation:
+    pathway: Glycolysis
+    enzyme: GAPDH
+  genetic_regulation:
+    genes:
+      - name: GAPDH (Glyceraldehyde-3-phosphate Dehydrogenase)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: Low
+  isomers:
+    D_form: Active
+    L_form: Inactive
+  stoichiometry:
+    reactions:
+      - name: GAPDH Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 170.06  # g/mol
+    charge: -2
+  visualization:
+    structure_2D: "structures/g3p_2d.png"
+    structure_3D: "structures/g3p_3d.pdb"
+  energy_metrics:
+    ATP_yield: 0
+  experimental_data:
+    concentration: 0.03  # mM
+    reference: "Thompson et al., 2021" 
