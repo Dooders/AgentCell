@@ -15,6 +15,7 @@ target_metabolites = [
     "α_Ketoglutarate",
 ]
 
+
 class KrebsCycleSimulation:
     def __init__(self, cell: "Cell", debug=True):
         self.cell = cell
@@ -25,9 +26,7 @@ class KrebsCycleSimulation:
         logger.info("Starting Krebs Cycle simulation")
         self.cell.set_metabolite_quantity("Acetyl_CoA", acetyl_coa_units)
 
-        logger.info(
-            f"Initial metabolite levels: {self.cell.metabolites.quantities}"
-        )
+        logger.info(f"Initial metabolite levels: {self.cell.metabolites.quantities}")
 
         # Add initial quantities for essential metabolites
         essential_metabolites = {
@@ -52,6 +51,8 @@ class KrebsCycleSimulation:
         except Exception as e:
             logger.error(f"Error during Krebs Cycle simulation: {str(e)}")
             raise
+
+        logger.info(f"Final metabolite levels: {self.cell.metabolites.quantities}")
 
 
 reporter = Reporter()

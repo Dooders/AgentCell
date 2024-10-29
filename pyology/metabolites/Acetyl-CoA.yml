@@ -47,6 +47,9 @@ meta:
     isomers: None
   thermodynamics:
     delta_G: -30.5 # kJ/mol
+    gibbs_free_energies:
+      formation: -178.5 # kJ/mol
+      hydrolysis: -31.5 # kJ/mol
   flux:
     production_rate: 5 # μmol/min
     consumption_rate: 5 # μmol/min

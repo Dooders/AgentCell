@@ -7,6 +7,69 @@ from .exceptions import (
     UnknownMetaboliteError,
 )
 
+gibbs_free_energies = {
+    "ATP": 50,
+    "ADP": 30,
+    "AMP": 10,
+    "GTP": 50,
+    "NADH": 158,
+    "FADH2": 105,
+    "Acetyl_CoA": 31,
+    "proton_gradient": 5,
+    "Glucose": 686,
+    "Fructose": 686,
+    "Glucose_6_Phosphate": 916,
+    "Fructose_6_Phosphate": 916,
+    "Fructose_1_6_Bisphosphate": 1146,
+    "Glyceraldehyde_3_Phosphate": 573,
+    "Bisphosphoglycerate_1_3": 803,
+    "phosphoglycerate_3": 573,
+    "phosphoglycerate_2": 573,
+    "phosphoenolpyruvate": 803,
+    "Pyruvate": 343,
+    "pyruvate_dehydrogenase": 100,
+    "phosphoenolpyruvate_carboxykinase": 100,
+    "phosphoenolpyruvate_mutase": 100,
+    "pyruvate_kinase": 100,
+    "Phosphoglycerate_Kinase": 100,
+    "Phosphoglycerate_Mutase": 100,
+    "Phosphoglycerate_Phosphatase": 100,
+    "bisphosphoglycerate_3": 803,
+    "Phosphoglycerate_3": 573,
+    "Phosphoglycerate_2": 573,
+    "Phosphoglycerate": 573,
+    "NAD": 100,
+    "NAD+": 100,
+    "NADH": 158,
+    "FAD": 100,
+    "FADH2": 105,
+    "NADP": 100,
+    "NADP+": 100,
+    "bisphosphoglycerate_1_3": 803,
+    "dihydroxyacetone_phosphate": 34,
+    "phosphoglycerate": 34,
+    "Lactate": 34,
+    "Glycogen": 34,
+    "Alanine": 34,
+    "Glutamate": 34,
+    "Glutamine": 34,
+    "Aspartate": 34,
+    "Asparagine": 34,
+    "Glycine": 34,
+    "Serine": 34,
+    "Threonine": 34,
+    "Proline": 34,
+    "Tyrosine": 34,
+    "Valine": 34,
+    "Methionine": 34,
+    "Leucine": 34,
+    "Isoleucine": 34,
+    "Phenylalanine": 34,
+    "Tryptophan": 34,
+    "Malonyl_CoA": 34,
+    "Palmitic_Acid": 34,
+}
+
 
 class Metabolite:
     """
@@ -61,6 +124,7 @@ class Metabolite:
         type: str = "default",
     ) -> None:
         self.name = name.lower()
+        self.label = name
         self.type = type
         self.quantity = float(quantity)
         self.max_quantity = float(max_quantity)
@@ -88,6 +152,13 @@ class Metabolite:
             self.quantity = new_quantity
             if self.on_change:
                 self.on_change(self)
+
+    @property
+    def energy(self):
+        if self.label not in gibbs_free_energies:
+            pass
+            # raise KeyError(f"Gibbs free energy not found for metabolite: {self.label}")
+        return gibbs_free_energies.get(self.label, 1) * self.quantity
 
     def reset(self) -> None:
         with self.lock:
@@ -127,6 +198,27 @@ class Metabolite:
             f"max_quantity={self.max_quantity}, unit='{self.unit}', type='{self.type}')"
         )
 
+    @property
+    def state(self) -> dict:
+        """
+        Returns the current state of the metabolite.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the current state of the metabolite.
+        """
+        return {
+            "name": self.name,
+            "label": self.label,
+            "type": self.type,
+            "quantity": self.quantity,
+            "max_quantity": self.max_quantity,
+            "min_quantity": self.min_quantity,
+            "unit": self.unit,
+            "metadata": self.metadata,
+        }
+
 
 class Metabolites:
     """
@@ -155,6 +247,8 @@ class Metabolites:
     validate_all() -> None:
         Validates all metabolites to ensure quantities are within valid ranges.
     """
+
+    DEFAULT_STATE_ATTRIBUTES = ["quantity", "energy"]
 
     def __init__(self):
         """
@@ -186,12 +280,13 @@ class Metabolites:
             raise ValueError(
                 f"Initial quantity {quantity} exceeds max quantity {max_quantity}."
             )
-        if name in self.data:
-            metabolite = self.data[name]
+        if name.lower() not in self.data:
+            metabolite = Metabolite(name, quantity, max_quantity)
+            self.data[name.lower()] = metabolite
+        else:
+            metabolite = self.data[name.lower()]
             new_quantity = min(metabolite.quantity + quantity, metabolite.max_quantity)
             metabolite.quantity = new_quantity
-        else:
-            self.data[name.lower()] = Metabolite(name, quantity, max_quantity)
 
     def register(
         self,
@@ -202,7 +297,6 @@ class Metabolites:
     ) -> None:
         """
         Adds a new metabolite or updates an existing one. Can accept individual parameters or a dictionary.
-        #! return as a named tuple?
 
         Parameters
         ----------
@@ -410,6 +504,33 @@ class Metabolites:
     def values(self):
         return self.data.values()
 
+    def __iter__(self):
+        return iter(self.data.values())
+
+    @property
+    def names(self):
+        return [metabolite.name for metabolite in self.data.values()]
+
+    @property
+    def labels(self):
+        return [metabolite.label for metabolite in self.data.values()]
+
+    @property
+    def types(self):
+        return [metabolite.type for metabolite in self.data.values()]
+
+    @property
+    def quantities(self):
+        return [metabolite.quantity for metabolite in self.data.values()]
+
+    @property
+    def total_energy(self):
+        return sum(metabolite.energy for metabolite in self.data.values())
+
+    @property
+    def energy_dict(self):
+        return {metabolite.name: metabolite.energy for metabolite in self.data.values()}
+
     def exists(self, key: str) -> bool:
         """
         Check if a metabolite exists in the collection.
@@ -426,3 +547,28 @@ class Metabolites:
         """
         normalized_key = key.lower().replace("-", "_")
         return normalized_key in self.data
+
+    def state(self, attributes: list = None) -> dict:
+        """
+        Returns the current states of all metabolites.
+
+        Parameters
+        ----------
+        attributes : list, optional
+            A list of attribute names to include in the state.
+            If None, uses DEFAULT_STATE_ATTRIBUTES.
+        no_zero : bool, optional
+            If True, only includes metabolites with a quantity greater than zero.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the current states of all metabolites.
+        """
+        if attributes is None:
+            attributes = self.DEFAULT_STATE_ATTRIBUTES
+
+        return {
+            x.name: {attr: getattr(x, attr) for attr in attributes if hasattr(x, attr)}
+            for x in self.data.values()
+        }

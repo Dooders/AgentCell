@@ -130,7 +130,7 @@ def calculate_total_adenine_nucleotides(organelle: "Organelle") -> float:
 
 def calculate_energy_state(organelle: "Organelle", logger: logging.Logger) -> float:
     """
-    Calculate the total energy state of the organelle.
+    Calculate the total energy state of the organelle, with detailed logging for energy debugging.
 
     This function accounts for various forms of energy storage in the cell:
     1. High-energy phosphate compounds (ATP, GTP, etc.)
@@ -172,16 +172,77 @@ def calculate_energy_state(organelle: "Organelle", logger: logging.Logger) -> fl
     proton_gradient_energy = calculate_proton_gradient_energy(organelle)
     total_energy += proton_gradient_energy
 
-    # Log the energy contributions
-    logger.info(f"Energy from ATP: {atp_energy:.2f} kJ/mol")
-    logger.info(f"Energy from GTP: {gtp_energy:.2f} kJ/mol")
-    logger.info(f"Energy from NADH: {nadh_energy:.2f} kJ/mol")
-    logger.info(f"Energy from FADH2: {fadh2_energy:.2f} kJ/mol")
-    logger.info(f"Energy from Acetyl-CoA: {acetyl_coa_energy:.2f} kJ/mol")
-    logger.info(f"Energy from proton gradient: {proton_gradient_energy:.2f} kJ/mol")
-    logger.info(f"Total energy state: {total_energy:.2f} kJ/mol")
+    # Combine energy contributions into a single-line log message
+    energy_log = f"""Total energy state: {total_energy:.2f} kJ/mol | ATP: {atp_energy:.2f}, GTP: {gtp_energy:.2f}, NADH: {nadh_energy:.2f}, FADH2: {fadh2_energy:.2f}, Acetyl-CoA: {acetyl_coa_energy:.2f}, Proton gradient: {proton_gradient_energy:.2f} kJ/mol"""
+
+    # Log the combined energy contributions
+    logger.info(energy_log)
 
     return total_energy
+
+gibbs_free_energies = {
+    "ATP": 50,
+    "ADP": 30,
+    "AMP": 10,
+    "GTP": 50,
+    "NADH": 158,
+    "FADH2": 105,
+    "Acetyl_CoA": 31,
+    "proton_gradient": 5,
+    "glucose": 686,
+    "glucose_6_phosphate": 916,
+    "fructose_6_phosphate": 916,
+    "fructose_1_6_bisphosphate": 1146,
+    "glyceraldehyde_3_phosphate": 573,
+    "bisphosphoglycerate_1_3": 803,
+    "phosphoglycerate_3": 573,
+    "phosphoglycerate_2": 573,
+    "phosphoenolpyruvate": 803,
+    "pyruvate": 343,
+    "pyruvate_dehydrogenase": 100,
+    "phosphoenolpyruvate_carboxykinase": 100,
+    "phosphoenolpyruvate_mutase": 100,
+    "pyruvate_kinase": 100,
+    "phosphoglycerate_kinase": 100,
+    "phosphoglycerate_mutase": 100,
+    "phosphoglycerate_phosphatase": 100,
+}
+
+
+def calculate_energy_state(organelle: "Organelle", logger: logging.Logger, gibbs_free_energies: dict = gibbs_free_energies) -> float:
+    """
+    Calculate the total energy from a dictionary of metabolites using Gibbs free energies.
+
+    Parameters
+    ----------
+    organelle : Organelle
+        The organelle to calculate the energy state for.
+    logger : logging.Logger
+        The logger to use for logging messages.
+    gibbs_free_energies : dict
+        A dictionary where keys are metabolite names, and values are their standard Gibbs free energies (kJ/mol).
+
+    Returns
+    -------
+    float
+        The total energy in kJ/mol.
+    """
+    total_energy = 0.0
+
+    # Calculate energy contribution of each metabolite
+    for metabolite in organelle.metabolites:
+        # Fetch the Gibbs free energy for the metabolite, default to 0 if not found
+        delta_g_f = gibbs_free_energies.get(metabolite.label, 0.0)
+        # Calculate energy contribution
+        contribution = metabolite.quantity * delta_g_f
+        # Add to total energy
+        total_energy += contribution
+        
+        if contribution > 0:
+            logger.debug(f"{metabolite.name} contributes {contribution:.2f} kJ/mol to total energy.")
+
+    return total_energy
+
 
 
 def calculate_proton_gradient_energy(organelle: "Organelle") -> float:
@@ -205,15 +266,15 @@ def calculate_proton_gradient_energy(organelle: "Organelle") -> float:
     R = 8.314  # J/(mol·K), gas constant
     T = 310  # K, typical cellular temperature (37°C)
     F = 96485  # C/mol, Faraday constant
-    
+
     # Typical values for mitochondrial membrane potential and pH gradient
     delta_psi = 0.18  # V, electrical potential difference
     delta_pH = 0.75  # pH units, typical pH gradient across mitochondrial membrane
-    
+
     # Calculate the proton motive force (PMF)
     pmf = delta_psi + (2.303 * R * T / F) * delta_pH
-    
+
     # Convert PMF to kJ/mol
     energy_kj_mol = pmf * F / 1000  # divide by 1000 to convert J to kJ
-    
+
     return energy_kj_mol

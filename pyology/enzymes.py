@@ -68,7 +68,8 @@ class Enzyme:
     k_cat : float
         The catalytic constant (turnover number) of the enzyme.
     k_m : Dict[str, float]
-        The Michaelis constants for multiple substrates.
+        The Michaelis constants for multiple substrates. 
+        For example, {"glucose": 10}
     inhibitors : Dict[str, Dict[str, float]], optional
         The inhibition constants for multiple substrates. Defaults to None.
     activators : Dict[str, float], optional
@@ -314,6 +315,6 @@ class Enzyme:
                 new_quantity = metabolite.quantity + coefficient * delta
                 metabolite.quantity = max(new_quantity, 0.0)
 
-        # Trigger downstream enzymes in the cascade
+        # Trigger downstream enzymes in the cascade***
         for enzyme in self.downstream_enzymes:
             self.regulate_enzyme(enzyme, "activate")
