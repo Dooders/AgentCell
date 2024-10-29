@@ -28,6 +28,8 @@ class GlycolysisSimulation:
         #             f"{metabolite}: {final_value['quantity'] - initial_value['quantity']}"
         #         )
 
+        return result, initial_state, final_state
+
 
 reporter = Reporter()
 reporter.logger.setLevel(logging.DEBUG)  # Add this line
