@@ -1,0 +1,92 @@
+quantity: 5.0
+type: Input
+description: Primary energy source for most organisms, entering glycolysis as the first step of cellular respiration.
+meta:
+  molecular_formula: C6H12O6
+  pathway:
+    - Glycolysis
+    - Pentose Phosphate Pathway
+  role: Primary energy substrate
+  concentration:
+    default: 5.0
+    unit: mM
+    range:
+      min: 3.0
+      max: 7.0
+  localization:
+    compartments:
+      - Cytosol
+      - Extracellular Space
+  kinetics:
+    Km: 0.5  # in mM
+    Vmax: 50  # in μmol/min
+  transport:
+    mechanism: Facilitated Diffusion
+    transporters:
+      - GLUT1
+      - GLUT2
+      - GLUT3
+      - GLUT4
+  reactions:
+    - name: Hexokinase Reaction
+      enzyme: Hexokinase
+      role: Substrate
+  chemical_properties:
+    pKa: None
+    solubility: High
+    stability: Stable
+    molecular_weight: 180.16  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: Phosphofructokinase-1
+        effect: None
+    feedback_loops:
+      - type: Negative Feedback
+        source: Glucose-6-phosphate
+  interactions:
+    binding_partners:
+      - Enzyme: Hexokinase
+        type: Substrate
+      - Enzyme: Glucokinase
+        type: Substrate
+  state_changes:
+    redox_state: None
+    phosphorylation: Unphosphorylated
+    isomers: None
+  thermodynamics:
+    delta_G: -2.9  # kJ/mol
+  flux:
+    production_rate: 0  # μmol/min (primarily imported)
+    consumption_rate: 10  # μmol/min
+  synthesis:
+    pathway: Gluconeogenesis
+    enzyme: Glucose-6-phosphatase
+  degradation:
+    pathway: Glycolysis
+    enzyme: Hexokinase
+  genetic_regulation:
+    genes:
+      - name: GCK (Glucokinase)
+      - name: HK (Hexokinase)
+  physiological_conditions:
+    pH_dependence: No
+    temperature_dependence: Yes
+    oxygen_dependence: Low
+  isomers:
+    D_form: Active
+    L_form: Inactive
+  stoichiometry:
+    reactions:
+      - name: Hexokinase Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 180.16  # g/mol
+    charge: 0
+  visualization:
+    structure_2D: "structures/glucose_2d.png"
+    structure_3D: "structures/glucose_3d.pdb"
+  energy_metrics:
+    ATP_yield: -1  # Initial ATP investment in glycolysis
+  experimental_data:
+    concentration: 5.0  # mM
+    reference: "Anderson et al., 2022" 

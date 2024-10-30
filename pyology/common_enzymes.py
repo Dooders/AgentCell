@@ -14,7 +14,7 @@ hexokinase = Enzyme(
 phosphoglucose_isomerase = Enzyme(
     name="Phosphoglucose Isomerase",
     k_cat=100,
-    k_m={"glucose_6_phosphate": 10},
+    k_m={"glucose-6-phosphate": 10},
     inhibitors={"adp": 1.0},
     activators={"atp": 1.0},
     active=True,
@@ -25,7 +25,7 @@ phosphoglucose_isomerase = Enzyme(
 phosphofructokinase = Enzyme(
     name="Phosphofructokinase",
     k_cat=100,
-    k_m={"fructose_6_phosphate": 10},
+    k_m={"fructose-6-phosphate": 10},
     inhibitors={"adp": 1.0},
     activators={"atp": 1.0},
     active=True,
@@ -36,7 +36,7 @@ phosphofructokinase = Enzyme(
 aldolase = Enzyme(
     name="Aldolase",
     k_cat=100,
-    k_m={"fructose_1_6_bisphosphate": 10},
+    k_m={"fructose-1-6-bisphosphate": 10},
     inhibitors={"adp": 1.0},
     activators={"atp": 1.0},
     active=True,
@@ -47,18 +47,18 @@ aldolase = Enzyme(
 triose_phosphate_isomerase = Enzyme(
     name="Triose Phosphate Isomerase",
     k_cat=100,
-    k_m={"glyceraldehyde_3_phosphate": 10},
+    k_m={"glyceraldehyde-3-phosphate": 10},
     inhibitors={"adp": 1.0},
     activators={"atp": 1.0},
     active=True,
-    downstream_enzymes=["glyceraldehyde_3_phosphate_dehydrogenase"],
+    downstream_enzymes=["glyceraldehyde-3-phosphate-dehydrogenase"],
     hill_coefficients={"adp": 1.0, "atp": 1.0},
 )
 
 glyceraldehyde_3_phosphate_dehydrogenase = Enzyme(
     name="Glyceraldehyde 3-Phosphate Dehydrogenase",
     k_cat=100,
-    k_m={"glyceraldehyde_3_phosphate": 10},
+    k_m={"glyceraldehyde-3-phosphate": 10},
     inhibitors={"adp": 1.0},
     activators={"atp": 1.0},
     active=True,
@@ -69,7 +69,7 @@ glyceraldehyde_3_phosphate_dehydrogenase = Enzyme(
 phosphoglycerate_kinase = Enzyme(
     name="Phosphoglycerate Kinase",
     k_cat=100,
-    k_m={"bisphosphoglycerate_1_3": 10},
+    k_m={"1-3-bisphosphoglycerate": 10},
     inhibitors={"adp": 1.0},
     activators={"atp": 1.0},
     active=True,
@@ -80,7 +80,7 @@ phosphoglycerate_kinase = Enzyme(
 phosphoglycerate_mutase = Enzyme(
     name="Phosphoglycerate Mutase",
     k_cat=100,
-    k_m={"phosphoglycerate_3": 10},
+    k_m={"3-phosphoglycerate": 10},
     inhibitors={"adp": 1.0},
     activators={"atp": 1.0},
     active=True,
@@ -91,11 +91,11 @@ phosphoglycerate_mutase = Enzyme(
 enolase = Enzyme(
     name="Enolase",
     k_cat=100,
-    k_m={"phosphoglycerate_2": 10},
+    k_m={"2-phosphoglycerate": 10},
     inhibitors={"adp": 1.0},
     activators={"atp": 1.0},
     active=True,
-    downstream_enzymes=["pyruvate_kinase"],
+    downstream_enzymes=["pyruvate-kinase"],
     hill_coefficients={"adp": 1.0, "atp": 1.0},
 )
 
@@ -106,7 +106,7 @@ pyruvate_kinase = Enzyme(
     inhibitors={"adp": 1.0},
     activators={"atp": 1.0},
     active=True,
-    downstream_enzymes=["pyruvate_dehydrogenase"],
+    downstream_enzymes=["pyruvate-dehydrogenase"],
     hill_coefficients={"adp": 1.0, "atp": 1.0},
 )
 
@@ -117,7 +117,7 @@ pyruvate_dehydrogenase = Enzyme(
     inhibitors={"adp": 1.0},
     activators={"atp": 1.0},
     active=True,
-    downstream_enzymes=["pyruvate_carboxylase"],
+    downstream_enzymes=["pyruvate-carboxylase"],
     hill_coefficients={"adp": 1.0, "atp": 1.0},
 )
 
@@ -128,18 +128,18 @@ pyruvate_carboxylase = Enzyme(
     inhibitors={"adp": 1.0},
     activators={"atp": 1.0},
     active=True,
-    downstream_enzymes=["phosphoglycerate_mutate"],
+    downstream_enzymes=["phosphoglycerate-mutate"],
     hill_coefficients={"adp": 1.0, "atp": 1.0},
 )
 
 phosphoglycerate_mutate = Enzyme(
     name="Phosphoglycerate Mutase",
     k_cat=100,
-    k_m={"phosphoglycerate_3": 10},
+    k_m={"3-phosphoglycerate": 10},
     inhibitors={"adp": 1.0},
     activators={"atp": 1.0},
     active=True,
-    downstream_enzymes=["citrate_synthase"],
+    downstream_enzymes=["citrate-synthase"],
     hill_coefficients={"adp": 1.0, "atp": 1.0},
 )
 
@@ -161,7 +161,7 @@ aconitase = Enzyme(
     inhibitors={"adp": 1.0},
     activators={"atp": 1.0},
     active=True,
-    downstream_enzymes=["isocitrate_dehydrogenase"],
+    downstream_enzymes=["isocitrate-dehydrogenase"],
     hill_coefficients={"adp": 1.0, "atp": 1.0},
 )
 
@@ -172,29 +172,29 @@ isocitrate_dehydrogenase = Enzyme(
     inhibitors={"adp": 1.0},
     activators={"atp": 1.0},
     active=True,
-    downstream_enzymes=["alpha_ketoglutarate_dehydrogenase"],
+    downstream_enzymes=["alpha-ketoglutarate-dehydrogenase"],
     hill_coefficients={"adp": 1.0, "atp": 1.0},
 )
 
 alpha_ketoglutarate_dehydrogenase = Enzyme(
     name="Alpha-Ketoglutarate Dehydrogenase",
     k_cat=100,
-    k_m={"alpha_ketoglutarate": 10},
+    k_m={"alpha-ketoglutarate": 10},
     inhibitors={"adp": 1.0},
     activators={"atp": 1.0},
     active=True,
-    downstream_enzymes=["succinyl_coa_synthetase"],
+    downstream_enzymes=["succinyl-coa-synthetase"],
     hill_coefficients={"adp": 1.0, "atp": 1.0},
 )
 
 succinyl_coa_synthetase = Enzyme(
     name="Succinyl_CoA Synthetase",
     k_cat=100,
-    k_m={"succinyl_coa": 10},
+    k_m={"succinyl-coa": 10},
     inhibitors={"adp": 1.0},
     activators={"atp": 1.0},
     active=True,
-    downstream_enzymes=["succinate_dehydrogenase"],
+    downstream_enzymes=["succinate-dehydrogenase"],
     hill_coefficients={"adp": 1.0, "atp": 1.0},
 )
 
@@ -216,7 +216,7 @@ fumarase = Enzyme(
     inhibitors={"adp": 1.0},
     activators={"atp": 1.0},
     active=True,
-    downstream_enzymes=["malate_dehydrogenase"],
+    downstream_enzymes=["malate-dehydrogenase"],
     hill_coefficients={"adp": 1.0, "atp": 1.0},
 )
 
@@ -227,6 +227,6 @@ malate_dehydrogenase = Enzyme(
     inhibitors={"adp": 1.0},
     activators={"atp": 1.0},
     active=True,
-    downstream_enzymes=["oxaloacetate_synthetase"],
+    downstream_enzymes=["oxaloacetate-synthetase"],
     hill_coefficients={"adp": 1.0, "atp": 1.0},
 )

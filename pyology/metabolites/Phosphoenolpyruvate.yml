@@ -1,0 +1,85 @@
+quantity: 5.0
+type: Glycolysis Intermediate
+description: High-energy phosphate compound formed from 2-phosphoglycerate, precursor to pyruvate in the final ATP-generating step.
+meta:
+  molecular_formula: C3H5O6P
+  pathway:
+    - Glycolysis
+    - Gluconeogenesis
+  role: High-energy phosphate donor
+  concentration:
+    default: 0.02
+    unit: mM
+    range:
+      min: 0.01
+      max: 30.0
+  localization:
+    compartments:
+      - Cytosol
+  kinetics:
+    Km: 0.15  # in mM
+    Vmax: 85  # in μmol/min
+  transport:
+    mechanism: None
+    transporters: []
+  reactions:
+    - name: Pyruvate Kinase Reaction
+      enzyme: Pyruvate Kinase
+      role: Substrate
+  chemical_properties:
+    pKa: 6.4
+    solubility: High
+    stability: Unstable
+    molecular_weight: 168.04  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: Pyruvate Kinase
+        effect: Substrate
+    feedback_loops:
+      - type: Positive Feedback
+        source: Fructose-1,6-bisphosphate
+  interactions:
+    binding_partners:
+      - Enzyme: Pyruvate Kinase
+        type: Substrate
+  state_changes:
+    redox_state: None
+    phosphorylation: Phosphorylated
+    isomers: None
+  thermodynamics:
+    delta_G: -61.9  # kJ/mol
+  flux:
+    production_rate: 20  # μmol/min
+    consumption_rate: 20  # μmol/min
+  synthesis:
+    pathway: Glycolysis
+    enzyme: Enolase
+  degradation:
+    pathway: Glycolysis
+    enzyme: Pyruvate Kinase
+  genetic_regulation:
+    genes:
+      - name: PKM (Pyruvate Kinase M1/2)
+      - name: PKLR (Pyruvate Kinase L/R)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: Low
+  isomers:
+    D_form: Active
+    L_form: Inactive
+  stoichiometry:
+    reactions:
+      - name: Pyruvate Kinase Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 168.04  # g/mol
+    charge: -2
+  visualization:
+    structure_2D: "structures/pep_2d.png"
+    structure_3D: "structures/pep_3d.pdb"
+  energy_metrics:
+    ATP_yield: 1  # Generates 1 ATP in next reaction
+  experimental_data:
+    concentration: 0.02  # mM
+    reference: "Zhang et al., 2021" 

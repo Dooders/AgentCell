@@ -1,0 +1,95 @@
+quantity: 5.0
+type: Glycolysis Intermediate
+description: First phosphorylated intermediate in glycolysis, formed by the phosphorylation of glucose by hexokinase.
+meta:
+  molecular_formula: C6H13O9P
+  pathway:
+    - Glycolysis
+    - Pentose Phosphate Pathway
+    - Glycogen Synthesis
+  role: Key branch point metabolite
+  concentration:
+    default: 0.2
+    unit: mM
+    range:
+      min: 0.1
+      max: 30.0
+  localization:
+    compartments:
+      - Cytosol
+  kinetics:
+    Km: 0.3  # in mM
+    Vmax: 45  # in μmol/min
+  transport:
+    mechanism: None  # Charged molecule, doesn't cross membranes
+    transporters: []
+  reactions:
+    - name: Glucose-6-phosphate Isomerase Reaction
+      enzyme: Glucose-6-phosphate Isomerase
+      role: Substrate
+    - name: Glucose-6-phosphate Dehydrogenase Reaction
+      enzyme: Glucose-6-phosphate Dehydrogenase
+      role: Substrate
+  chemical_properties:
+    pKa: 6.1
+    solubility: High
+    stability: Stable
+    molecular_weight: 260.14  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: Hexokinase
+        effect: Inhibition
+    feedback_loops:
+      - type: Negative Feedback
+        source: Self
+  interactions:
+    binding_partners:
+      - Enzyme: Glucose-6-phosphate Isomerase
+        type: Substrate
+      - Enzyme: Glucose-6-phosphate Dehydrogenase
+        type: Substrate
+  state_changes:
+    redox_state: None
+    phosphorylation: Phosphorylated
+    isomers: None
+  thermodynamics:
+    delta_G: -13.8  # kJ/mol
+  flux:
+    production_rate: 10  # μmol/min
+    consumption_rate: 10  # μmol/min
+  synthesis:
+    pathway: Glycolysis
+    enzyme: Hexokinase
+  degradation:
+    pathway:
+      - Glycolysis
+      - Pentose Phosphate Pathway
+    enzyme:
+      - Glucose-6-phosphate Isomerase
+      - Glucose-6-phosphate Dehydrogenase
+  genetic_regulation:
+    genes:
+      - name: HK (Hexokinase)
+      - name: GPI (Glucose-6-phosphate Isomerase)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: Low
+  isomers:
+    D_form: Active
+    L_form: Inactive
+  stoichiometry:
+    reactions:
+      - name: Glucose-6-phosphate Isomerase Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 260.14  # g/mol
+    charge: -2
+  visualization:
+    structure_2D: "structures/g6p_2d.png"
+    structure_3D: "structures/g6p_3d.pdb"
+  energy_metrics:
+    ATP_yield: -1  # ATP consumed in formation
+  experimental_data:
+    concentration: 0.2  # mM
+    reference: "Smith et al., 2021"

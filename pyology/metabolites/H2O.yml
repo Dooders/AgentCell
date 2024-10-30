@@ -1,0 +1,92 @@
+quantity: 55000  # High concentration as it's the solvent
+type: Environmental Factor
+description: Water molecule, essential reactant and product in many metabolic reactions including hydrolysis steps in glycolysis.
+meta:
+  molecular_formula: H2O
+  pathway:
+    - Glycolysis
+    - Hydrolysis Reactions
+    - Cellular Metabolism
+  role: Universal solvent and reactant
+  concentration:
+    default: 55000
+    unit: mM
+    range:
+      min: 54000
+      max: 56000
+  localization:
+    compartments:
+      - Cytosol
+      - Mitochondria
+      - All cellular compartments
+  kinetics:
+    Km: None  # Not applicable as it's the solvent
+    Vmax: None
+  transport:
+    mechanism: Facilitated Diffusion
+    transporters:
+      - Aquaporins
+  reactions:
+    - name: Enolase Reaction
+      enzyme: Enolase
+      role: Product
+    - name: ATP Hydrolysis
+      enzyme: ATPase
+      role: Reactant
+  chemical_properties:
+    pKa: 15.7
+    solubility: Universal Solvent
+    stability: Stable
+    molecular_weight: 18.015  # g/mol
+  regulation:
+    allosteric_effects: []  # Water itself doesn't have allosteric effects
+    feedback_loops: []
+  interactions:
+    binding_partners:
+      - Enzyme: Enolase
+        type: Product
+      - Enzyme: ATPase
+        type: Reactant
+  state_changes:
+    redox_state: None
+    phosphorylation: None
+    isomers: None
+  thermodynamics:
+    delta_G: 0  # Standard state
+  flux:
+    production_rate: None  # Not typically measured
+    consumption_rate: None
+  synthesis:
+    pathway: Multiple Metabolic Pathways
+    enzyme: Multiple
+  degradation:
+    pathway: Multiple Metabolic Pathways
+    enzyme: Multiple
+  genetic_regulation:
+    genes:
+      - name: AQP1 (Aquaporin 1)  # Water channel proteins
+      - name: AQP2 (Aquaporin 2)
+  physiological_conditions:
+    pH_dependence: No
+    temperature_dependence: Yes
+    oxygen_dependence: No
+  isomers:
+    D_form: None
+    L_form: None
+  stoichiometry:
+    reactions:
+      - name: Enolase Reaction
+        coefficient: 1
+      - name: ATP Hydrolysis
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 18.015  # g/mol
+    charge: 0
+  visualization:
+    structure_2D: "structures/h2o_2d.png"
+    structure_3D: "structures/h2o_3d.pdb"
+  energy_metrics:
+    ATP_yield: 0
+  experimental_data:
+    concentration: 55000  # mM (approximately 55 M in cells)
+    reference: "Standard Physical Chemistry Reference" 

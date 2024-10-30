@@ -1,5 +1,7 @@
 from threading import Lock
-from typing import Dict
+from typing import Dict, List
+
+import yaml
 
 from .exceptions import (
     InsufficientMetaboliteError,
@@ -16,58 +18,23 @@ gibbs_free_energies = {
     "FADH2": 105,
     "Acetyl_CoA": 31,
     "proton_gradient": 5,
-    "Glucose": 686,
-    "Fructose": 686,
-    "Glucose_6_Phosphate": 916,
-    "Fructose_6_Phosphate": 916,
-    "Fructose_1_6_Bisphosphate": 1146,
-    "Glyceraldehyde_3_Phosphate": 573,
-    "Bisphosphoglycerate_1_3": 803,
-    "phosphoglycerate_3": 573,
-    "phosphoglycerate_2": 573,
+    "glucose": 686,
+    "glucose-6-phosphate": 916,
+    "fructose-6-phosphate": 916,
+    "fructose-1-6-bisphosphate": 1146,
+    "glyceraldehyde-3-phosphate": 573,
+    "1-3-bisphosphoglycerate": 803,
+    "3-phosphoglycerate": 573,
+    "2-phosphoglycerate": 573,
     "phosphoenolpyruvate": 803,
-    "Pyruvate": 343,
+    "pyruvate": 343,
     "pyruvate_dehydrogenase": 100,
     "phosphoenolpyruvate_carboxykinase": 100,
     "phosphoenolpyruvate_mutase": 100,
     "pyruvate_kinase": 100,
-    "Phosphoglycerate_Kinase": 100,
-    "Phosphoglycerate_Mutase": 100,
-    "Phosphoglycerate_Phosphatase": 100,
-    "bisphosphoglycerate_3": 803,
-    "Phosphoglycerate_3": 573,
-    "Phosphoglycerate_2": 573,
-    "Phosphoglycerate": 573,
-    "NAD": 100,
-    "NAD+": 100,
-    "NADH": 158,
-    "FAD": 100,
-    "FADH2": 105,
-    "NADP": 100,
-    "NADP+": 100,
-    "bisphosphoglycerate_1_3": 803,
-    "dihydroxyacetone_phosphate": 34,
-    "phosphoglycerate": 34,
-    "Lactate": 34,
-    "Glycogen": 34,
-    "Alanine": 34,
-    "Glutamate": 34,
-    "Glutamine": 34,
-    "Aspartate": 34,
-    "Asparagine": 34,
-    "Glycine": 34,
-    "Serine": 34,
-    "Threonine": 34,
-    "Proline": 34,
-    "Tyrosine": 34,
-    "Valine": 34,
-    "Methionine": 34,
-    "Leucine": 34,
-    "Isoleucine": 34,
-    "Phenylalanine": 34,
-    "Tryptophan": 34,
-    "Malonyl_CoA": 34,
-    "Palmitic_Acid": 34,
+    "phosphoglycerate_kinase": 100,
+    "phosphoglycerate_mutase": 100,
+    "phosphoglycerate_phosphatase": 100,
 }
 
 
@@ -256,7 +223,7 @@ class Metabolites:
         """
         self.data: Dict[str, Metabolite] = {}
 
-    def _register(self, name: str, quantity: int, max_quantity: int) -> None:
+    def _register(self, name: str, quantity: int, max_quantity: int, metadata: dict = None) -> None:
         """
         Adds a new metabolite or updates an existing one.
 
@@ -281,7 +248,7 @@ class Metabolites:
                 f"Initial quantity {quantity} exceeds max quantity {max_quantity}."
             )
         if name.lower() not in self.data:
-            metabolite = Metabolite(name, quantity, max_quantity)
+            metabolite = Metabolite(name, quantity, max_quantity, metadata=metadata)
             self.data[name.lower()] = metabolite
         else:
             metabolite = self.data[name.lower()]
@@ -293,6 +260,7 @@ class Metabolites:
         name: str = None,
         quantity: int = None,
         max_quantity: int = None,
+        metadata: dict = None,
         **metabolites,
     ) -> None:
         """
@@ -306,6 +274,8 @@ class Metabolites:
             The initial quantity of the metabolite (when registering individually).
         max_quantity : int, optional
             The maximum allowable quantity of the metabolite (when registering individually).
+        metadata : dict, optional
+            Additional metadata about the metabolite (when registering individually).
         **metabolites : dict
             A dictionary of metabolites to register, where keys are metabolite names and values are tuples of (quantity, max_quantity).
 
@@ -318,7 +288,7 @@ class Metabolites:
         register(glucose=(100, 1000), atp=(50, 500))
         """
         if name and quantity is not None and max_quantity is not None:
-            self._register(name, quantity, max_quantity)
+            self._register(name, quantity, max_quantity, metadata)
         elif metabolites:
             for metabolite_name, (
                 metabolite_quantity,
@@ -328,6 +298,7 @@ class Metabolites:
                     metabolite_name.lower(),
                     metabolite_quantity,
                     metabolite_max_quantity,
+                    metadata,
                 )
         else:
             raise ValueError(
@@ -466,7 +437,7 @@ class Metabolites:
             metabolite.reset()
 
     def __getitem__(self, key):
-        normalized_key = key.lower().replace("-", "_")
+        normalized_key = key.lower()
         if normalized_key not in self.data:
             # If the metabolite doesn't exist, create it with default values
             self._register(
@@ -545,7 +516,7 @@ class Metabolites:
         bool
             True if the metabolite exists, False otherwise.
         """
-        normalized_key = key.lower().replace("-", "_")
+        normalized_key = key.lower()
         return normalized_key in self.data
 
     def state(self, attributes: list = None) -> dict:
@@ -572,3 +543,44 @@ class Metabolites:
             x.name: {attr: getattr(x, attr) for attr in attributes if hasattr(x, attr)}
             for x in self.data.values()
         }
+
+    @classmethod
+    def _load_metabolite_info(cls, name: str) -> dict:
+        """
+        Loads the yml file for a metabolite and returns the info as a dict.
+        """
+        with open(f"pyology/metabolites/{name}.yml", "r", encoding="utf-8") as f:
+            return yaml.safe_load(f)
+
+    @classmethod
+    def from_list(cls, metabolite_names: List[str]) -> "Metabolites":
+        """
+        Builds a Metabolites instance from a list of metabolite names.
+
+        Loads the yml file for each metabolite and creates a Metabolite instance for each.
+        """
+        metabolites = cls()
+        if metabolite_names is None:
+            metabolite_names = []
+        for name in metabolite_names:
+            try:
+                metabolite_info = cls._load_metabolite_info(name)
+                # Extract just the quantity and max_quantity from the YAML data
+                quantity = metabolite_info.get("quantity", 0)
+                max_quantity = (
+                    metabolite_info.get("meta", {})
+                    .get("concentration", {})
+                    .get("range", {})
+                    .get("max", quantity)
+                )
+                metabolites.register(
+                    name,
+                    quantity=quantity,
+                    max_quantity=max_quantity,
+                    metadata=metabolite_info.get("meta", {}),
+                )
+            except ValueError as e:
+                raise ValueError(
+                    f"Error processing metabolite '{name}': {str(e)}"
+                ) from e
+        return metabolites

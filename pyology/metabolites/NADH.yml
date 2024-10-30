@@ -1,0 +1,92 @@
+quantity: 10.0
+type: Electron Carrier
+description: Reduced form of nicotinamide adenine dinucleotide, carries electrons and hydrogen atoms in metabolic reactions.
+meta:
+  molecular_formula: C21H29N7O14P2
+  pathway:
+    - Glycolysis
+    - TCA Cycle
+    - Electron Transport Chain
+  role: Electron and hydrogen carrier
+  concentration:
+    default: 0.1
+    unit: mM
+    range:
+      min: 0.05
+      max: 30.0
+  localization:
+    compartments:
+      - Cytosol
+      - Mitochondria
+  kinetics:
+    Km: 0.05  # in mM
+    Vmax: 75  # in μmol/min
+  transport:
+    mechanism: Shuttle Systems
+    transporters:
+      - Malate-Aspartate Shuttle
+      - Glycerol-3-Phosphate Shuttle
+  reactions:
+    - name: GAPDH Reaction
+      enzyme: Glyceraldehyde-3-phosphate Dehydrogenase
+      role: Product
+  chemical_properties:
+    pKa: None
+    solubility: High
+    stability: Stable
+    molecular_weight: 665.43  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: Complex I
+        effect: Substrate
+    feedback_loops:
+      - type: Negative Feedback
+        source: NAD+
+  interactions:
+    binding_partners:
+      - Enzyme: GAPDH
+        type: Product
+      - Enzyme: Complex I
+        type: Substrate
+  state_changes:
+    redox_state: Reduced
+    phosphorylation: None
+    isomers: None
+  thermodynamics:
+    delta_G: -220  # kJ/mol
+  flux:
+    production_rate: 20  # μmol/min
+    consumption_rate: 20  # μmol/min
+  synthesis:
+    pathway: Glycolysis
+    enzyme: GAPDH
+  degradation:
+    pathway: Electron Transport Chain
+    enzyme: Complex I
+  genetic_regulation:
+    genes:
+      - name: NDUFV1 (NADH:Ubiquinone Oxidoreductase Core Subunit V1)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: High
+  isomers:
+    D_form: Active
+    L_form: Inactive
+  stoichiometry:
+    reactions:
+      - name: GAPDH Reaction
+        coefficient: 1
+      - name: Complex I Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 665.43  # g/mol
+    charge: -1
+  visualization:
+    structure_2D: "structures/nadh_2d.png"
+    structure_3D: "structures/nadh_3d.pdb"
+  energy_metrics:
+    ATP_yield: 2.5  # Generates ~2.5 ATP through ETC
+  experimental_data:
+    concentration: 0.1  # mM
+    reference: "Wilson et al., 2021" 

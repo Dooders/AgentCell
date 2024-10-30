@@ -1,0 +1,97 @@
+quantity: 10.0
+type: High-Energy Molecule
+description: Adenosine triphosphate, the primary energy currency of the cell, used in many metabolic reactions including glycolysis.
+meta:
+  molecular_formula: C10H16N5O13P3
+  pathway:
+    - Energy Metabolism
+    - Glycolysis
+    - Oxidative Phosphorylation
+  role: Energy carrier and phosphate donor
+  concentration:
+    default: 3.0
+    unit: mM
+    range:
+      min: 1.0
+      max: 50.0
+  localization:
+    compartments:
+      - Cytosol
+      - Mitochondria
+  kinetics:
+    Km: 0.4  # in mM
+    Vmax: 100  # in μmol/min
+  transport:
+    mechanism: Active Transport
+    transporters:
+      - ATP/ADP Translocase
+  reactions:
+    - name: Hexokinase Reaction
+      enzyme: Hexokinase
+      role: Phosphate Donor
+    - name: Phosphofructokinase-1 Reaction
+      enzyme: Phosphofructokinase-1
+      role: Phosphate Donor
+  chemical_properties:
+    pKa: 6.5
+    solubility: High
+    stability: Moderate
+    molecular_weight: 507.18  # g/mol
+  regulation:
+    allosteric_effects:
+      - target_enzyme: Phosphofructokinase-1
+        effect: Inhibition
+      - target_enzyme: Pyruvate Kinase
+        effect: Activation
+    feedback_loops:
+      - type: Negative Feedback
+        source: Self
+  interactions:
+    binding_partners:
+      - Enzyme: Hexokinase
+        type: Substrate
+      - Enzyme: Phosphofructokinase-1
+        type: Substrate
+  state_changes:
+    redox_state: None
+    phosphorylation: Triphosphate
+    isomers: None
+  thermodynamics:
+    delta_G: -30.5  # kJ/mol
+  flux:
+    production_rate: 50  # μmol/min
+    consumption_rate: 50  # μmol/min
+  synthesis:
+    pathway: Oxidative Phosphorylation
+    enzyme: ATP Synthase
+  degradation:
+    pathway: Energy Metabolism
+    enzyme: ATPases
+  genetic_regulation:
+    genes:
+      - name: ATP5F1A (ATP Synthase F1 Subunit Alpha)
+      - name: ATP5F1B (ATP Synthase F1 Subunit Beta)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: High
+  isomers:
+    D_form: Active
+    L_form: Inactive
+  stoichiometry:
+    reactions:
+      - name: Hexokinase Reaction
+        coefficient: 1
+      - name: Phosphofructokinase-1 Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 507.18  # g/mol
+    charge: -4
+  visualization:
+    structure_2D: "structures/atp_2d.png"
+    structure_3D: "structures/atp_3d.pdb"
+  energy_metrics:
+    ATP_yield: 1
+  experimental_data:
+    concentration: 3.0  # mM
+    reference: "Anderson et al., 2021" 

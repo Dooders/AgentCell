@@ -1,0 +1,78 @@
+quantity: 5.0
+type: Glycolysis Intermediate
+description: High-energy intermediate containing two phosphate groups, formed by GAPDH and substrate for phosphoglycerate kinase.
+meta:
+  molecular_formula: C3H8O10P2
+  pathway:
+    - Glycolysis
+  role: High-energy phosphate compound
+  concentration:
+    default: 0.001
+    unit: mM
+    range:
+      min: 0.0005
+      max: 30.0
+  localization:
+    compartments:
+      - Cytosol
+  kinetics:
+    Km: 0.003  # in mM
+    Vmax: 80  # in μmol/min
+  transport:
+    mechanism: None
+    transporters: []
+  reactions:
+    - name: Phosphoglycerate Kinase Reaction
+      enzyme: Phosphoglycerate Kinase
+      role: Substrate
+  chemical_properties:
+    pKa: 3.4, 7.2
+    solubility: High
+    stability: Unstable
+    molecular_weight: 266.04  # g/mol
+  regulation:
+    allosteric_effects: []
+  interactions:
+    binding_partners:
+      - Enzyme: Phosphoglycerate Kinase
+        type: Substrate
+  state_changes:
+    redox_state: Oxidized
+    phosphorylation: Bisphosphorylated
+    isomers: None
+  thermodynamics:
+    delta_G: -18.9  # kJ/mol
+  flux:
+    production_rate: 20  # μmol/min
+    consumption_rate: 20  # μmol/min
+  synthesis:
+    pathway: Glycolysis
+    enzyme: GAPDH
+  degradation:
+    pathway: Glycolysis
+    enzyme: Phosphoglycerate Kinase
+  genetic_regulation:
+    genes:
+      - name: PGK1 (Phosphoglycerate Kinase 1)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: Low
+  isomers:
+    D_form: Active
+    L_form: Inactive
+  stoichiometry:
+    reactions:
+      - name: Phosphoglycerate Kinase Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 266.04  # g/mol
+    charge: -4
+  visualization:
+    structure_2D: "structures/13bpg_2d.png"
+    structure_3D: "structures/13bpg_3d.pdb"
+  energy_metrics:
+    ATP_yield: 1  # Generates 1 ATP in next reaction
+  experimental_data:
+    concentration: 0.001  # mM
+    reference: "Roberts et al., 2021" 

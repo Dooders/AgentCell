@@ -1,4 +1,6 @@
-from typing import Dict
+from typing import Dict, List
+
+from pyology.metabolite import Metabolites
 
 from .constants import TIME_STEP
 from .cytoplasm import Cytoplasm
@@ -12,6 +14,8 @@ class Cell(Organelle):
 
     Parameters
     ----------
+    metabolites_list : List[str]
+        The list of metabolites to include in the cell.
     logger : logging.Logger, optional
         The logger to use for logging messages.
     debug : bool, optional
@@ -48,8 +52,8 @@ class Cell(Organelle):
 
     name = "Cell"
 
-    def __init__(self, logger=None, debug=False) -> None:
-        super().__init__()
+    def __init__(self, metabolites_list: List[str], logger=None, debug=False) -> None:
+        super().__init__(metabolites_list)
         self.cytoplasm = Cytoplasm(logger=logger, debug=debug)
         self.mitochondrion = Mitochondrion()
         self.krebs_cycle = KrebsCycle()

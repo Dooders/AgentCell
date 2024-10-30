@@ -1,0 +1,79 @@
+quantity: 5.0
+type: Glycolysis Intermediate
+description: Product of the first ATP-generating step in glycolysis, formed by phosphoglycerate kinase.
+meta:
+  molecular_formula: C3H7O7P
+  pathway:
+    - Glycolysis
+    - Serine Synthesis
+  role: Intermediate in ATP-generating phase
+  concentration:
+    default: 0.5
+    unit: mM
+    range:
+      min: 0.2
+      max: 30.0
+  localization:
+    compartments:
+      - Cytosol
+  kinetics:
+    Km: 0.3  # in mM
+    Vmax: 75  # in μmol/min
+  transport:
+    mechanism: None
+    transporters: []
+  reactions:
+    - name: Phosphoglycerate Mutase Reaction
+      enzyme: Phosphoglycerate Mutase
+      role: Substrate
+  chemical_properties:
+    pKa: 3.42
+    solubility: High
+    stability: Stable
+    molecular_weight: 186.06  # g/mol
+  regulation:
+    allosteric_effects: []
+  interactions:
+    binding_partners:
+      - Enzyme: Phosphoglycerate Mutase
+        type: Substrate
+  state_changes:
+    redox_state: None
+    phosphorylation: Phosphorylated
+    isomers: None
+  thermodynamics:
+    delta_G: 4.4  # kJ/mol
+  flux:
+    production_rate: 20  # μmol/min
+    consumption_rate: 20  # μmol/min
+  synthesis:
+    pathway: Glycolysis
+    enzyme: Phosphoglycerate Kinase
+  degradation:
+    pathway: Glycolysis
+    enzyme: Phosphoglycerate Mutase
+  genetic_regulation:
+    genes:
+      - name: PGAM2 (Phosphoglycerate Mutase 2)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: Low
+  isomers:
+    D_form: Active
+    L_form: Inactive
+  stoichiometry:
+    reactions:
+      - name: Phosphoglycerate Mutase Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 186.06  # g/mol
+    charge: -2
+  visualization:
+    structure_2D: "structures/3pg_2d.png"
+    structure_3D: "structures/3pg_3d.pdb"
+  energy_metrics:
+    ATP_yield: 0
+  experimental_data:
+    concentration: 0.5  # mM
+    reference: "Chen et al., 2021" 

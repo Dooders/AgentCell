@@ -1,0 +1,78 @@
+quantity: 5.0
+type: Glycolysis Intermediate
+description: Isomer of 3-phosphoglycerate formed by phosphoglycerate mutase, precursor to phosphoenolpyruvate.
+meta:
+  molecular_formula: C3H7O7P
+  pathway:
+    - Glycolysis
+  role: Precursor to high-energy PEP
+  concentration:
+    default: 0.1
+    unit: mM
+    range:
+      min: 0.05
+      max: 30.0
+  localization:
+    compartments:
+      - Cytosol
+  kinetics:
+    Km: 0.25  # in mM
+    Vmax: 70  # in μmol/min
+  transport:
+    mechanism: None
+    transporters: []
+  reactions:
+    - name: Enolase Reaction
+      enzyme: Enolase
+      role: Substrate
+  chemical_properties:
+    pKa: 3.42
+    solubility: High
+    stability: Stable
+    molecular_weight: 186.06  # g/mol
+  regulation:
+    allosteric_effects: []
+  interactions:
+    binding_partners:
+      - Enzyme: Enolase
+        type: Substrate
+  state_changes:
+    redox_state: None
+    phosphorylation: Phosphorylated
+    isomers: None
+  thermodynamics:
+    delta_G: 4.4  # kJ/mol
+  flux:
+    production_rate: 20  # μmol/min
+    consumption_rate: 20  # μmol/min
+  synthesis:
+    pathway: Glycolysis
+    enzyme: Phosphoglycerate Mutase
+  degradation:
+    pathway: Glycolysis
+    enzyme: Enolase
+  genetic_regulation:
+    genes:
+      - name: ENO1 (Enolase 1)
+  physiological_conditions:
+    pH_dependence: Yes
+    temperature_dependence: Yes
+    oxygen_dependence: Low
+  isomers:
+    D_form: Active
+    L_form: Inactive
+  stoichiometry:
+    reactions:
+      - name: Enolase Reaction
+        coefficient: 1
+  mass_charge:
+    molecular_weight: 186.06  # g/mol
+    charge: -2
+  visualization:
+    structure_2D: "structures/2pg_2d.png"
+    structure_3D: "structures/2pg_3d.pdb"
+  energy_metrics:
+    ATP_yield: 0
+  experimental_data:
+    concentration: 0.1  # mM
+    reference: "Martinez et al., 2021" 
