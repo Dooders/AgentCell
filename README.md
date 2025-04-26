@@ -1,7 +1,7 @@
-# Pyology
+# AgentCell
 ![Project Status](https://img.shields.io/badge/status-in%20development-orange)
 
-Pyology is a object-oriented model of a biological cell, implemented as a Python library. It provides a framework for simulating cellular processes and metabolic pathways.
+AgentCell is a object-oriented model of a biological cell, implemented as a Python library. It provides a framework for simulating cellular processes and metabolic pathways.
 
 ## Features
 
